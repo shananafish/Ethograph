@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>ETHOGRAPH</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Sora:wght@300;600;800&display=swap" rel="stylesheet">
 <style>
@@ -14,11 +14,11 @@
   --agg:#f87171;--sub:#fb923c;--aff:#34d399;--tp:#c084fc;
 }
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;overflow:hidden;font-size:14px;}
-#app{height:100vh;display:flex;flex-direction:column;}
+#app{height:100vh;height:100dvh;display:flex;flex-direction:column;}
 .view{display:none;flex-direction:column;height:100%;}.view.active{display:flex;}
 
 /* ── Header ── */
-.hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--surface);flex-shrink:0;}
+.hdr{padding:12px 16px;padding-top:max(12px,env(safe-area-inset-top));border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--surface);flex-shrink:0;}
 .hdr-title{font-family:'Sora',sans-serif;font-weight:800;font-size:21px;color:var(--accent);letter-spacing:-.5px;}
 .hdr-sub{font-size:11px;color:var(--dim);margin-top:2px;}
 
@@ -1013,6 +1013,7 @@ function scheduleLayout(svgId,cId){
     iter++;
     if(iter%2===0) renderSVG(svgId);
     if(iter<600) animFrame=requestAnimationFrame(step);
+    else renderSVG(svgId); // final render after settling
   }
   animFrame=requestAnimationFrame(step);
 }
@@ -1688,6 +1689,8 @@ function commitRecord(){
   sheetEditIdx=null;sheetLinkedRef=null;
   // If in review mode, write changes back to stored session immediately
   if(reviewMode) saveReviewEvent();
+  // Cancel any running layout animation so our renderSVG call isn't immediately overwritten
+  cancelAnimationFrame(animFrame);
   updateHint();updateRecPanel();renderSVG('evt-svg');doFlash();
 }
 
@@ -1728,7 +1731,7 @@ function recRowHtml(i,labels){
   const rec=records[i];
   const a1=INDS.find(x=>x.id===rec.an1Id);
   const a2=rec.an2Id?INDS.find(x=>x.id===rec.an2Id):null;
-  const pair=a2?`${a1.name} — ${a2.name}`:`${a1.name} (solo)`;
+  const pair=a2?`${a1?indMenuLabel(a1):rec.an1Id} — ${indMenuLabel(a2)}`:`${a1?indMenuLabel(a1):rec.an1Id} (solo)`;
   const {dots,lines}=behSummaryFull(rec);
   const durLbl=DURATIONS.find(d=>d.id===rec.duration)?.label||'';
   const time=new Date(rec.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -1805,12 +1808,12 @@ function behSummaryFull(rec){
     if(a1s.size){
       const an1=INDS.find(i=>i.id===rec.an1Id);
       const names=[...a1s].map(bid=>(BEHAVIORS[d].find(x=>x.id===bid)||{label:bid}).label).join(', ');
-      parts.push(`<span style="color:${domColors[d]}">${an1?an1.name:'An1'}</span>: ${names}`);
+      parts.push(`<span style="color:${domColors[d]}">${an1?indMenuLabel(an1):'An1'}</span>: ${names}`);
     }
     if(a2s.size){
       const an2=INDS.find(i=>i.id===rec.an2Id);
       const names=[...a2s].map(bid=>(BEHAVIORS[d].find(x=>x.id===bid)||{label:bid}).label).join(', ');
-      parts.push(`<span style="color:var(--warn)">${an2?an2.name:'An2'}</span>: ${names}`);
+      parts.push(`<span style="color:var(--warn)">${an2?indMenuLabel(an2):'An2'}</span>: ${names}`);
     }
     if(parts.length) lines.push(parts.join(' · '));
   });

@@ -426,12 +426,12 @@ function nodeRadius(ind){
   return [0,18,22,27,32][tier];
 }
 
-// Distinct palette for matrilines (up to 20)
+// Distinct palette for matrilines (up to 20) — kept for stroke border
 const MATRILINE_PALETTE=[
-  '#3d7ab5','#e85d75','#4a9e82','#e09140','#9e6db5',
-  '#3da87a','#b55a3d','#5a8ab5','#b53d7a','#6b9e3d',
-  '#7b5ea7','#c49a2a','#3d8fb5','#b53d52','#4a7a6b',
-  '#c47a3d','#5e6ab5','#7ab53d','#8b3db5','#3db5b0',
+  '#5ef0e8','#f7b731','#a78bfa','#34d399','#f87171',
+  '#60a5fa','#fb923c','#4ade80','#c084fc','#facc15',
+  '#38bdf8','#f472b6','#86efac','#fbbf24','#818cf8',
+  '#2dd4bf','#fb7185','#a3e635','#e879f9','#94a3b8',
 ];
 function matrilineColor(mat){
   if(!mat||mat==='N/A') return '#666';
@@ -441,6 +441,59 @@ function matrilineColor(mat){
   }
   return MATRILINE_COLORS[mat];
 }
+
+// ── R-style rank palette ──────────────────────────────────────────────────────
+// Each matriline gets one color from its rank group's ramp, interpolated by
+// position within the matriline (index / count).
+function lerpHex(c1,c2,t){
+  const h=s=>parseInt(s,16);
+  const r1=h(c1.slice(1,3)),g1=h(c1.slice(3,5)),b1=h(c1.slice(5,7));
+  const r2=h(c2.slice(1,3)),g2=h(c2.slice(3,5)),b2=h(c2.slice(5,7));
+  const r=Math.round(r1+(r2-r1)*t);
+  const g=Math.round(g1+(g2-g1)*t);
+  const b=Math.round(b1+(b2-b1)*t);
+  return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+function rampColor(stops,t){
+  // stops: array of hex strings; t in [0,1]
+  if(stops.length===1) return stops[0];
+  const seg=(stops.length-1)*t;
+  const i=Math.min(Math.floor(seg),stops.length-2);
+  return lerpHex(stops[i],stops[i+1],seg-i);
+}
+const RANK_RAMPS={
+  'dom':    ['#7F0000','#B30000','#D7301F','#EF6548','#FB6A4A','#FC9272','#FBB4B9'],
+  'mod':    ['#8C2D04','#CC4C02','#EC7014','#FE9929','#FEC44F','#FEE391','#FFF7BC'],
+  'mod/sub':['#00441B','#1B7837','#5AAE61','#78C679','#A1D99B','#C7E9C0','#E5F5E0'],
+  'sub':    ['#3F007D','#54278F','#6A51A3','#756BB1','#807DBA','#9E9AC8','#C6DBEF'],
+  '':       ['#4D4D4D','#737373','#969696','#BDBDBD','#D9D9D9'],
+  '?':      ['#4D4D4D','#737373','#969696','#BDBDBD','#D9D9D9'],
+};
+
+// Pre-compute one color per matriline based on rank + position within matriline
+let MAT_COLORS={};  // matriline → hex color
+function buildMatColors(){
+  MAT_COLORS={};
+  // Group INDS by matriline
+  const groups={};
+  INDS.forEach(ind=>{
+    const m=ind.matriline||'?';
+    if(!groups[m]) groups[m]=[];
+    groups[m].push(ind);
+  });
+  Object.entries(groups).forEach(([mat,members])=>{
+    // Rank from first member that has one (matrilines share rank)
+    const rank=(members.find(i=>i.matrank&&i.matrank!=='?')?.matrank||'?').toLowerCase().trim();
+    const ramp=RANK_RAMPS[rank]||RANK_RAMPS['?'];
+    const n=members.length;
+    members.forEach((ind,idx)=>{
+      const t=n===1?0.5:idx/(n-1);
+      MAT_COLORS[ind.id]=rampColor(ramp,t);
+    });
+  });
+}
+
+function nodeColor(ind){ return MAT_COLORS[ind.id]||'#666'; }
 
 // Label priority: name → dye → id
 function indLabel(ind){return ind.name||ind.dye||String(ind.id);}
@@ -502,6 +555,8 @@ function buildInds(group, demogCats){
   // Dam edges: dam must also be in selection
   DAM_EDGES=INDS.filter(ind=>ind.dam&&idSet.has(ind.dam))
     .map(ind=>({source:ind.dam, target:ind.id}));
+  // Build per-individual colors from rank ramp
+  buildMatColors();
 }
 
 const NODE_R=32; // base — overridden per-node by nodeRadius()
@@ -788,34 +843,18 @@ function showView(name){
 // ═══════════════════════════════════════════
 //  COLOR: rank = fill (warm→cool), matriline = stroke
 // ═══════════════════════════════════════════
-// matrank field values seen: Dom, Mod, Sub, Mod/Sub, Dom/Mod, ? 
-const RANK_COLORS={
-  'dom':     '#e8522a',   // warm red-orange
-  'dom/mod': '#e8832a',   // orange
-  'mod':     '#e8b82a',   // amber
-  'mod/sub': '#7ab83a',   // yellow-green
-  'sub':     '#3a9eb8',   // teal-blue
-  '?':       '#6b7280',   // grey
-  '':        '#6b7280',
-};
-function rankColor(ind){
-  const r=(ind.matrank||'').toLowerCase().trim();
-  for(const key of Object.keys(RANK_COLORS)){
-    if(r===key) return RANK_COLORS[key];
-  }
-  return RANK_COLORS['?'];
-}
-// ═══════════════════════════════════════════
-//  LAYOUT — hierarchical + matriline clustering
-// ═══════════════════════════════════════════
+// matrank field values seen: Dom, Mod, Sub, Mod/Sub, Dom/Mod, ?
+function rankColor(ind){ return nodeColor(ind); } // alias kept for compat
 
-// Compute generation depth for each individual (0 = no known dam in INDS)
+// ═══════════════════════════════════════════
+//  LAYOUT — grid + dam spring + hard separation
+// ═══════════════════════════════════════════
 function computeGenerations(){
   const idSet=new Set(INDS.map(i=>i.id));
   const depth={};
   const gen=(id,visited=new Set())=>{
     if(depth[id]!==undefined) return depth[id];
-    if(visited.has(id)) return 0; // cycle guard
+    if(visited.has(id)) return 0;
     visited.add(id);
     const ind=INDS.find(i=>i.id===id);
     if(!ind||!ind.dam||!idSet.has(ind.dam)) return (depth[id]=0);
@@ -823,20 +862,6 @@ function computeGenerations(){
   };
   INDS.forEach(ind=>gen(ind.id));
   return depth;
-}
-
-// Compute centroid X for each matriline group
-function matrilineCentroids(){
-  const cents={};
-  const counts={};
-  INDS.forEach(ind=>{
-    const m=ind.matriline||'?';
-    if(!cents[m]){cents[m]=0;counts[m]=0;}
-    cents[m]+=positions[ind.id].x;
-    counts[m]++;
-  });
-  Object.keys(cents).forEach(m=>cents[m]/=counts[m]);
-  return cents;
 }
 
 function hardSeparate(w,h){
@@ -848,7 +873,7 @@ function hardSeparate(w,h){
         const dx=positions[b.id].x-positions[a.id].x;
         const dy=positions[b.id].y-positions[a.id].y;
         const dist=Math.sqrt(dx*dx+dy*dy)||0.01;
-        const minD=ra+rb+8;
+        const minD=ra+rb+6;
         if(dist<minD){
           const push=(minD-dist)/2;
           const nx=dx/dist, ny=dy/dist;
@@ -869,95 +894,72 @@ function initLayout(cId){
   const c=document.getElementById(cId);
   const w=c.clientWidth,h=c.clientHeight;
   positions={}; velocities={};
+  const n=INDS.length;
+  if(!n) return {w,h};
 
-  // Compute generations for Y-banding
-  const depth=computeGenerations();
-  const maxDepth=Math.max(...Object.values(depth),0)||1;
+  // Simple grid: compute cols/rows to roughly fill the canvas
+  const aspect=w/h;
+  const cols=Math.max(1,Math.round(Math.sqrt(n*aspect)));
+  const rows=Math.ceil(n/cols);
+  const cellW=w/cols, cellH=h/rows;
 
-  // Group INDS by matriline for initial X placement
-  const matGroups={};
-  INDS.forEach(ind=>{
-    const m=ind.matriline||'?';
-    if(!matGroups[m]) matGroups[m]=[];
-    matGroups[m].push(ind);
-  });
-  const matKeys=Object.keys(matGroups).sort();
-  const nMats=matKeys.length;
-  const colW=w/(nMats+1);
-
-  INDS.forEach(ind=>{
-    const m=ind.matriline||'?';
-    const mi=matKeys.indexOf(m);
-    const d=depth[ind.id]||0;
-    const margin=50;
-    const yRange=h-margin*2;
-    // Y: dams at top, offspring below — with small jitter to avoid perfect overlap
-    const y=margin + (d/Math.max(maxDepth,1))*yRange + (Math.random()-0.5)*20;
-    // X: grouped by matriline, with jitter within group
-    const groupSize=matGroups[m].length;
-    const x=(mi+1)*colW + (Math.random()-0.5)*(colW*0.5);
-    positions[ind.id]={x:Math.max(40,Math.min(w-40,x)), y:Math.max(40,Math.min(h-40,y))};
+  INDS.forEach((ind,i)=>{
+    const col=i%cols, row=Math.floor(i/cols);
+    positions[ind.id]={
+      x: cellW*(col+0.5)+(Math.random()-0.5)*cellW*0.3,
+      y: cellH*(row+0.5)+(Math.random()-0.5)*cellH*0.3,
+    };
     velocities[ind.id]={x:0,y:0};
   });
-
-  return {w,h,depth,maxDepth};
+  return {w,h};
 }
 
 function scheduleLayout(svgId,cId){
   cancelAnimationFrame(animFrame);
-  const dims=initLayout(cId);
-  const {w,h,depth,maxDepth}=dims;
-  const margin=50;
-  const yRange=h-margin*2;
+  const {w,h}=initLayout(cId);
+  if(!INDS.length){ renderSVG(svgId); return; }
 
-  // Assign a stable X-band centre per matriline
-  const matKeys=[...new Set(INDS.map(i=>i.matriline||'?'))].sort();
-  const nMats=Math.max(matKeys.length,1);
-  const matCentreX={};
-  matKeys.forEach((m,mi)=>{ matCentreX[m]=(mi+1)*(w/(nMats+1)); });
+  // Build dam adjacency for spring forces
+  const damPairs=new Set(DAM_EDGES.map(e=>`${e.source}|${e.target}`));
+  function isDamPair(a,b){ return damPairs.has(`${a}|${b}`)||damPairs.has(`${b}|${a}`); }
+
+  // Ideal dam-offspring distance: just touching with a small gap
+  function damRestDist(a,b){
+    return nodeRadius(INDS.find(i=>i.id===a)||{})+nodeRadius(INDS.find(i=>i.id===b)||{})+6;
+  }
 
   let iter=0;
   function step(){
     const damp=0.5;
-
     INDS.forEach(a=>{
       let fx=0,fy=0;
       const ra=nodeRadius(a);
-      const aDepth=depth[a.id]||0;
-      const aMat=a.matriline||'?';
-
       INDS.forEach(b=>{
         if(a.id===b.id) return;
         const rb=nodeRadius(b);
         const dx=positions[a.id].x-positions[b.id].x;
         const dy=positions[a.id].y-positions[b.id].y;
         const dist=Math.max(Math.sqrt(dx*dx+dy*dy),.1);
-        const minSep=ra+rb+12;
 
-        // Node-node repulsion
-        const f=(minSep*minSep*minSep*12000)/(dist*dist*dist*dist);
-        fx+=(dx/dist)*f; fy+=(dy/dist)*f;
-
-        // Extra repulsion between different matrilines (push clusters apart)
-        if((b.matriline||'?')!==aMat){
-          const xf=2500/(dist*dist);
-          fx+=(dx/dist)*xf;
-        }
-
-        // Matriline attraction (pull same-family X together gently)
-        if((b.matriline||'?')===aMat){
-          const xDist=positions[a.id].x-positions[b.id].x;
-          fx-=xDist*0.004;
+        if(isDamPair(a.id,b.id)){
+          // Very strong spring pulling dam–offspring together
+          const rest=damRestDist(a.id,b.id);
+          const stretch=dist-rest;
+          const k=0.35; // spring constant — high = very tight
+          fx-=(dx/dist)*k*stretch;
+          fy-=(dy/dist)*k*stretch;
+        } else {
+          // General repulsion between non-dam-paired nodes
+          const minSep=ra+rb+20;
+          const f=(minSep*minSep*minSep*10000)/(dist*dist*dist*dist);
+          fx+=(dx/dist)*f;
+          fy+=(dy/dist)*f;
         }
       });
 
-      // Y hierarchy: pull toward target Y band (dam/offspring depth)
-      const targetY=margin+(aDepth/Math.max(maxDepth,1))*yRange;
-      fy+=(targetY-positions[a.id].y)*0.08;
-
-      // X matriline band: pull toward this matriline's column
-      const targetX=matCentreX[aMat]||w/2;
-      fx+=(targetX-positions[a.id].x)*0.025;
+      // Weak centering
+      fx+=(w/2-positions[a.id].x)*0.005;
+      fy+=(h/2-positions[a.id].y)*0.005;
 
       velocities[a.id].x=(velocities[a.id].x+fx*.016)*damp;
       velocities[a.id].y=(velocities[a.id].y+fy*.016)*damp;
@@ -1110,10 +1112,9 @@ function renderSVG(svgId){
   INDS.forEach((ind)=>{
     const p=positions[ind.id]; if(!p) return;
     const r=nodeRadius(ind);
-    const fill=rankColor(ind);
+    const fill=nodeColor(ind);
     const matCol=matrilineColor(ind.matriline);
     const isA1=an1Id===ind.id,isA2=an2Id===ind.id;
-    // Selection rings override matriline stroke
     const sc=isA1?'#4ecdc4':isA2?'#f7b731':matCol;
     const sw=isA1||isA2?3:2.5;
     const label=indLabel(ind);

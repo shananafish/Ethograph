@@ -470,33 +470,63 @@ const RANK_RAMPS={
   '?':      ['#4D4D4D','#737373','#969696','#BDBDBD','#D9D9D9'],
 };
 
-// Pre-compute one color per matriline based on rank + position within matriline
-let MAT_COLORS={};  // matriline → hex color
+// Pre-compute one color per matriline based on rank + position of matriline within rank group
+let MAT_COLORS={};  // individual id → hex color
+let MAT_LINE_COLOR={}; // matriline → hex color
 function buildMatColors(){
-  MAT_COLORS={};
-  // Group INDS by matriline
-  const groups={};
+  MAT_COLORS={}; MAT_LINE_COLOR={};
+
+  // Group matrilines by rank
+  const rankMats={}; // rank → [matriline, ...]
+  const matRankMap={}; // matriline → rank
   INDS.forEach(ind=>{
     const m=ind.matriline||'?';
-    if(!groups[m]) groups[m]=[];
-    groups[m].push(ind);
+    const rank=(ind.matrank||'?').toLowerCase().trim();
+    if(!matRankMap[m]) matRankMap[m]=rank;
+    if(!rankMats[rank]) rankMats[rank]=new Set();
+    rankMats[rank].add(m);
   });
-  Object.entries(groups).forEach(([mat,members])=>{
-    // Rank from first member that has one (matrilines share rank)
-    const rank=(members.find(i=>i.matrank&&i.matrank!=='?')?.matrank||'?').toLowerCase().trim();
+
+  // For each rank group, spread matrilines evenly across the ramp
+  Object.entries(rankMats).forEach(([rank,matSet])=>{
+    const mats=[...matSet].sort();
     const ramp=RANK_RAMPS[rank]||RANK_RAMPS['?'];
-    const n=members.length;
-    members.forEach((ind,idx)=>{
-      const t=n===1?0.5:idx/(n-1);
-      MAT_COLORS[ind.id]=rampColor(ramp,t);
+    const n=mats.length;
+    mats.forEach((mat,idx)=>{
+      const t=n===1?0.4:idx/(n-1)*0.85; // use 0→0.85 so we don't hit the very pale end
+      MAT_LINE_COLOR[mat]=rampColor(ramp,t);
     });
+  });
+
+  // Assign the matriline color to every individual in that matriline
+  INDS.forEach(ind=>{
+    const m=ind.matriline||'?';
+    MAT_COLORS[ind.id]=MAT_LINE_COLOR[m]||'#666';
   });
 }
 
 function nodeColor(ind){ return MAT_COLORS[ind.id]||'#666'; }
 
-// Label priority: name → dye → id
-function indLabel(ind){return ind.name||ind.dye||String(ind.id);}
+// Label: name / dye / last-3-of-id  — all non-blank joined with ·
+function indLabel(ind){
+  const parts=[];
+  if(ind.name) parts.push(ind.name);
+  if(ind.dye)  parts.push(ind.dye);
+  const idStr=String(ind.id||'');
+  const short=idStr.length>3?idStr.slice(-3):idStr;
+  if(short) parts.push(short);
+  return parts.join(' · ');
+}
+// Short label for behavior menus (name / dye / last-3)
+function indMenuLabel(ind){
+  const parts=[];
+  if(ind.name) parts.push(ind.name);
+  if(ind.dye)  parts.push(ind.dye);
+  const idStr=String(ind.id||'');
+  const short=idStr.length>3?idStr.slice(-3):idStr;
+  if(short) parts.push(short);
+  return parts.join(' / ');
+}
 
 // Parse CSV or TSV roster text → array of row objects
 function parseRoster(text, fmt='tsv'){
@@ -1136,9 +1166,16 @@ function renderSVG(svgId){
     } else {
       inner+=`<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${fill}" stroke="${sc}" stroke-width="${sw}" style="cursor:pointer" onclick="tapNode('${ind.id}',event)"/>`;
     }
-    inner+=`<text x="${p.x}" y="${p.y-4}" text-anchor="middle" dominant-baseline="middle" fill="#f0f2fa" font-size="${Math.max(9,r*0.42)}" font-family="'Sora',sans-serif" font-weight="700" style="pointer-events:none;user-select:none">${label}</text>`;
-    if(ind.dye&&ind.name&&indLabel(ind)===ind.name){
-      inner+=`<text x="${p.x}" y="${p.y+r*0.42}" text-anchor="middle" dominant-baseline="middle" fill="rgba(240,242,250,.8)" font-size="${Math.max(8,r*0.36)}" font-family="'Sora',sans-serif" font-weight="600" style="pointer-events:none;user-select:none">${ind.dye}</text>`;
+    // Node label: name (if any) + dye (if any) on line 1, last-3 id smaller below
+    const namePart=[ind.name,ind.dye].filter(Boolean).join(' · ');
+    const idShort=String(ind.id||'').slice(-3);
+    const fontSize=Math.max(9,r*0.40);
+    const fontSize2=Math.max(7,r*0.32);
+    if(namePart){
+      inner+=`<text x="${p.x}" y="${p.y-fontSize2*0.6}" text-anchor="middle" dominant-baseline="middle" fill="#f0f2fa" font-size="${fontSize}" font-family="'Sora',sans-serif" font-weight="700" style="pointer-events:none;user-select:none">${namePart}</text>`;
+      inner+=`<text x="${p.x}" y="${p.y+fontSize*0.7}" text-anchor="middle" dominant-baseline="middle" fill="rgba(240,242,250,.65)" font-size="${fontSize2}" font-family="'Sora',sans-serif" font-weight="600" style="pointer-events:none;user-select:none">${idShort}</text>`;
+    } else {
+      inner+=`<text x="${p.x}" y="${p.y}" text-anchor="middle" dominant-baseline="middle" fill="#f0f2fa" font-size="${fontSize}" font-family="'Sora',sans-serif" font-weight="700" style="pointer-events:none;user-select:none">${idShort}</text>`;
     }
   });
 
@@ -1424,7 +1461,7 @@ function openSheet(solo){
   dur='lt5'; tpAn3=''; tpAn4=''; recNotes='';
   activeTab='aggsub';
   const a1=INDS.find(i=>i.id===sheetAn1),a2=sheetAn2?INDS.find(i=>i.id===sheetAn2):null;
-  document.getElementById('sheet-pair').textContent=a1.name+(a2?' — '+a2.name:' (solo)');
+  document.getElementById('sheet-pair').textContent=indMenuLabel(a1)+(a2?' — '+indMenuLabel(a2):' (solo)');
   document.getElementById('sheet-meta').textContent=solo?'Solo / undirected record':'Select behaviors, then save';
   document.getElementById('swap-btn').style.display=solo?'none':'inline-block';
   buildTabs(); buildContent();
@@ -1442,7 +1479,7 @@ function swapAnimals(){
   ['agg','sub','aff'].forEach(d=>{[sel[d].an1,sel[d].an2]=[sel[d].an2,sel[d].an1];});
   [selAffect.an1,selAffect.an2]=[selAffect.an2,selAffect.an1];
   const a1=INDS.find(i=>i.id===sheetAn1),a2=INDS.find(i=>i.id===sheetAn2);
-  document.getElementById('sheet-pair').textContent=a1.name+' — '+a2.name;
+  document.getElementById('sheet-pair').textContent=indMenuLabel(a1)+' — '+indMenuLabel(a2);
   buildContent();
 }
 
@@ -1470,23 +1507,23 @@ function buildContent(){
   const scr=document.getElementById('sheet-scroll');
   const a1=INDS.find(i=>i.id===sheetAn1);
   const a2=sheetAn2?INDS.find(i=>i.id===sheetAn2):null;
+  const n1=a1?indMenuLabel(a1):'An1';
+  const n2=a2?indMenuLabel(a2):'An2';
   let h='';
 
   if(activeTab==='aggsub'){
     if(sheetSolo){
-      h+=`<div class="sec-lbl">Aggression — solo/undirected (${a1.name})</div><div class="beh-grid-3">`;
+      h+=`<div class="sec-lbl">Aggression — solo/undirected (${n1})</div><div class="beh-grid-3">`;
       BEHAVIORS.agg.filter(b=>b.solo).forEach(b=>{
         const on=sel.agg.an1.has(b.id);
         h+=`<button class="beh-btn ${on?'on-agg':''}" onclick="tog('agg','an1','${b.id}')">${b.label}</button>`;
       });
       h+=`</div>`;
-      // Agg qualifiers for solo
       h+=qualBlock('agg','an1','on-qua');
     } else {
-      // ── 4-column: An1-Agg | An1-Sub | An2-Agg | An2-Sub ──
       h+=`<div class="as-grid">`;
-      h+=`<div class="as-animal-hdr a1" style="grid-column:1/3">${a1.name}</div>`;
-      h+=`<div class="as-animal-hdr a2" style="grid-column:3/5">${a2.name}</div>`;
+      h+=`<div class="as-animal-hdr a1" style="grid-column:1/3">${n1}</div>`;
+      h+=`<div class="as-animal-hdr a2" style="grid-column:3/5">${n2}</div>`;
       h+=`<div class="as-domain-hdr agg">Aggression</div>`;
       h+=`<div class="as-domain-hdr sub">Submission</div>`;
       h+=`<div class="as-domain-hdr agg">Aggression</div>`;
@@ -1504,12 +1541,9 @@ function buildContent(){
         else h+=`<div></div>`;
       }
       h+=`</div>`;
-
-      // ── Qualifiers: 4-column matching behavior grid ──
-      // An1-AggQual | An1-SubQual | An2-AggQual | An2-SubQual
       h+=`<div class="as-grid" style="margin-top:10px;">`;
-      h+=`<div class="as-animal-hdr a1" style="grid-column:1/3">Qualifiers — ${a1.name}</div>`;
-      h+=`<div class="as-animal-hdr a2" style="grid-column:3/5">Qualifiers — ${a2.name}</div>`;
+      h+=`<div class="as-animal-hdr a1" style="grid-column:1/3">Qualifiers — ${n1}</div>`;
+      h+=`<div class="as-animal-hdr a2" style="grid-column:3/5">Qualifiers — ${n2}</div>`;
       h+=`<div class="as-domain-hdr agg">Aggression</div>`;
       h+=`<div class="as-domain-hdr sub">Submission</div>`;
       h+=`<div class="as-domain-hdr agg">Aggression</div>`;
@@ -1542,7 +1576,7 @@ function buildContent(){
 
   } else if(activeTab==='aff'){
     if(a2){
-      h+=`<div class="col-hdrs"><div class="col-hdr a1">${a1.name}</div><div class="col-hdr a2">${a2.name}</div></div>`;
+      h+=`<div class="col-hdrs"><div class="col-hdr a1">${n1}</div><div class="col-hdr a2">${n2}</div></div>`;
       h+=`<div class="beh-grid-2">`;
       BEHAVIORS.aff.forEach(b=>{
         const o1=sel.aff.an1.has(b.id),o2=sel.aff.an2.has(b.id);
@@ -1551,7 +1585,7 @@ function buildContent(){
       });
       h+=`</div>`;
       // Affiliation qualifiers — 4-column matching behavior grid
-      h+=`<div class="col-hdrs" style="margin-top:8px;"><div class="col-hdr a1">Qualifiers — ${a1.name}</div><div class="col-hdr a2">Qualifiers — ${a2.name}</div></div>`;
+      h+=`<div class="col-hdrs" style="margin-top:8px;"><div class="col-hdr a1">Qualifiers — ${n1}</div><div class="col-hdr a2">Qualifiers — ${n2}</div></div>`;
       h+=`<div class="beh-grid-2">`;
       QUALIFIERS.aff.forEach(q=>{
         const on=selQua.aff.has(q.id);
@@ -1591,7 +1625,7 @@ function buildContent(){
   } else if(activeTab==='affect'){
     [['an1',a1],['an2',a2]].forEach(([side,ind])=>{
       if(!ind) return;
-      h+=`<div class="sec-lbl">Affect — ${ind.name}</div><div class="beh-grid-3">`;
+      h+=`<div class="sec-lbl">Affect — ${indMenuLabel(ind)}</div><div class="beh-grid-3">`;
       AFFECT.forEach(af=>{
         const on=selAffect[side].has(af);
         h+=`<button class="beh-btn ${on?'on-affect':''}" onclick="togAffect('${side}','${af}')">${af}</button>`;

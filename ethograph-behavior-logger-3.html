@@ -1,0 +1,2222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ETHOGRAPH</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Sora:wght@300;600;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0c0f18;--surface:#161b28;--hi:#1e2638;
+  --border:#2e3a52;--accent:#5ef0e8;--accent-dim:#1a4a47;
+  --warn:#fbbf24;--danger:#f05252;--text:#f0f2fa;--dim:#96a3bc;
+  --agg:#f87171;--sub:#fb923c;--aff:#34d399;--tp:#c084fc;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;overflow:hidden;font-size:14px;}
+#app{height:100vh;display:flex;flex-direction:column;}
+.view{display:none;flex-direction:column;height:100%;}.view.active{display:flex;}
+
+/* ── Header ── */
+.hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--surface);flex-shrink:0;}
+.hdr-title{font-family:'Sora',sans-serif;font-weight:800;font-size:21px;color:var(--accent);letter-spacing:-.5px;}
+.hdr-sub{font-size:11px;color:var(--dim);margin-top:2px;}
+
+/* ── Buttons ── */
+.btn{border-radius:7px;padding:8px 14px;font-size:12px;font-family:'JetBrains Mono',monospace;font-weight:600;cursor:pointer;border:1px solid transparent;transition:opacity .1s;}.btn:active{opacity:.7;}
+.btn-acc{background:var(--hi);color:var(--accent);border-color:rgba(94,240,232,.35);}
+.btn-warn{background:var(--hi);color:var(--warn);border-color:rgba(251,191,36,.35);}
+.btn-dim{background:var(--hi);color:var(--dim);border-color:rgba(150,163,188,.3);}
+.btn-dng{background:var(--danger);color:#fff;}
+.btn-solo{background:#1a1a2e;color:var(--warn);border:1px solid rgba(251,191,36,.45);border-radius:7px;padding:6px 13px;font-size:12px;font-family:'JetBrains Mono',monospace;font-weight:600;cursor:pointer;}
+.btn-big{width:100%;padding:17px;background:var(--accent);color:var(--bg);border-radius:10px;border:none;font-family:'Sora',sans-serif;font-weight:800;font-size:16px;cursor:pointer;letter-spacing:1px;}.btn-big:active{opacity:.85;}
+
+/* ── Stats ── */
+.stats-row{display:flex;gap:8px;padding:12px 14px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.stat-card{flex:1;background:var(--surface);border-radius:8px;padding:10px 11px;border:1px solid var(--border);}
+.stat-val{font-size:20px;font-weight:700;color:var(--accent);}
+.stat-lbl{font-size:10px;color:var(--dim);margin-top:2px;text-transform:uppercase;}
+
+/* ── Home list ── */
+.ev-list{padding:0 14px 20px;overflow-y:auto;flex:1;}
+.ev-item{background:var(--surface);border-radius:8px;padding:12px 14px;margin-bottom:8px;border:1px solid var(--border);}
+.ev-name{font-size:13px;font-weight:600;}
+.ev-meta{font-size:11px;color:var(--dim);margin-top:2px;}
+.ev-cnt{font-size:12px;color:var(--accent);margin-top:3px;}
+
+/* ── Session setup ── */
+.field-lbl{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;}
+.field-in{width:100%;background:var(--hi);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--text);outline:none;}.field-in:focus{border-color:var(--accent);}
+.field-sel{width:100%;background:var(--hi);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--text);outline:none;cursor:pointer;}.field-sel:focus{border-color:var(--accent);}
+.notes-in{width:100%;background:var(--hi);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--text);outline:none;resize:vertical;min-height:54px;}.notes-in:focus{border-color:var(--accent);}
+
+/* ── Canvas ── */
+#net-c,#evt-c{flex:1;position:relative;overflow:hidden;}
+#net-svg,#evt-svg{position:absolute;inset:0;width:100%;height:100%;}
+
+/* ── Event header ── */
+.evt-hdr{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--surface);flex-shrink:0;}
+.evt-name{font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:var(--accent);}
+.evt-sub{font-size:11px;color:var(--dim);}
+
+/* ── Hint bar ── */
+.hint{padding:6px 14px;font-size:12px;text-align:center;flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:10px;}
+.hint-a1{background:#0d1820;color:var(--dim);}
+.hint-a2{background:#081808;color:#4ade80;}
+
+/* ── Record panel ── */
+.rec-panel{flex-shrink:0;background:var(--surface);border-top:1px solid var(--border);display:flex;flex-direction:column;max-height:260px;}
+.rec-panel-hdr{display:flex;justify-content:space-between;align-items:center;padding:5px 13px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.rec-panel-title{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;}
+.rec-list{overflow-y:auto;flex:1;}
+
+/* record rows */
+.rec-row{display:flex;align-items:flex-start;gap:6px;padding:7px 11px;border-bottom:1px solid var(--border);user-select:none;cursor:pointer;transition:background .1s;}
+.rec-row:hover{background:rgba(255,255,255,.04);}
+.rec-row.dragging{opacity:.35;}
+.rec-row.drag-over-merge{background:rgba(192,132,252,.12);border:1.5px dashed var(--tp);}
+.rec-row.drag-over-before{border-top:2px solid var(--accent);}
+
+/* simultaneous group bracket */
+.simul-bracket{width:3px;background:var(--tp);border-radius:2px;flex-shrink:0;align-self:stretch;margin:2px 0;}
+
+.drag-handle{color:var(--dim);font-size:18px;cursor:grab;padding:0 2px;flex-shrink:0;touch-action:none;line-height:1;margin-top:1px;}
+.rec-body{flex:1;min-width:0;}
+.rec-num{font-size:10px;color:var(--dim);margin-bottom:2px;}
+.rec-pair{font-size:13px;font-weight:700;}
+.rec-behs{font-size:11px;color:var(--dim);margin-top:2px;line-height:1.55;}
+.rec-tags{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;}
+.rec-tag{font-size:10px;padding:2px 6px;border-radius:3px;font-weight:600;}
+.rec-del{background:none;border:none;color:var(--dim);font-size:16px;cursor:pointer;padding:1px 3px;line-height:1;flex-shrink:0;margin-top:1px;}
+.rec-del:hover{color:var(--danger);}
+.group-with-btn{background:rgba(192,132,252,.14);border:1px solid rgba(192,132,252,.45);border-radius:5px;color:var(--tp);font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:700;padding:4px 8px;cursor:pointer;white-space:nowrap;}
+.group-with-btn:active{opacity:.7;}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:3px;vertical-align:middle;}
+
+/* ── Record sheet ── */
+.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);display:flex;align-items:flex-end;z-index:100;}
+.sheet{width:100%;background:var(--surface);border-radius:16px 16px 0 0;max-height:90vh;display:flex;flex-direction:column;}
+.sheet-hdr{padding:14px 16px 0;flex-shrink:0;}
+.sheet-pair{font-family:'Sora',sans-serif;font-weight:700;font-size:17px;}
+.sheet-meta{font-size:11px;color:var(--dim);margin-top:3px;display:flex;align-items:center;gap:8px;}
+.sheet-swap{background:none;border:1px solid var(--border);border-radius:6px;color:var(--dim);font-size:12px;padding:3px 9px;cursor:pointer;}
+
+/* tabs */
+.tabs{display:flex;padding:10px 16px 0;flex-shrink:0;border-bottom:1px solid var(--border);overflow-x:auto;}
+.tab{flex-shrink:0;padding:8px 12px;font-size:11px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:#b0bcd4;white-space:nowrap;}
+.tab.aggsub.active{color:#fb923c;border-bottom-color:#fb923c;}
+.tab.aff.active{color:var(--aff);border-bottom-color:var(--aff);}
+.tab.tp.active{color:var(--tp);border-bottom-color:var(--tp);}
+.tab.qua.active{color:#fbbf24;border-bottom-color:#fbbf24;}
+.tab.affect.active{color:#60a5fa;border-bottom-color:#60a5fa;}
+.tab.meta.active{color:var(--dim);border-bottom-color:var(--dim);}
+
+.sheet-scroll{overflow-y:auto;flex:1;padding:11px 15px;}
+
+/* ── Agg+Sub 4-column grid ── */
+.as-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;}
+.as-animal-hdr{grid-column:span 2;text-align:center;font-size:12px;font-weight:700;padding:6px 4px;border-radius:6px;margin-bottom:2px;}
+.as-animal-hdr.a1{background:rgba(94,240,232,.12);color:var(--accent);}
+.as-animal-hdr.a2{background:rgba(251,191,36,.12);color:var(--warn);}
+.as-domain-hdr{text-align:center;font-size:10px;font-weight:600;padding:3px 2px;color:#b0bcd4;text-transform:uppercase;letter-spacing:.4px;}
+.as-domain-hdr.agg{color:var(--agg);}
+.as-domain-hdr.sub{color:var(--sub);}
+
+/* aff 2-column */
+.col-hdrs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:7px;}
+.col-hdr{text-align:center;font-size:12px;font-weight:700;padding:5px;border-radius:5px;}
+.col-hdr.a1{background:rgba(94,240,232,.1);color:var(--accent);}
+.col-hdr.a2{background:rgba(251,191,36,.1);color:var(--warn);}
+
+/* behavior buttons */
+.beh-btn{background:var(--hi);border:1.5px solid var(--border);border-radius:7px;padding:8px 4px;cursor:pointer;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600;color:#c8d0e0;text-align:center;line-height:1.3;transition:all .08s;width:100%;}.beh-btn:active{opacity:.65;}
+.beh-btn.on-agg{background:rgba(248,113,113,.2);border-color:var(--agg);color:var(--agg);}
+.beh-btn.on-sub{background:rgba(251,146,60,.2);border-color:var(--sub);color:var(--sub);}
+.beh-btn.on-aff{background:rgba(52,211,153,.2);border-color:var(--aff);color:var(--aff);}
+.beh-btn.on-tp{background:rgba(192,132,252,.2);border-color:var(--tp);color:var(--tp);}
+.beh-btn.on-qua{background:rgba(251,191,36,.2);border-color:#fbbf24;color:#fbbf24;}
+.beh-btn.on-affect{background:rgba(96,165,250,.2);border-color:#60a5fa;color:#60a5fa;}
+
+/* grid helpers */
+.beh-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px;}
+.beh-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:10px;}
+
+.sec-lbl{font-size:11px;color:#b0bcd4;text-transform:uppercase;letter-spacing:.5px;margin:10px 0 5px;}
+.dur-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
+.dur-btn{background:var(--hi);border:1.5px solid var(--border);border-radius:6px;padding:7px 11px;font-size:12px;font-family:'JetBrains Mono',monospace;font-weight:600;color:#c8d0e0;cursor:pointer;}
+.dur-btn.on{background:rgba(94,240,232,.15);border-color:var(--accent);color:var(--accent);}
+.tp-in{width:100%;background:var(--hi);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--text);outline:none;margin-bottom:9px;}.tp-in:focus{border-color:var(--accent);}
+
+.sheet-foot{padding:11px 14px 26px;display:flex;gap:8px;flex-shrink:0;border-top:1px solid var(--border);}
+.commit-btn{flex:1;padding:14px;background:var(--accent);color:var(--bg);border:none;border-radius:10px;font-family:'Sora',sans-serif;font-weight:800;font-size:15px;cursor:pointer;}.commit-btn:active{opacity:.85;}
+.cancel-btn{padding:14px 16px;background:var(--hi);color:var(--dim);border:1px solid var(--border);border-radius:10px;font-family:'JetBrains Mono',monospace;font-weight:600;font-size:12px;cursor:pointer;}
+
+/* ── Diamond tooltip ── */
+.d-tip{position:fixed;background:var(--surface);border:1px solid var(--accent);border-radius:10px;padding:12px 15px;z-index:200;max-width:300px;box-shadow:0 4px 24px rgba(0,0,0,.6);}
+.d-tip-pair{font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:var(--accent);}
+.d-tip-close{float:right;background:none;border:none;color:var(--dim);font-size:17px;cursor:pointer;margin-left:8px;line-height:1;}
+
+/* ── node picker popover ── */
+.picker{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px;z-index:200;min-width:200px;box-shadow:0 4px 24px rgba(0,0,0,.6);}
+.picker-title{font-size:10px;color:var(--dim);text-transform:uppercase;margin-bottom:8px;}
+.picker-item{padding:8px 11px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;}
+.picker-item:hover{background:var(--hi);}
+
+.flash{position:fixed;inset:0;pointer-events:none;z-index:400;opacity:0;transition:opacity .7s;display:flex;align-items:center;justify-content:center;}
+.flash.show{opacity:1;transition:none;}
+.flash-badge{padding:10px 24px;border-radius:100px;font-family:'Sora',sans-serif;font-weight:700;font-size:15px;color:var(--bg);background:var(--accent);}
+
+.home-pad{padding:18px 14px 0;}
+.sec-title{font-size:11px;color:var(--dim);margin-bottom:8px;padding:0 14px;text-transform:uppercase;}
+.filter-chip{background:var(--hi);border:1.5px solid var(--border);border-radius:20px;padding:6px 14px;font-size:12px;font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--dim);cursor:pointer;transition:all .1s;}
+.filter-chip.active{background:rgba(94,240,232,.15);border-color:var(--accent);color:var(--accent);}
+.filter-chip:active{opacity:.7;}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ════ HOME ════ -->
+<div id="view-home" class="view active">
+  <div class="hdr">
+    <div><div class="hdr-title">ETHOGRAPH</div><div class="hdr-sub">Social Network Behavioral Recorder</div></div>
+    <div style="display:flex;gap:7px;">
+      <button class="btn btn-dim" onclick="showView('roster')">Roster</button>
+      <button class="btn btn-acc" onclick="showView('network')" id="network-btn" style="display:none">Network</button>
+      <button class="btn btn-warn" id="export-btn" onclick="exportData()" style="display:none">Export CSV</button>
+    </div>
+  </div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val" id="s-ind">—</div><div class="stat-lbl">Individuals</div></div>
+    <div class="stat-card"><div class="stat-val" id="s-sess">0</div><div class="stat-lbl">Sessions</div></div>
+    <div class="stat-card"><div class="stat-val" id="s-ev">0</div><div class="stat-lbl">Events</div></div>
+    <div class="stat-card"><div class="stat-val" id="s-rec">0</div><div class="stat-lbl">Records</div></div>
+  </div>
+  <div id="home-no-roster" style="padding:24px 14px;color:var(--dim);font-size:13px;">
+    <div id="home-fetch-status" style="margin-bottom:12px;"></div>
+    Loading roster from Google Sheets… tap <b style="color:var(--accent)">Roster</b> if it doesn't appear.
+  </div>
+  <div id="home-roster-ready" style="display:none;">
+    <div style="padding:14px 14px 0;">
+      <div class="field-lbl" style="margin-bottom:5px;">Active group: <span id="home-group-label" style="color:var(--accent);font-weight:700;"></span></div>
+      <div style="display:flex;gap:7px;margin-bottom:12px;">
+        <button class="btn btn-dim" style="flex:1;" onclick="showView('filter')">Change Group / Filter</button>
+        <button class="btn btn-dim" onclick="fetchRosterFromSheet()" title="Refresh from Google Sheets">↻ Refresh</button>
+      </div>
+      <button class="btn-big" onclick="showView('setup')">+ NEW SESSION</button>
+    </div>
+    <div style="padding:14px 0 0;">
+      <div class="sec-title" id="ev-lbl" style="display:none">Recorded Sessions</div>
+      <div class="ev-list" id="ev-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ ROSTER UPLOAD ════ -->
+<div id="view-roster" class="view">
+  <div class="hdr" style="padding:11px 14px;">
+    <button class="btn btn-dim" onclick="showView('home')">← Back</button>
+    <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:var(--accent);">Roster</div>
+    <div></div>
+  </div>
+  <div style="overflow-y:auto;flex:1;padding:14px;">
+    <!-- Google Sheets source -->
+    <div class="field-lbl" style="margin-bottom:6px;">Google Sheets source</div>
+    <div style="background:var(--hi);border:1px solid var(--border);border-radius:6px;padding:9px 11px;font-size:10px;color:var(--dim);word-break:break-all;margin-bottom:10px;">
+      docs.google.com/spreadsheets/d/1-Zw3zA7_QJmv_OzWRB0xD5DzcHGQJobpcwRwoq8tCdc
+    </div>
+    <button class="btn-big" onclick="fetchRosterFromSheet()" id="fetch-btn">↓ Fetch from Google Sheets</button>
+    <div id="roster-status" style="font-size:12px;color:var(--dim);margin:10px 0;min-height:18px;"></div>
+
+    <!-- Paste fallback -->
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+      <div class="field-lbl" style="margin-bottom:6px;">Or paste TSV manually</div>
+      <textarea class="notes-in" id="roster-paste" style="min-height:120px;font-size:10px;" placeholder="Paste tab-separated data (with header row)…"></textarea>
+      <button class="btn btn-acc" style="width:100%;margin-top:8px;padding:12px;" onclick="loadRoster()">Load Pasted Data</button>
+    </div>
+
+    <div id="roster-summary" style="display:none;margin-top:18px;">
+      <div class="sec-lbl">Loaded roster</div>
+      <div id="roster-summary-text" style="font-size:12px;color:var(--dim);margin-top:4px;line-height:1.8;"></div>
+      <button class="btn-big" style="margin-top:12px;background:var(--hi);color:var(--accent);border:1px solid rgba(94,240,232,.3);" onclick="showView('filter')">Select Group & Filter →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ GROUP / DEMOG FILTER ════ -->
+<div id="view-filter" class="view">
+  <div class="hdr" style="padding:11px 14px;">
+    <button class="btn btn-dim" onclick="showView('home')">← Back</button>
+    <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:var(--accent);">Select Group</div>
+    <div></div>
+  </div>
+  <div style="overflow-y:auto;flex:1;padding:14px;">
+    <div class="field-lbl" style="margin-bottom:8px;">Current Group <span style="color:var(--dim)">(select one)</span></div>
+    <div id="filter-groups" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px;"></div>
+    <div class="field-lbl" style="margin-bottom:8px;">Demog Categories <span style="color:var(--dim)">(select one or more — all selected = include all)</span></div>
+    <div id="filter-demogs" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px;"></div>
+    <div id="filter-preview" style="font-size:12px;color:var(--dim);margin-bottom:14px;min-height:18px;"></div>
+    <button class="btn-big" onclick="applyFilter()">Apply Filter →</button>
+  </div>
+</div>
+
+<!-- ════ SESSION SETUP ════ -->
+<div id="view-setup" class="view">
+  <div class="hdr" style="padding:11px 14px;">
+    <button class="btn btn-dim" onclick="showView('home')">← Back</button>
+    <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:var(--accent);">Session Setup</div>
+    <div></div>
+  </div>
+  <div style="overflow-y:auto;flex:1;padding:14px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:7px;">
+      <div><div class="field-lbl">Observer</div><input class="field-in" id="sess-observer" placeholder="Initials"></div>
+      <div><div class="field-lbl">Group ID</div><input class="field-in" id="sess-group" placeholder="e.g. Group A"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:7px;">
+      <div><div class="field-lbl">Enclosure</div><input class="field-in" id="sess-enclosure" placeholder="e.g. Enclosure 3"></div>
+      <div><div class="field-lbl">Data Type</div>
+        <select class="field-sel" id="sess-datatype">
+          <option value="opportunistic">General / Opportunistic</option>
+          <option value="systematic">Systematic</option>
+          <option value="scan">Affiliation Scan</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:7px;">
+      <div><div class="field-lbl">Conditions</div>
+        <select class="field-sel" id="sess-conditions">
+          <option value="unprovisioned">Unprovisioned</option>
+          <option value="provisioned">Provisioned</option>
+          <option value="release">Release</option>
+          <option value="group_release">Group Release</option>
+          <option value="male_intro">Male Introduction</option>
+          <option value="monitoring">Monitoring / Unrest</option>
+        </select>
+      </div>
+      <div><div class="field-lbl">Scan # (if scan)</div><input class="field-in" id="sess-scan" type="number" placeholder="1"></div>
+    </div>
+    <div style="margin-bottom:14px;"><div class="field-lbl">Session Notes</div><textarea class="notes-in" id="sess-notes" placeholder="Notes…"></textarea></div>
+    <button class="btn-big" onclick="startSession()">Start Session</button>
+  </div>
+</div>
+
+<!-- ════ NETWORK VIEW ════ -->
+<div id="view-network" class="view">
+  <div class="hdr" style="padding:11px 14px;">
+    <button class="btn btn-dim" onclick="showView('home')">← Back</button>
+    <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:var(--accent);">Baseline Network</div>
+    <div style="font-size:10px;color:var(--dim);">9 individuals</div>
+  </div>
+  <div id="net-c"><svg id="net-svg"></svg></div>
+</div>
+
+<!-- ════ EVENT VIEW ════ -->
+<div id="view-event" class="view">
+  <div class="evt-hdr">
+    <div>
+      <div class="evt-name" id="evt-name">Event 1</div>
+      <div class="evt-sub" id="evt-sub">0 records</div>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+      <div id="an1-badge" style="display:none;font-size:11px;color:var(--accent);padding:3px 8px;background:rgba(94,240,232,.1);border-radius:6px;border:1px solid rgba(94,240,232,.3);"></div>
+      <button class="btn btn-dim"  onclick="showSessionInfo()">Session</button>
+      <button class="btn btn-acc"  id="evt-new-btn"  onclick="newRecordBtn()">+ Record</button>
+      <button class="btn btn-warn" id="evt-end-btn"  onclick="endEvent()"   style="display:none">End Event</button>
+      <button class="btn btn-dng"  id="evt-sess-btn" onclick="endSession()" style="display:none">End Session</button>
+      <button class="btn btn-dim"  id="evt-done-btn" onclick="exitReview()" style="display:none">← Done</button>
+    </div>
+  </div>
+  <!-- Nav bar -->
+  <div id="evt-nav-row" style="display:none;gap:6px;align-items:center;padding:6px 14px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
+    <button class="btn btn-dim" id="evt-prev-btn" onclick="navEvent(-1)" style="flex:1">← Prev</button>
+    <div id="evt-nav-label" style="font-size:11px;color:var(--dim);white-space:nowrap;text-align:center;flex-shrink:0;min-width:50px;"></div>
+    <button class="btn btn-dim" id="evt-next-btn" onclick="navEvent(1)"  style="flex:1;text-align:right">Next →</button>
+  </div>
+  <!-- Hint bar — selection state indicator -->
+  <div class="hint hint-a1" id="hint-bar">
+    <span id="hint-text">Tap a node to select <span style="color:var(--accent)">An1</span></span>
+    <button class="btn-solo" id="solo-btn" style="display:none" onclick="openSheet(true)">Solo Record</button>
+  </div>
+  <div id="evt-c"><svg id="evt-svg"></svg></div>
+  <div class="rec-panel" id="rec-panel" style="display:none;">
+    <div class="rec-panel-hdr">
+      <span class="rec-panel-title">Records — drag ⠿ to reorder</span>
+      <span style="font-size:9px;color:var(--dim);">tap row to edit</span>
+    </div>
+    <div class="rec-list" id="rec-list"></div>
+  </div>
+</div>
+
+<!-- ════ SESSION INFO PANEL ════ -->
+<div class="sheet-overlay" id="sess-info-overlay" style="display:none;">
+  <div class="sheet" style="max-height:92vh;">
+    <div class="sheet-hdr" style="padding-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="sheet-pair" id="sess-info-title">Session 1</div>
+        <button class="sheet-swap" onclick="closeSessionInfo()">✕ Close</button>
+      </div>
+      <div class="sheet-meta" id="sess-info-meta"></div>
+    </div>
+    <div style="overflow-y:auto;flex:1;padding:0 14px 24px;" id="sess-info-body"></div>
+  </div>
+</div>
+
+<!-- ════ RECORD SHEET ════ -->
+<div class="sheet-overlay" id="sheet-overlay" style="display:none;">
+  <div class="sheet">
+    <div class="sheet-hdr">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <div class="sheet-pair" id="sheet-pair">An1 — An2</div>
+        <button class="sheet-swap" id="swap-btn" onclick="swapAnimals()" style="display:none">⇄ Swap</button>
+      </div>
+      <div class="sheet-meta" id="sheet-meta">Select behaviors, then save</div>
+    </div>
+    <div class="tabs" id="tabs"></div>
+    <div class="sheet-scroll" id="sheet-scroll"></div>
+    <div class="sheet-foot">
+      <button class="cancel-btn" onclick="closeSheet()">Cancel</button>
+      <button class="commit-btn" onclick="commitRecord()">Save Record</button>
+    </div>
+  </div>
+</div>
+
+<!-- Diamond tooltip -->
+<div class="d-tip" id="d-tip" style="display:none;">
+  <button class="d-tip-close" onclick="closeTip()">✕</button>
+  <div class="d-tip-pair" id="d-tip-pair"></div>
+  <div id="d-tip-body" style="font-size:10px;color:var(--dim);margin-top:6px;line-height:1.6;"></div>
+  <button style="margin-top:8px;width:100%;padding:6px;background:var(--hi);border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:600;cursor:pointer;" id="d-tip-edit-btn">Edit this record</button>
+</div>
+
+<!-- Node picker -->
+<div class="picker" id="node-picker" style="display:none;">
+  <div class="picker-title">Records involving this node</div>
+  <div id="picker-items"></div>
+</div>
+
+<!-- Flash -->
+<div class="flash" id="flash"><div class="flash-badge">Saved ✓</div></div>
+
+</div>
+<script>
+// ═══════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════
+// ═══════════════════════════════════════════
+//  ROSTER  (replaces hardcoded INDS)
+// ═══════════════════════════════════════════
+// Full uploaded roster — array of row objects
+let ROSTER=[];
+// Currently active individual list for recording
+let INDS=[];
+// Dam edges within current INDS
+let DAM_EDGES=[];
+// Matriline → color map
+let MATRILINE_COLORS={};
+
+// demog_cat display tiers (smallest → largest)
+const DEMOG_TIERS={
+  'infant with dam':1,'weanling':1,
+  'juvenile m/f':2,'juvenile':2,
+  'subadult m':3,'subadult f':3,'subadult':3,
+  'adult f':4,'adult m':4,'adult':4,
+};
+function nodeRadius(ind){
+  const tier=DEMOG_TIERS[ind.demog_cat]||4;
+  return [0,18,22,27,32][tier];
+}
+
+// Distinct palette for matrilines (up to 20)
+const MATRILINE_PALETTE=[
+  '#3d7ab5','#e85d75','#4a9e82','#e09140','#9e6db5',
+  '#3da87a','#b55a3d','#5a8ab5','#b53d7a','#6b9e3d',
+  '#7b5ea7','#c49a2a','#3d8fb5','#b53d52','#4a7a6b',
+  '#c47a3d','#5e6ab5','#7ab53d','#8b3db5','#3db5b0',
+];
+function matrilineColor(mat){
+  if(!mat||mat==='N/A') return '#666';
+  if(!MATRILINE_COLORS[mat]){
+    const keys=Object.keys(MATRILINE_COLORS);
+    MATRILINE_COLORS[mat]=MATRILINE_PALETTE[keys.length%MATRILINE_PALETTE.length];
+  }
+  return MATRILINE_COLORS[mat];
+}
+
+// Label priority: name → dye → id
+function indLabel(ind){return ind.name||ind.dye||String(ind.id);}
+
+// Parse CSV or TSV roster text → array of row objects
+function parseRoster(text, fmt='tsv'){
+  // Split CSV fields respecting quoted commas
+  function splitCSV(line){
+    const out=[]; let cur='', inQ=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='"'){inQ=!inQ;}
+      else if(c===','&&!inQ){out.push(cur.trim());cur='';}
+      else cur+=c;
+    }
+    out.push(cur.trim());
+    return out;
+  }
+  const lines=text.trim().split('\n');
+  const splitLine=fmt==='csv'?splitCSV:(l=>l.split('\t').map(s=>s.trim()));
+  const headers=splitLine(lines[0]).map(h=>h.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,''));
+  return lines.slice(1).filter(l=>l.trim()).map(line=>{
+    const row=splitLine(line);
+    const obj={};
+    headers.forEach((h,i)=>obj[h]=(row[i]||'').trim());
+    obj.sex=(obj.sex||'').toLowerCase();
+    obj.name=obj.name||'';
+    obj.dye=obj.dye||'';
+    obj.dam=obj.dam||'';
+    obj.matriline=obj.matriline||'';
+    obj.demog_cat=(obj.demog_cat||'').toLowerCase();
+    obj.current_group=obj.current_group||'';
+    obj.dam_in_group=(obj.dam_in_group||'').toLowerCase()==='true';
+    return obj;
+  }).filter(r=>r.id||r.current_group);
+}
+
+// Build INDS and DAM_EDGES from selected group + demog_cats
+function buildInds(group, demogCats){
+  MATRILINE_COLORS={};
+  const filtered=ROSTER.filter(r=>
+    r.current_group===group &&
+    (demogCats.length===0 || demogCats.includes(r.demog_cat))
+  );
+  const idSet=new Set(filtered.map(r=>r.id));
+  INDS=filtered.map(r=>({
+    id:r.id,
+    name:r.name,
+    dye:r.dye,
+    sex:r.sex,
+    matriline:r.matriline,
+    demog_cat:r.demog_cat,
+    dam:r.dam,
+    matrank:r.matrank||'',
+  }));
+  // Pre-warm matriline colors in consistent order
+  const mats=[...new Set(INDS.map(i=>i.matriline))].sort();
+  mats.forEach(m=>matrilineColor(m));
+  // Dam edges: dam must also be in selection
+  DAM_EDGES=INDS.filter(ind=>ind.dam&&idSet.has(ind.dam))
+    .map(ind=>({source:ind.dam, target:ind.id}));
+}
+
+const NODE_R=32; // base — overridden per-node by nodeRadius()
+
+const BEHAVIORS={
+  agg:[
+    {id:"neutral_approach",label:"Neutral Approach",solo:false},
+    {id:"assert",          label:"Assert",           solo:false},
+    {id:"threat",          label:"Threat",           solo:false},
+    {id:"noncontact_agg",  label:"Non-contact Agg",  solo:false},
+    {id:"contact_agg",     label:"Contact Agg",      solo:false},
+    {id:"severe_brief",    label:"Severe Agg–Brief",  solo:false},
+    {id:"severe_prol",     label:"Severe Agg–Prol.",  solo:false},
+    {id:"display",         label:"Display",           solo:true},
+    {id:"patrol",          label:"Patrol",            solo:true},
+    {id:"brow_flash_agg",  label:"Brow Flash",        solo:false},
+    {id:"ear_flap_agg",    label:"Ear Flap",          solo:false},
+    {id:"head_bob_agg",    label:"Head Bob",          solo:false},
+  ],
+  sub:[
+    {id:"no_response",     label:"No Response",       solo:false},
+    {id:"avert",           label:"Avert",             solo:false},
+    {id:"jump",            label:"Jump",              solo:false},
+    {id:"move_away",       label:"Move Away",         solo:false},
+    {id:"flee",            label:"Flee",              solo:false},
+    {id:"intense_fear",    label:"Intense Fear",      solo:false},
+    {id:"protest",         label:"Protest",           solo:false},
+    {id:"affil_sub",       label:"Affiliative Sub",   solo:false},
+    {id:"status_signal",   label:"Status Signal",     solo:false},
+    {id:"tantrum",         label:"Tantrum",           solo:false},
+  ],
+  aff:[
+    {id:"vocal_grunt",     label:"Grunt/Chuff",       solo:false},
+    {id:"vocal_girney",    label:"Girney",            solo:false},
+    {id:"alloparent",      label:"Alloparent",        solo:false},
+    {id:"enlist_tandem",   label:"Enlist Tandem Agg", solo:false},
+    {id:"groom",           label:"Groom",             solo:false},
+    {id:"lipsmack",        label:"Lipsmack",          solo:false},
+    {id:"mount",           label:"Mount",             solo:false},
+    {id:"peaceful_prox",   label:"Peaceful Prox",     solo:false},
+    {id:"play",            label:"Play",              solo:false},
+    {id:"social_contact",  label:"Social Contact",    solo:false},
+    {id:"present",         label:"Present",           solo:false},
+    {id:"reject_ignore",   label:"Reject/Ignore",     solo:false},
+    {id:"tandem_agg",      label:"Tandem Aggression", solo:false},
+    {id:"consort",         label:"Consort",           solo:false},
+    {id:"brow_flash_aff",  label:"Brow Flash",        solo:false},
+    {id:"ear_flap_aff",    label:"Ear Flap",          solo:false},
+    {id:"head_bob_aff",    label:"Head Bob",          solo:false},
+    {id:"hairpulling",     label:"Hairpulling",       solo:false},
+  ],
+  tp:[
+    {id:"seek_shelter",    label:"Seek Shelter With", solo:false},
+    {id:"provide_shelter", label:"Provide Shelter To",solo:false},
+    {id:"redirect_to",     label:"Redirect To",       solo:false},
+    {id:"redirect_from",   label:"Redirect From",     solo:false},
+    {id:"recruit",         label:"Recruit",           solo:false},
+    {id:"enlist",          label:"Enlist",            solo:false},
+    {id:"provide_support", label:"Support/Ally With", solo:false},
+  ],
+};
+
+const QUALIFIERS={
+  agg:[
+    {id:"redirected",       label:"Redirected"},
+    {id:"spontaneous",      label:"Spontaneous"},
+    {id:"interv_general",   label:"Intervention–General"},
+    {id:"interv_political", label:"Intervention–Political"},
+    {id:"interv_defend",    label:"Intervention–Defend"},
+    {id:"interv_reinforce", label:"Intervention–Reinforce"},
+    {id:"interv_reprimand", label:"Intervention–Reprimand"},
+    {id:"interv_disrupt",   label:"Intervention–Disrupt"},
+    {id:"sexual_pursuit",   label:"Sexual Pursuit"},
+    {id:"insistent",        label:"Insistent"},
+    {id:"sheltered",        label:"Sheltered"},
+    {id:"alliance_build",   label:"Alliance Building"},
+    {id:"infant_oriented",  label:"Infant Oriented"},
+  ],
+  sub:[
+    {id:"avoid_interact",   label:"Avoid Interaction"},
+    {id:"avoid_attn",       label:"Avoid Attention"},
+    {id:"reluctant",        label:"Reluctant"},
+    {id:"relaxed_sub",      label:"Relaxed"},
+    {id:"reactive",         label:"Reactive"},
+  ],
+  aff:[
+    {id:"alliance_build_aff",  label:"Alliance Building"},
+    {id:"conflict_related",    label:"Conflict-related"},
+    {id:"borderline_agg",      label:"Borderline Aggressive"},
+    {id:"disinterested",       label:"Disinterested/Aloof"},
+    {id:"sexual_pursuit_aff",  label:"Sexual Pursuit"},
+    {id:"ingratiating",        label:"Ingratiating"},
+    {id:"political_consort",   label:"Political Consort"},
+    {id:"present_groom",       label:"Present Groom"},
+    {id:"reconciliation",      label:"Reconciliation"},
+    {id:"reluctant_aff",       label:"Reluctant"},
+    {id:"hesitant",            label:"Hesitant"},
+    {id:"interv_affiliative",  label:"Intervention–Affiliative"},
+    {id:"infant_oriented_aff", label:"Infant Oriented"},
+  ],
+  ix:[
+    {id:"persistent",       label:"Persistent/Repeated"},
+    {id:"unresolved",       label:"Unresolved"},
+    {id:"injury",           label:"Injury"},
+    {id:"social_unrest",    label:"Social Unrest"},
+    {id:"chaotic",          label:"Chaotic Event"},
+    {id:"obs_intervention", label:"Observer Intervention"},
+    {id:"disrupted",        label:"Disrupted by Misc."},
+    {id:"consort_ctx",      label:"Consort Context"},
+    {id:"post_aversive",    label:"Post-aversive"},
+  ],
+};
+const ALL_QUALS=[...QUALIFIERS.agg,...QUALIFIERS.sub,...QUALIFIERS.aff,...QUALIFIERS.ix];
+
+const AFFECT=[
+  "Aloof","Assertive","Berserk","Cautious","Commanding","Defeated",
+  "Domineering","Excited","Fearful","Frustrated","Impulsive","Insecure",
+  "Intimidating","Intolerant","Overwhelmed","Polite","Relaxed","Savvy",
+  "Shut down","Sociable","Tense","Tolerant","Vigilant to group","Vigilant to outside","Very",
+];
+
+const DURATIONS=[
+  {id:"lt5",   label:"< 5 sec"},
+  {id:"d5_29", label:"5–29 sec"},
+  {id:"d30_59",label:"30–59 sec"},
+  {id:"d60p",  label:"≥ 60 sec"},
+];
+
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+let currentView='home';
+let sessions=[], activeSession=null;
+let events=[], activeEvent=null, records=[];
+let an1Id=null, an2Id=null;
+
+// Review mode — browsing a completed session
+let reviewMode=false;
+let reviewSession=null;   // the session object being reviewed
+let reviewEventIdx=0;     // which event we're viewing
+
+// Session
+let sessObserver='',sessGroup='',sessEnclosure='';
+let sessDatatype='opportunistic',sessConditions='unprovisioned';
+let sessScan='',sessNotes='';
+
+// Sheet
+let sheetSolo=false,sheetAn1=null,sheetAn2=null,activeTab='aggsub';
+let sheetEditIdx=null; // null = new record, number = editing existing
+let sheetLinkedRef=null;
+let sel={},selQua={},selAffect={},dur='lt5',tpAn3='',tpAn4='',recNotes='';
+
+// Layout
+let positions={},velocities={},animFrame=null;
+let recMids={};
+
+// Pan / zoom per canvas (keyed by svgId)
+const view2d={
+  'net-svg':{x:0,y:0,scale:1},
+  'evt-svg':{x:0,y:0,scale:1},
+};
+const MIN_SCALE=0.3, MAX_SCALE=4;
+
+// Roster filter state
+let activeGroup='';
+let activeDemogs=new Set(); // empty = all
+
+// ═══════════════════════════════════════════
+//  ROSTER LOAD & FILTER
+// ═══════════════════════════════════════════
+const SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/1-Zw3zA7_QJmv_OzWRB0xD5DzcHGQJobpcwRwoq8tCdc/export?format=csv&gid=0';
+
+async function fetchRosterFromSheet(){
+  const statusEl=document.getElementById('roster-status');
+  const btn=document.getElementById('fetch-btn');
+  if(statusEl) statusEl.textContent='Fetching…';
+  if(btn) btn.disabled=true;
+  try{
+    const resp=await fetch(SHEET_CSV_URL);
+    if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const text=await resp.text();
+    applyRosterText(text, 'csv');
+  } catch(e){
+    const msg=`❌ Could not fetch: ${e.message}. Try pasting manually below.`;
+    if(statusEl) statusEl.textContent=msg;
+    const homeStatus=document.getElementById('home-fetch-status');
+    if(homeStatus) homeStatus.textContent=msg;
+  }
+  if(btn) btn.disabled=false;
+}
+
+function loadRoster(){
+  const text=document.getElementById('roster-paste').value.trim();
+  if(!text){
+    document.getElementById('roster-status').textContent='❌ Nothing to load — paste data first';
+    return;
+  }
+  // Auto-detect CSV vs TSV
+  const fmt=text.includes('\t')?'tsv':'csv';
+  applyRosterText(text, fmt);
+}
+
+function applyRosterText(text, fmt){
+  const rows=parseRoster(text, fmt);
+  const statusEl=document.getElementById('roster-status');
+  if(!rows.length){
+    if(statusEl) statusEl.textContent='❌ Could not parse — check format';
+    return;
+  }
+  ROSTER=rows; MATRILINE_COLORS={};
+  const groups=[...new Set(rows.map(r=>r.current_group))].filter(Boolean).sort();
+  const msg=`✓ ${rows.length} animals across ${groups.length} group(s)`;
+  if(statusEl) statusEl.textContent=msg;
+  const homeStatus=document.getElementById('home-fetch-status');
+  if(homeStatus) homeStatus.textContent=msg;
+  const summaryEl=document.getElementById('roster-summary');
+  if(summaryEl){
+    summaryEl.style.display='block';
+    document.getElementById('roster-summary-text').innerHTML=
+      groups.map(g=>`<b style="color:var(--accent)">${g}</b> — ${rows.filter(r=>r.current_group===g).length} animals`).join('<br>');
+  }
+  buildFilterUI();
+}
+
+function buildFilterUI(){
+  const groups=[...new Set(ROSTER.map(r=>r.current_group))].filter(Boolean).sort();
+  document.getElementById('filter-groups').innerHTML=groups.map(g=>
+    `<button class="filter-chip${activeGroup===g?' active':''}" onclick="selectGroup('${g}')">${g}</button>`
+  ).join('');
+  buildDemogUI();
+}
+
+function selectGroup(g){
+  activeGroup=g; activeDemogs=new Set();
+  buildFilterUI();
+}
+
+function buildDemogUI(){
+  if(!activeGroup){
+    document.getElementById('filter-demogs').innerHTML='<span style="color:var(--dim);font-size:11px;">Select a group first</span>';
+    return;
+  }
+  const demogs=[...new Set(ROSTER.filter(r=>r.current_group===activeGroup).map(r=>r.demog_cat))].filter(Boolean).sort();
+  document.getElementById('filter-demogs').innerHTML=demogs.map(d=>
+    `<button class="filter-chip${activeDemogs.has(d)?' active':''}" onclick="toggleDemog('${d}')">${d}</button>`
+  ).join('');
+  updateFilterPreview();
+}
+
+function toggleDemog(d){
+  activeDemogs.has(d)?activeDemogs.delete(d):activeDemogs.add(d);
+  buildDemogUI();
+}
+
+function updateFilterPreview(){
+  const da=[...activeDemogs];
+  const n=ROSTER.filter(r=>r.current_group===activeGroup&&(da.length===0||da.includes(r.demog_cat))).length;
+  document.getElementById('filter-preview').textContent=activeGroup?`${n} animal${n!==1?'s':''} selected`:'';
+}
+
+function applyFilter(){
+  if(!activeGroup){alert('Please select a group first.');return;}
+  buildInds(activeGroup,[...activeDemogs]);
+  document.getElementById('home-group-label').textContent=
+    activeGroup+(activeDemogs.size>0?' · '+[...activeDemogs].join(', '):'');
+  document.getElementById('home-no-roster').style.display='none';
+  document.getElementById('home-roster-ready').style.display='block';
+  document.getElementById('network-btn').style.display='block';
+  updateHomeStats();
+  view2d['net-svg']={x:0,y:0,scale:1};
+  view2d['evt-svg']={x:0,y:0,scale:1};
+  showView('home');
+}
+function showView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  currentView=name;
+  closeAllPopovers();
+  if(name==='network') scheduleLayout('net-svg','net-c');
+  if(name==='event')   scheduleLayout('evt-svg','evt-c');
+  if(name==='filter')  buildFilterUI();
+}
+
+// ═══════════════════════════════════════════
+//  COLOR: rank = fill (warm→cool), matriline = stroke
+// ═══════════════════════════════════════════
+// matrank field values seen: Dom, Mod, Sub, Mod/Sub, Dom/Mod, ? 
+const RANK_COLORS={
+  'dom':     '#e8522a',   // warm red-orange
+  'dom/mod': '#e8832a',   // orange
+  'mod':     '#e8b82a',   // amber
+  'mod/sub': '#7ab83a',   // yellow-green
+  'sub':     '#3a9eb8',   // teal-blue
+  '?':       '#6b7280',   // grey
+  '':        '#6b7280',
+};
+function rankColor(ind){
+  const r=(ind.matrank||'').toLowerCase().trim();
+  for(const key of Object.keys(RANK_COLORS)){
+    if(r===key) return RANK_COLORS[key];
+  }
+  return RANK_COLORS['?'];
+}
+// ═══════════════════════════════════════════
+//  LAYOUT — hierarchical + matriline clustering
+// ═══════════════════════════════════════════
+
+// Compute generation depth for each individual (0 = no known dam in INDS)
+function computeGenerations(){
+  const idSet=new Set(INDS.map(i=>i.id));
+  const depth={};
+  const gen=(id,visited=new Set())=>{
+    if(depth[id]!==undefined) return depth[id];
+    if(visited.has(id)) return 0; // cycle guard
+    visited.add(id);
+    const ind=INDS.find(i=>i.id===id);
+    if(!ind||!ind.dam||!idSet.has(ind.dam)) return (depth[id]=0);
+    return (depth[id]=gen(ind.dam,visited)+1);
+  };
+  INDS.forEach(ind=>gen(ind.id));
+  return depth;
+}
+
+// Compute centroid X for each matriline group
+function matrilineCentroids(){
+  const cents={};
+  const counts={};
+  INDS.forEach(ind=>{
+    const m=ind.matriline||'?';
+    if(!cents[m]){cents[m]=0;counts[m]=0;}
+    cents[m]+=positions[ind.id].x;
+    counts[m]++;
+  });
+  Object.keys(cents).forEach(m=>cents[m]/=counts[m]);
+  return cents;
+}
+
+function hardSeparate(w,h){
+  for(let pass=0;pass<4;pass++){
+    for(let i=0;i<INDS.length;i++){
+      const a=INDS[i], ra=nodeRadius(a);
+      for(let j=i+1;j<INDS.length;j++){
+        const b=INDS[j], rb=nodeRadius(b);
+        const dx=positions[b.id].x-positions[a.id].x;
+        const dy=positions[b.id].y-positions[a.id].y;
+        const dist=Math.sqrt(dx*dx+dy*dy)||0.01;
+        const minD=ra+rb+8;
+        if(dist<minD){
+          const push=(minD-dist)/2;
+          const nx=dx/dist, ny=dy/dist;
+          positions[a.id].x-=nx*push; positions[a.id].y-=ny*push;
+          positions[b.id].x+=nx*push; positions[b.id].y+=ny*push;
+          [a,b].forEach(ind=>{
+            const rr=nodeRadius(ind);
+            positions[ind.id].x=Math.max(rr+4,Math.min(w-rr-4,positions[ind.id].x));
+            positions[ind.id].y=Math.max(rr+4,Math.min(h-rr-4,positions[ind.id].y));
+          });
+        }
+      }
+    }
+  }
+}
+
+function initLayout(cId){
+  const c=document.getElementById(cId);
+  const w=c.clientWidth,h=c.clientHeight;
+  positions={}; velocities={};
+
+  // Compute generations for Y-banding
+  const depth=computeGenerations();
+  const maxDepth=Math.max(...Object.values(depth),0)||1;
+
+  // Group INDS by matriline for initial X placement
+  const matGroups={};
+  INDS.forEach(ind=>{
+    const m=ind.matriline||'?';
+    if(!matGroups[m]) matGroups[m]=[];
+    matGroups[m].push(ind);
+  });
+  const matKeys=Object.keys(matGroups).sort();
+  const nMats=matKeys.length;
+  const colW=w/(nMats+1);
+
+  INDS.forEach(ind=>{
+    const m=ind.matriline||'?';
+    const mi=matKeys.indexOf(m);
+    const d=depth[ind.id]||0;
+    const margin=50;
+    const yRange=h-margin*2;
+    // Y: dams at top, offspring below — with small jitter to avoid perfect overlap
+    const y=margin + (d/Math.max(maxDepth,1))*yRange + (Math.random()-0.5)*20;
+    // X: grouped by matriline, with jitter within group
+    const groupSize=matGroups[m].length;
+    const x=(mi+1)*colW + (Math.random()-0.5)*(colW*0.5);
+    positions[ind.id]={x:Math.max(40,Math.min(w-40,x)), y:Math.max(40,Math.min(h-40,y))};
+    velocities[ind.id]={x:0,y:0};
+  });
+
+  return {w,h,depth,maxDepth};
+}
+
+function scheduleLayout(svgId,cId){
+  cancelAnimationFrame(animFrame);
+  const dims=initLayout(cId);
+  const {w,h,depth,maxDepth}=dims;
+  const margin=50;
+  const yRange=h-margin*2;
+
+  // Assign a stable X-band centre per matriline
+  const matKeys=[...new Set(INDS.map(i=>i.matriline||'?'))].sort();
+  const nMats=Math.max(matKeys.length,1);
+  const matCentreX={};
+  matKeys.forEach((m,mi)=>{ matCentreX[m]=(mi+1)*(w/(nMats+1)); });
+
+  let iter=0;
+  function step(){
+    const damp=0.5;
+
+    INDS.forEach(a=>{
+      let fx=0,fy=0;
+      const ra=nodeRadius(a);
+      const aDepth=depth[a.id]||0;
+      const aMat=a.matriline||'?';
+
+      INDS.forEach(b=>{
+        if(a.id===b.id) return;
+        const rb=nodeRadius(b);
+        const dx=positions[a.id].x-positions[b.id].x;
+        const dy=positions[a.id].y-positions[b.id].y;
+        const dist=Math.max(Math.sqrt(dx*dx+dy*dy),.1);
+        const minSep=ra+rb+12;
+
+        // Node-node repulsion
+        const f=(minSep*minSep*minSep*12000)/(dist*dist*dist*dist);
+        fx+=(dx/dist)*f; fy+=(dy/dist)*f;
+
+        // Extra repulsion between different matrilines (push clusters apart)
+        if((b.matriline||'?')!==aMat){
+          const xf=2500/(dist*dist);
+          fx+=(dx/dist)*xf;
+        }
+
+        // Matriline attraction (pull same-family X together gently)
+        if((b.matriline||'?')===aMat){
+          const xDist=positions[a.id].x-positions[b.id].x;
+          fx-=xDist*0.004;
+        }
+      });
+
+      // Y hierarchy: pull toward target Y band (dam/offspring depth)
+      const targetY=margin+(aDepth/Math.max(maxDepth,1))*yRange;
+      fy+=(targetY-positions[a.id].y)*0.08;
+
+      // X matriline band: pull toward this matriline's column
+      const targetX=matCentreX[aMat]||w/2;
+      fx+=(targetX-positions[a.id].x)*0.025;
+
+      velocities[a.id].x=(velocities[a.id].x+fx*.016)*damp;
+      velocities[a.id].y=(velocities[a.id].y+fy*.016)*damp;
+    });
+
+    INDS.forEach(a=>{
+      const r=nodeRadius(a);
+      positions[a.id].x=Math.max(r+4,Math.min(w-r-4,positions[a.id].x+velocities[a.id].x));
+      positions[a.id].y=Math.max(r+4,Math.min(h-r-4,positions[a.id].y+velocities[a.id].y));
+    });
+
+    hardSeparate(w,h);
+    iter++;
+    if(iter%2===0) renderSVG(svgId);
+    if(iter<600) animFrame=requestAnimationFrame(step);
+  }
+  animFrame=requestAnimationFrame(step);
+}
+
+// ═══════════════════════════════════════════
+//  RECORD NUMBERING
+//  groupId null = standalone, shared groupId = simultaneous
+//  Label: standalone → "1","2"… grouped → "3a","3b","3c"…
+// ═══════════════════════════════════════════
+function computeLabels(){
+  // Assign group numbers and letter suffixes
+  const groupOrder=[]; // ordered list of unique groupIds (null treated as individual)
+  const seen=new Map(); // groupId -> groupNumber (1-based sequential among groups)
+  let nextNum=1;
+  records.forEach(rec=>{
+    const gid=rec.groupId||rec.id; // ungrouped records use own id as key
+    if(!seen.has(gid)){seen.set(gid,nextNum++);groupOrder.push(gid);}
+  });
+  // Count members per group
+  const groupCount=new Map();
+  records.forEach(rec=>{
+    const gid=rec.groupId||rec.id;
+    groupCount.set(gid,(groupCount.get(gid)||0)+1);
+  });
+  // letter counter per group
+  const groupLetterIdx=new Map();
+  return records.map(rec=>{
+    const gid=rec.groupId||rec.id;
+    const num=seen.get(gid);
+    const count=groupCount.get(gid);
+    if(count===1) return String(num);
+    const li=groupLetterIdx.get(gid)||0;
+    groupLetterIdx.set(gid,li+1);
+    return `${num}${'abcdefghijklmnopqrstuvwxyz'[li]}`;
+  });
+}
+
+// ═══════════════════════════════════════════
+//  SVG RENDERING
+// ═══════════════════════════════════════════
+function parseIds(str){
+  if(!str) return [];
+  return str.toUpperCase().split(/[\s,]+/).filter(id=>INDS.find(i=>i.id===id));
+}
+function edgeMidpoint(s,t,offsetIdx,total){
+  const mx=(s.x+t.x)/2,my=(s.y+t.y)/2;
+  if(total<=1) return {x:mx,y:my};
+  const dx=t.x-s.x,dy=t.y-s.y,dist=Math.max(Math.sqrt(dx*dx+dy*dy),.1);
+  const px=-dy/dist,py=dx/dist;
+  const shift=(offsetIdx-(total-1)/2)*20;
+  return {x:mx+px*shift,y:my+py*shift};
+}
+function domainColor(dom){
+  return dom==='agg'?'#ef4444':dom==='sub'?'#f97316':dom==='aff'?'#22c55e':'#a78bfa';
+}
+function primaryDomain(rec){
+  if(rec.beh.agg.an1.size+rec.beh.agg.an2.size>0) return 'agg';
+  if(rec.beh.sub.an1.size+rec.beh.sub.an2.size>0) return 'sub';
+  if(rec.beh.aff.an1.size+rec.beh.aff.an2.size>0) return 'aff';
+  return 'tp';
+}
+
+function renderSVG(svgId){
+  const svg=document.getElementById(svgId); if(!svg) return;
+  const isEvt=svgId==='evt-svg';
+  const w=svg.parentElement.clientWidth,h=svg.parentElement.clientHeight;
+  svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+  const labels=isEvt?computeLabels():[];
+
+  let inner=``;
+
+  if(isEvt && records.length>0){
+    const pairBuckets={};
+    records.forEach((rec,i)=>{
+      if(!rec.an2Id) return;
+      const key=[rec.an1Id,rec.an2Id].sort().join('|');
+      if(!pairBuckets[key]) pairBuckets[key]=[];
+      pairBuckets[key].push(i);
+    });
+    recMids={};
+    Object.values(pairBuckets).forEach(idxArr=>{
+      idxArr.forEach((ri,offset)=>{
+        const rec=records[ri];
+        const s=positions[rec.an1Id],t=positions[rec.an2Id];
+        if(s&&t) recMids[ri]=edgeMidpoint(s,t,offset,idxArr.length);
+      });
+    });
+    records.forEach((rec,i)=>{
+      if(!rec.an2Id) return;
+      const s=positions[rec.an1Id],t=positions[rec.an2Id],mid=recMids[i];
+      if(!s||!t||!mid) return;
+      const dom=primaryDomain(rec),col=domainColor(dom);
+      const dx1=mid.x-s.x,dy1=mid.y-s.y,d1=Math.max(Math.sqrt(dx1*dx1+dy1*dy1),.1);
+      inner+=`<line x1="${s.x+(dx1/d1)*(NODE_R+2)}" y1="${s.y+(dy1/d1)*(NODE_R+2)}" x2="${mid.x}" y2="${mid.y}" stroke="${col}" stroke-width="2" stroke-opacity=".65"/>`;
+      const dx2=t.x-mid.x,dy2=t.y-mid.y,d2=Math.max(Math.sqrt(dx2*dx2+dy2*dy2),.1);
+      inner+=`<line x1="${mid.x}" y1="${mid.y}" x2="${t.x-(dx2/d2)*(NODE_R+9)}" y2="${t.y-(dy2/d2)*(NODE_R+9)}" stroke="${col}" stroke-width="2" stroke-opacity=".65" marker-end="url(#m-${dom})"/>`;
+    });
+    records.forEach((rec,i)=>{
+      if(!rec.an2Id) return;
+      const mid=recMids[i]; if(!mid) return;
+      const col=domainColor(primaryDomain(rec));
+      [...parseIds(rec.tpAn3),...parseIds(rec.tpAn4)].forEach(tpId=>{
+        const tp=positions[tpId]; if(!tp) return;
+        const dx=mid.x-tp.x,dy=mid.y-tp.y,dist=Math.max(Math.sqrt(dx*dx+dy*dy),.1);
+        inner+=`<line x1="${tp.x+(dx/dist)*(NODE_R+2)}" y1="${tp.y+(dy/dist)*(NODE_R+2)}" x2="${mid.x-(dx/dist)*9}" y2="${mid.y-(dy/dist)*9}" stroke="${col}" stroke-width="1.5" stroke-dasharray="5,3" stroke-opacity=".85"/>`;
+      });
+    });
+    records.forEach((rec,i)=>{
+      if(!rec.an2Id) return;
+      const mid=recMids[i]; if(!mid) return;
+      const dom=primaryDomain(rec),col=domainColor(dom);
+      const hasTp=!!(rec.tpAn3||rec.tpAn4),ds=8;
+      inner+=`<polygon points="${mid.x},${mid.y-ds} ${mid.x+ds},${mid.y} ${mid.x},${mid.y+ds} ${mid.x-ds},${mid.y}"
+        fill="${col}" stroke="${hasTp?'#fff':col}" stroke-width="${hasTp?1.5:.5}" opacity=".92"
+        style="cursor:pointer" onclick="tapDiamond(event,${i})"/>`;
+      inner+=`<text x="${mid.x}" y="${mid.y+ds+11}" text-anchor="middle" fill="${col}" font-size="8"
+        font-family="'JetBrains Mono',monospace" font-weight="700" style="pointer-events:none">${labels[i]||''}</text>`;
+    });
+  }
+
+  // ── Dam edges (network relationships) ──
+  DAM_EDGES.forEach(e=>{
+    const s=positions[e.source],t=positions[e.target];
+    if(!s||!t) return;
+    const dx=t.x-s.x,dy=t.y-s.y,dist=Math.max(Math.sqrt(dx*dx+dy*dy),.1);
+    const nx=dx/dist,ny=dy/dist;
+    const sr=nodeRadius(INDS.find(i=>i.id===e.source)||{})+2;
+    const tr=nodeRadius(INDS.find(i=>i.id===e.target)||{})+9;
+    inner+=`<line x1="${s.x+nx*sr}" y1="${s.y+ny*sr}" x2="${t.x-nx*tr}" y2="${t.y-ny*tr}"
+      stroke="rgba(255,255,255,.25)" stroke-width="1.5" stroke-dasharray="4,3"
+      marker-end="url(#m-dam)"/>`;
+  });
+
+  // ── Nodes ──
+  INDS.forEach((ind)=>{
+    const p=positions[ind.id]; if(!p) return;
+    const r=nodeRadius(ind);
+    const fill=rankColor(ind);
+    const matCol=matrilineColor(ind.matriline);
+    const isA1=an1Id===ind.id,isA2=an2Id===ind.id;
+    // Selection rings override matriline stroke
+    const sc=isA1?'#4ecdc4':isA2?'#f7b731':matCol;
+    const sw=isA1||isA2?3:2.5;
+    const label=indLabel(ind);
+    const isMale=ind.sex==='m';
+
+    if(isA1) inner+=`<circle cx="${p.x}" cy="${p.y}" r="${r+11}" fill="none" stroke="#4ecdc4" stroke-width="2.5" opacity=".85"/>`;
+    if(isA2) inner+=`<circle cx="${p.x}" cy="${p.y}" r="${r+11}" fill="none" stroke="#f7b731" stroke-width="2.5" opacity=".85"/>`;
+
+    if(isMale){
+      inner+=`<rect x="${p.x-r}" y="${p.y-r}" width="${r*2}" height="${r*2}" rx="5" fill="${fill}" stroke="${sc}" stroke-width="${sw}" style="cursor:pointer" onclick="tapNode('${ind.id}',event)"/>`;
+    } else {
+      inner+=`<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${fill}" stroke="${sc}" stroke-width="${sw}" style="cursor:pointer" onclick="tapNode('${ind.id}',event)"/>`;
+    }
+    inner+=`<text x="${p.x}" y="${p.y-4}" text-anchor="middle" dominant-baseline="middle" fill="#f0f2fa" font-size="${Math.max(9,r*0.42)}" font-family="'Sora',sans-serif" font-weight="700" style="pointer-events:none;user-select:none">${label}</text>`;
+    if(ind.dye&&ind.name&&indLabel(ind)===ind.name){
+      inner+=`<text x="${p.x}" y="${p.y+r*0.42}" text-anchor="middle" dominant-baseline="middle" fill="rgba(240,242,250,.8)" font-size="${Math.max(8,r*0.36)}" font-family="'Sora',sans-serif" font-weight="600" style="pointer-events:none;user-select:none">${ind.dye}</text>`;
+    }
+  });
+
+  svg.innerHTML=`<defs>
+    <marker id="m-agg" markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5z" fill="#f87171"/></marker>
+    <marker id="m-sub" markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5z" fill="#fb923c"/></marker>
+    <marker id="m-aff" markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5z" fill="#34d399"/></marker>
+    <marker id="m-tp"  markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5z" fill="#c084fc"/></marker>
+    <marker id="m-dam" markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5z" fill="rgba(255,255,255,.4)"/></marker>
+  </defs><g>${inner}</g>`;
+  // Always restore the current pan/zoom transform — layout loop must not clobber it
+  applyTransform(svgId);
+}
+
+// ═══════════════════════════════════════════
+//  PAN / ZOOM
+// ═══════════════════════════════════════════
+function applyTransform(svgId){
+  const v=view2d[svgId];
+  const g=document.querySelector(`#${svgId} > g`);
+  if(g) g.setAttribute('transform',`translate(${v.x},${v.y}) scale(${v.scale})`);
+}
+
+function resetView(svgId){
+  view2d[svgId]={x:0,y:0,scale:1};
+  applyTransform(svgId);
+}
+
+function initPanZoom(svgId,cId){
+  const svg=document.getElementById(svgId);
+  const c=document.getElementById(cId);
+  let isPanning=false, panStart={x:0,y:0}, panOrigin={x:0,y:0};
+  let lastDist=null;
+
+  // Mouse wheel zoom
+  c.addEventListener('wheel',e=>{
+    e.preventDefault();
+    const v=view2d[svgId];
+    const rect=svg.getBoundingClientRect();
+    const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+    const delta=e.deltaY<0?1.12:1/1.12;
+    const ns=Math.max(MIN_SCALE,Math.min(MAX_SCALE,v.scale*delta));
+    v.x=mx-(mx-v.x)*(ns/v.scale);
+    v.y=my-(my-v.y)*(ns/v.scale);
+    v.scale=ns;
+    applyTransform(svgId);
+  },{passive:false});
+
+  // Mouse pan (only on background — not on nodes/diamonds which have their own click)
+  svg.addEventListener('mousedown',e=>{
+    if(e.target.tagName==='circle'||e.target.tagName==='polygon'||e.target.tagName==='text') return;
+    isPanning=true;
+    panStart={x:e.clientX,y:e.clientY};
+    panOrigin={x:view2d[svgId].x,y:view2d[svgId].y};
+    svg.style.cursor='grabbing';
+  });
+  window.addEventListener('mousemove',e=>{
+    if(!isPanning) return;
+    view2d[svgId].x=panOrigin.x+(e.clientX-panStart.x);
+    view2d[svgId].y=panOrigin.y+(e.clientY-panStart.y);
+    applyTransform(svgId);
+  });
+  window.addEventListener('mouseup',()=>{isPanning=false;svg.style.cursor='';});
+
+  // Touch pan + pinch zoom
+  c.addEventListener('touchstart',e=>{
+    if(e.touches.length===1){
+      const t=e.touches[0];
+      isPanning=true;
+      panStart={x:t.clientX,y:t.clientY};
+      panOrigin={x:view2d[svgId].x,y:view2d[svgId].y};
+    } else if(e.touches.length===2){
+      isPanning=false;
+      lastDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    }
+  },{passive:true});
+
+  c.addEventListener('touchmove',e=>{
+    if(e.touches.length===1&&isPanning){
+      e.preventDefault();
+      const t=e.touches[0];
+      view2d[svgId].x=panOrigin.x+(t.clientX-panStart.x);
+      view2d[svgId].y=panOrigin.y+(t.clientY-panStart.y);
+      applyTransform(svgId);
+    } else if(e.touches.length===2){
+      e.preventDefault();
+      const dist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+      if(lastDist){
+        const v=view2d[svgId];
+        const rect=svg.getBoundingClientRect();
+        const mx=((e.touches[0].clientX+e.touches[1].clientX)/2)-rect.left;
+        const my=((e.touches[0].clientY+e.touches[1].clientY)/2)-rect.top;
+        const delta=dist/lastDist;
+        const ns=Math.max(MIN_SCALE,Math.min(MAX_SCALE,v.scale*delta));
+        v.x=mx-(mx-v.x)*(ns/v.scale);
+        v.y=my-(my-v.y)*(ns/v.scale);
+        v.scale=ns;
+        applyTransform(svgId);
+      }
+      lastDist=dist;
+    }
+  },{passive:false});
+
+  c.addEventListener('touchend',e=>{
+    if(e.touches.length<2) lastDist=null;
+    if(e.touches.length===0) isPanning=false;
+  },{passive:true});
+
+  // Double-tap to reset
+  let lastTap=0;
+  c.addEventListener('touchend',e=>{
+    const now=Date.now();
+    if(now-lastTap<320&&e.changedTouches.length===1){resetView(svgId);}
+    lastTap=now;
+  },{passive:true});
+
+  // Double-click to reset
+  c.addEventListener('dblclick',e=>{
+    if(e.target.tagName==='circle'||e.target.tagName==='polygon') return;
+    resetView(svgId);
+  });
+}
+function tapDiamond(evt,recIdx){
+  evt.stopPropagation();
+  closeAllPopovers();
+  const rec=records[recIdx]; if(!rec) return;
+
+  if(an1Id){
+    // An1 selected → show picker: choose which animal from this edge to record toward
+    const edgeA1=INDS.find(i=>i.id===rec.an1Id);
+    const edgeA2=INDS.find(i=>i.id===rec.an2Id);
+    const picker=document.getElementById('node-picker');
+    document.getElementById('picker-items').innerHTML=`
+      <div class="picker-title">Record behavior toward:</div>
+      <div class="picker-item" onclick="openSheetLinked(${recIdx},'${edgeA1.id}');closePicker()">
+        ${edgeA1.name} <span style="color:var(--dim);font-size:9px">An1 of rec #${computeLabels()[recIdx]}</span>
+      </div>
+      <div class="picker-item" onclick="openSheetLinked(${recIdx},'${edgeA2.id}');closePicker()">
+        ${edgeA2.name} <span style="color:var(--dim);font-size:9px">An2 of rec #${computeLabels()[recIdx]}</span>
+      </div>
+      <div class="picker-item" style="color:var(--dim);border-top:1px solid var(--border);margin-top:4px;padding-top:8px"
+        onclick="openSheetLinked(${recIdx},null);closePicker()">No specific target (intervention)</div>`;
+    picker.style.display='block';
+    picker.style.left=Math.min(evt.clientX+6,window.innerWidth-200)+'px';
+    picker.style.top=Math.max(evt.clientY-10,10)+'px';
+    return;
+  }
+
+  // No An1 → show info tooltip
+  const a1=INDS.find(i=>i.id===rec.an1Id),a2=INDS.find(i=>i.id===rec.an2Id);
+  const labels=computeLabels();
+  const {lines}=behSummaryFull(rec);
+  const durLbl=DURATIONS.find(d=>d.id===rec.duration)?.label||'';
+  document.getElementById('d-tip-pair').textContent=`#${labels[recIdx]} ${a1.name} — ${a2.name}`;
+  document.getElementById('d-tip-body').innerHTML=
+    lines.join('<br>')+(durLbl?`<br><span style="color:var(--accent)">${durLbl}</span>`:'')
+    +(rec.tpAn3?`<br>An3: ${rec.tpAn3}`:'')+(rec.tpAn4?`<br>An4: ${rec.tpAn4}`:'');
+  document.getElementById('d-tip-edit-btn').onclick=()=>{closeTip();editRecord(recIdx);};
+  const tip=document.getElementById('d-tip');
+  tip.style.display='block';
+  tip.style.left=Math.min(evt.clientX+10,window.innerWidth-300)+'px';
+  tip.style.top=Math.max(evt.clientY-80,10)+'px';
+}
+function closeTip(){document.getElementById('d-tip').style.display='none';}
+
+// an2Override: specific animal from the edge chosen as An2, or null for no An2
+function openSheetLinked(refRecIdx, an2Override){
+  const ref=records[refRecIdx];
+  const a1=INDS.find(i=>i.id===ref.an1Id),a2=INDS.find(i=>i.id===ref.an2Id);
+  sheetLinkedRef=refRecIdx; sheetEditIdx=null;
+  sheetSolo=an2Override===null&&an2Override!==undefined?false:!an2Override;
+  sheetAn1=an1Id;
+  sheetAn2=an2Override||null;
+  sel=freshSel(); selQua=freshQua(); selAffect=freshAffect();
+  dur='lt5'; tpAn3=''; tpAn4=''; recNotes='';
+  activeTab='aggsub';
+  const intervener=INDS.find(i=>i.id===an1Id);
+  const an2name=an2Override?INDS.find(i=>i.id===an2Override)?.name:'?';
+  document.getElementById('sheet-pair').textContent=
+    an2Override?`${intervener.name} — ${an2name}`:`${intervener.name} (intervention)`;
+  document.getElementById('sheet-meta').textContent=`Linked to record #${computeLabels()[refRecIdx]} (${a1.name}–${a2.name})`;
+  document.getElementById('swap-btn').style.display=an2Override?'inline-block':'none';
+  buildTabs(); buildContent();
+  document.getElementById('sheet-overlay').style.display='flex';
+}
+
+// ═══════════════════════════════════════════
+//  NODE TAP — select An1/An2 or show picker
+// ═══════════════════════════════════════════
+function tapNode(id,evt){
+  if(currentView!=='event') return;
+  closeTip();
+  evt.stopPropagation();
+
+  if(!an1Id){
+    an1Id=id; updateHint(); renderSVG('evt-svg');
+  } else if(an1Id===id){
+    an1Id=null; an2Id=null; updateHint(); renderSVG('evt-svg');
+  } else if(!an2Id){
+    an2Id=id; updateHint(); renderSVG('evt-svg');
+    openSheet(false);
+  }
+}
+
+function showNodePicker(nodeId,involved,evt){
+  const labels=computeLabels();
+  const picker=document.getElementById('node-picker');
+  const items=document.getElementById('picker-items');
+  // Build option list
+  let html=`<div class="picker-item" style="color:var(--accent)" onclick="selectAn1FromPicker('${nodeId}')">Select as An1 for new record</div>`;
+  involved.forEach(({r,i})=>{
+    const a1=INDS.find(x=>x.id===r.an1Id),a2=r.an2Id?INDS.find(x=>x.id===r.an2Id):null;
+    const pair=a2?`${a1.name}–${a2.name}`:`${a1.name} (solo)`;
+    html+=`<div class="picker-item" onclick="editRecord(${i});closePicker()">Edit #${labels[i]}: ${pair}</div>`;
+  });
+  items.innerHTML=html;
+  picker.style.display='block';
+  picker.style.left=Math.min(evt.clientX+6,window.innerWidth-200)+'px';
+  picker.style.top=Math.max(evt.clientY-10,10)+'px';
+}
+function selectAn1FromPicker(id){an1Id=id; updateHint(); renderSVG('evt-svg'); closePicker();}
+function closePicker(){document.getElementById('node-picker').style.display='none';}
+function closeAllPopovers(){closeTip(); closePicker(); closeSessionInfo();}
+
+// ═══════════════════════════════════════════
+//  EDIT EXISTING RECORD
+// ═══════════════════════════════════════════
+function editRecord(i){
+  const rec=records[i];
+  sheetEditIdx=i; sheetLinkedRef=null;
+  sheetSolo=rec.solo; sheetAn1=rec.an1Id; sheetAn2=rec.an2Id||null;
+  // Restore Sets
+  sel={
+    agg:{an1:new Set(rec.beh.agg.an1),an2:new Set(rec.beh.agg.an2)},
+    sub:{an1:new Set(rec.beh.sub.an1),an2:new Set(rec.beh.sub.an2)},
+    aff:{an1:new Set(rec.beh.aff.an1),an2:new Set(rec.beh.aff.an2)},
+    tp: {an1:new Set(rec.beh.tp.an1)},
+  };
+  selQua={agg:new Set(rec.qualifiers.agg),sub:new Set(rec.qualifiers.sub),aff:new Set(rec.qualifiers.aff),ix:new Set(rec.qualifiers.ix)};
+  selAffect={an1:new Set(rec.affect.an1),an2:new Set(rec.affect.an2)};
+  dur=rec.duration||'lt5';
+  tpAn3=rec.tpAn3||''; tpAn4=rec.tpAn4||'';
+  recNotes=rec.notes||'';
+  activeTab='aggsub';
+  const a1=INDS.find(x=>x.id===sheetAn1),a2=sheetAn2?INDS.find(x=>x.id===sheetAn2):null;
+  const labels=computeLabels();
+  document.getElementById('sheet-pair').textContent=a1.name+(a2?' — '+a2.name:' (solo)');
+  document.getElementById('sheet-meta').textContent=`Editing record #${labels[i]}`;
+  document.getElementById('swap-btn').style.display=sheetSolo?'none':'inline-block';
+  buildTabs(); buildContent();
+  document.getElementById('sheet-overlay').style.display='flex';
+}
+
+function updateHint(){
+  const hintBar=document.getElementById('hint-bar');
+  const hintTxt=document.getElementById('hint-text');
+  const soloBtn=document.getElementById('solo-btn');
+  const badge=document.getElementById('an1-badge');
+  if(!an1Id){
+    hintBar.className='hint hint-a1';
+    hintTxt.innerHTML='Tap a node to select <span style="color:var(--accent)">An1</span>';
+    soloBtn.style.display='none'; badge.style.display='none';
+  } else {
+    const ind=INDS.find(i=>i.id===an1Id);
+    hintBar.className='hint hint-a2';
+    hintTxt.innerHTML=`<b style="color:var(--accent)">${ind.name}</b> — tap <span style="color:var(--warn)">An2</span> or diamond:`;
+    soloBtn.style.display='inline-block';
+    badge.textContent=ind.name; badge.style.display='block';
+  }
+}
+
+// ═══════════════════════════════════════════
+//  SHEET
+// ═══════════════════════════════════════════
+function freshSel(){return{agg:{an1:new Set(),an2:new Set()},sub:{an1:new Set(),an2:new Set()},aff:{an1:new Set(),an2:new Set()},tp:{an1:new Set()}};}
+function freshQua(){return{agg:new Set(),sub:new Set(),aff:new Set(),ix:new Set()};}
+function freshAffect(){return{an1:new Set(),an2:new Set()};}
+
+function openSheet(solo){
+  sheetSolo=solo; sheetAn1=an1Id; sheetAn2=solo?null:an2Id;
+  sheetEditIdx=null; sheetLinkedRef=null;
+  sel=freshSel(); selQua=freshQua(); selAffect=freshAffect();
+  dur='lt5'; tpAn3=''; tpAn4=''; recNotes='';
+  activeTab='aggsub';
+  const a1=INDS.find(i=>i.id===sheetAn1),a2=sheetAn2?INDS.find(i=>i.id===sheetAn2):null;
+  document.getElementById('sheet-pair').textContent=a1.name+(a2?' — '+a2.name:' (solo)');
+  document.getElementById('sheet-meta').textContent=solo?'Solo / undirected record':'Select behaviors, then save';
+  document.getElementById('swap-btn').style.display=solo?'none':'inline-block';
+  buildTabs(); buildContent();
+  document.getElementById('sheet-overlay').style.display='flex';
+}
+
+function closeSheet(){
+  document.getElementById('sheet-overlay').style.display='none';
+  if(sheetEditIdx===null){an1Id=null; an2Id=null; updateHint(); renderSVG('evt-svg');}
+  sheetEditIdx=null; sheetLinkedRef=null;
+}
+
+function swapAnimals(){
+  [sheetAn1,sheetAn2]=[sheetAn2,sheetAn1];
+  ['agg','sub','aff'].forEach(d=>{[sel[d].an1,sel[d].an2]=[sel[d].an2,sel[d].an1];});
+  [selAffect.an1,selAffect.an2]=[selAffect.an2,selAffect.an1];
+  const a1=INDS.find(i=>i.id===sheetAn1),a2=INDS.find(i=>i.id===sheetAn2);
+  document.getElementById('sheet-pair').textContent=a1.name+' — '+a2.name;
+  buildContent();
+}
+
+function buildTabs(){
+  const domains=sheetSolo?['aggsub','affect','meta']:['aggsub','aff','tp','affect','meta'];
+  const labels={aggsub:'Agg + Sub',aff:'Affiliation',tp:'3rd Party',affect:'Affect',meta:'Notes'};
+  document.getElementById('tabs').innerHTML=domains.map(d=>`
+    <div class="tab ${d} ${d===activeTab?'active':''}" onclick="switchTab('${d}')">${labels[d]}</div>`).join('');
+}
+function switchTab(d){activeTab=d; buildTabs(); buildContent();}
+
+// Helper: render a qualifier block for one domain+side
+function qualBlock(qd, side, colorCls){
+  let h=`<div class="sec-lbl" style="margin-top:8px;">Qualifiers</div><div class="beh-grid-2" style="margin-bottom:4px;">`;
+  QUALIFIERS[qd].forEach(q=>{
+    const on=selQua[qd].has(q.id);
+    // Qualifiers are per-domain not per-side — toggling either side's button hits same set
+    h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('${qd}','${q.id}')">${q.label}</button>`;
+  });
+  h+=`</div>`;
+  return h;
+}
+
+function buildContent(){
+  const scr=document.getElementById('sheet-scroll');
+  const a1=INDS.find(i=>i.id===sheetAn1);
+  const a2=sheetAn2?INDS.find(i=>i.id===sheetAn2):null;
+  let h='';
+
+  if(activeTab==='aggsub'){
+    if(sheetSolo){
+      h+=`<div class="sec-lbl">Aggression — solo/undirected (${a1.name})</div><div class="beh-grid-3">`;
+      BEHAVIORS.agg.filter(b=>b.solo).forEach(b=>{
+        const on=sel.agg.an1.has(b.id);
+        h+=`<button class="beh-btn ${on?'on-agg':''}" onclick="tog('agg','an1','${b.id}')">${b.label}</button>`;
+      });
+      h+=`</div>`;
+      // Agg qualifiers for solo
+      h+=qualBlock('agg','an1','on-qua');
+    } else {
+      // ── 4-column: An1-Agg | An1-Sub | An2-Agg | An2-Sub ──
+      h+=`<div class="as-grid">`;
+      h+=`<div class="as-animal-hdr a1" style="grid-column:1/3">${a1.name}</div>`;
+      h+=`<div class="as-animal-hdr a2" style="grid-column:3/5">${a2.name}</div>`;
+      h+=`<div class="as-domain-hdr agg">Aggression</div>`;
+      h+=`<div class="as-domain-hdr sub">Submission</div>`;
+      h+=`<div class="as-domain-hdr agg">Aggression</div>`;
+      h+=`<div class="as-domain-hdr sub">Submission</div>`;
+      const maxRows=Math.max(BEHAVIORS.agg.length,BEHAVIORS.sub.length);
+      for(let r=0;r<maxRows;r++){
+        const ag=BEHAVIORS.agg[r],sb=BEHAVIORS.sub[r];
+        if(ag){const on=sel.agg.an1.has(ag.id);h+=`<button class="beh-btn ${on?'on-agg':''}" onclick="tog('agg','an1','${ag.id}')">${ag.label}</button>`;}
+        else h+=`<div></div>`;
+        if(sb){const on=sel.sub.an1.has(sb.id);h+=`<button class="beh-btn ${on?'on-sub':''}" onclick="tog('sub','an1','${sb.id}')">${sb.label}</button>`;}
+        else h+=`<div></div>`;
+        if(ag){const on=sel.agg.an2.has(ag.id);h+=`<button class="beh-btn ${on?'on-agg':''}" onclick="tog('agg','an2','${ag.id}')">${ag.label}</button>`;}
+        else h+=`<div></div>`;
+        if(sb){const on=sel.sub.an2.has(sb.id);h+=`<button class="beh-btn ${on?'on-sub':''}" onclick="tog('sub','an2','${sb.id}')">${sb.label}</button>`;}
+        else h+=`<div></div>`;
+      }
+      h+=`</div>`;
+
+      // ── Qualifiers: 4-column matching behavior grid ──
+      // An1-AggQual | An1-SubQual | An2-AggQual | An2-SubQual
+      h+=`<div class="as-grid" style="margin-top:10px;">`;
+      h+=`<div class="as-animal-hdr a1" style="grid-column:1/3">Qualifiers — ${a1.name}</div>`;
+      h+=`<div class="as-animal-hdr a2" style="grid-column:3/5">Qualifiers — ${a2.name}</div>`;
+      h+=`<div class="as-domain-hdr agg">Aggression</div>`;
+      h+=`<div class="as-domain-hdr sub">Submission</div>`;
+      h+=`<div class="as-domain-hdr agg">Aggression</div>`;
+      h+=`<div class="as-domain-hdr sub">Submission</div>`;
+      const maxQRows=Math.max(QUALIFIERS.agg.length,QUALIFIERS.sub.length);
+      for(let r=0;r<maxQRows;r++){
+        const aq=QUALIFIERS.agg[r],sq=QUALIFIERS.sub[r];
+        // An1 agg qual
+        if(aq){const on=selQua.agg.has(aq.id);h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('agg','${aq.id}')">${aq.label}</button>`;}
+        else h+=`<div></div>`;
+        // An1 sub qual
+        if(sq){const on=selQua.sub.has(sq.id);h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('sub','${sq.id}')">${sq.label}</button>`;}
+        else h+=`<div></div>`;
+        // An2 agg qual (same shared set)
+        if(aq){const on=selQua.agg.has(aq.id);h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('agg','${aq.id}')">${aq.label}</button>`;}
+        else h+=`<div></div>`;
+        // An2 sub qual
+        if(sq){const on=selQua.sub.has(sq.id);h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('sub','${sq.id}')">${sq.label}</button>`;}
+        else h+=`<div></div>`;
+      }
+      h+=`</div>`;
+      // Interaction-level qualifiers — full width 2-col
+      h+=`<div class="sec-lbl" style="margin-top:10px;">Interaction Qualifiers</div><div class="beh-grid-2">`;
+      QUALIFIERS.ix.forEach(q=>{
+        const on=selQua.ix.has(q.id);
+        h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('ix','${q.id}')">${q.label}</button>`;
+      });
+      h+=`</div>`;
+    }
+
+  } else if(activeTab==='aff'){
+    if(a2){
+      h+=`<div class="col-hdrs"><div class="col-hdr a1">${a1.name}</div><div class="col-hdr a2">${a2.name}</div></div>`;
+      h+=`<div class="beh-grid-2">`;
+      BEHAVIORS.aff.forEach(b=>{
+        const o1=sel.aff.an1.has(b.id),o2=sel.aff.an2.has(b.id);
+        h+=`<button class="beh-btn ${o1?'on-aff':''}" onclick="tog('aff','an1','${b.id}')">${b.label}</button>`;
+        h+=`<button class="beh-btn ${o2?'on-aff':''}" onclick="tog('aff','an2','${b.id}')">${b.label}</button>`;
+      });
+      h+=`</div>`;
+      // Affiliation qualifiers — 4-column matching behavior grid
+      h+=`<div class="col-hdrs" style="margin-top:8px;"><div class="col-hdr a1">Qualifiers — ${a1.name}</div><div class="col-hdr a2">Qualifiers — ${a2.name}</div></div>`;
+      h+=`<div class="beh-grid-2">`;
+      QUALIFIERS.aff.forEach(q=>{
+        const on=selQua.aff.has(q.id);
+        // Mirror for both animals (shared set)
+        h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('aff','${q.id}')">${q.label}</button>`;
+        h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('aff','${q.id}')">${q.label}</button>`;
+      });
+      h+=`</div>`;
+    } else {
+      h+=`<div class="sec-lbl">Affiliation — solo</div><div class="beh-grid-3">`;
+      BEHAVIORS.aff.forEach(b=>{
+        const on=sel.aff.an1.has(b.id);
+        h+=`<button class="beh-btn ${on?'on-aff':''}" onclick="tog('aff','an1','${b.id}')">${b.label}</button>`;
+      });
+      h+=`</div>`;
+      h+=`<div class="sec-lbl" style="margin-top:6px;">Affiliation Qualifiers</div><div class="beh-grid-3">`;
+      QUALIFIERS.aff.forEach(q=>{
+        const on=selQua.aff.has(q.id);
+        h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('aff','${q.id}')">${q.label}</button>`;
+      });
+      h+=`</div>`;
+    }
+
+  } else if(activeTab==='tp'){
+    h+=`<div class="sec-lbl">An3 IDs (An1-associated 3rd parties)</div>
+    <input class="tp-in" id="tp-an3" value="${tpAn3}" oninput="tpAn3=this.value" placeholder="Space-separated IDs e.g. GA ON">
+    <div class="sec-lbl">An4 IDs (An2-associated 3rd parties)</div>
+    <input class="tp-in" id="tp-an4" value="${tpAn4}" oninput="tpAn4=this.value" placeholder="e.g. HE">
+    <div class="sec-lbl">3rd Party Behaviors (An1 toward 3rd parties)</div>
+    <div class="beh-grid-2">`;
+    BEHAVIORS.tp.forEach(b=>{
+      const on=sel.tp.an1.has(b.id);
+      h+=`<button class="beh-btn ${on?'on-tp':''}" onclick="tog('tp','an1','${b.id}')">${b.label}</button>`;
+    });
+    h+=`</div>`;
+
+  } else if(activeTab==='affect'){
+    [['an1',a1],['an2',a2]].forEach(([side,ind])=>{
+      if(!ind) return;
+      h+=`<div class="sec-lbl">Affect — ${ind.name}</div><div class="beh-grid-3">`;
+      AFFECT.forEach(af=>{
+        const on=selAffect[side].has(af);
+        h+=`<button class="beh-btn ${on?'on-affect':''}" onclick="togAffect('${side}','${af}')">${af}</button>`;
+      });
+      h+=`</div>`;
+    });
+
+  } else if(activeTab==='meta'){
+    h+=`<div class="sec-lbl">Record Notes</div>
+    <textarea class="notes-in" id="rec-notes-in" oninput="recNotes=this.value" placeholder="Free-text notes…">${recNotes}</textarea>`;
+  }
+
+  // Duration on behavior tabs
+  if(['aggsub','aff','tp'].includes(activeTab)){
+    h+=`<div class="sec-lbl">Duration</div><div class="dur-row">`;
+    DURATIONS.forEach(d=>{
+      h+=`<button class="dur-btn ${dur===d.id?'on':''}" onclick="setDur('${d.id}')">${d.label}</button>`;
+    });
+    h+=`</div>`;
+  }
+  scr.innerHTML=h;
+}
+
+function tog(domain,side,id){const s=sel[domain][side];s.has(id)?s.delete(id):s.add(id);buildContent();}
+function togQua(qd,id){selQua[qd].has(id)?selQua[qd].delete(id):selQua[qd].add(id);buildContent();}
+function togAffect(side,af){selAffect[side].has(af)?selAffect[side].delete(af):selAffect[side].add(af);buildContent();}
+function setDur(d){dur=d;buildContent();}
+
+// ═══════════════════════════════════════════
+//  COMMIT / SAVE
+// ═══════════════════════════════════════════
+function commitRecord(){
+  const i3=document.getElementById('tp-an3'),i4=document.getElementById('tp-an4'),rn=document.getElementById('rec-notes-in');
+  if(i3) tpAn3=i3.value; if(i4) tpAn4=i4.value; if(rn) recNotes=rn.value;
+
+  const recData={
+    beh:{
+      agg:{an1:new Set(sel.agg.an1),an2:new Set(sel.agg.an2)},
+      sub:{an1:new Set(sel.sub.an1),an2:new Set(sel.sub.an2)},
+      aff:{an1:new Set(sel.aff.an1),an2:new Set(sel.aff.an2)},
+      tp: {an1:new Set(sel.tp.an1)},
+    },
+    qualifiers:{agg:new Set(selQua.agg),sub:new Set(selQua.sub),aff:new Set(selQua.aff),ix:new Set(selQua.ix)},
+    affect:{an1:new Set(selAffect.an1),an2:new Set(selAffect.an2)},
+    tpAn3:tpAn3.trim(),tpAn4:tpAn4.trim(),
+    duration:dur,notes:recNotes.trim(),
+    solo:sheetSolo,linkedRef:sheetLinkedRef,
+    an1Id:sheetAn1,an2Id:sheetAn2||null,
+  };
+
+  if(sheetEditIdx!==null){
+    // Update existing record, preserve id/ts/groupId
+    records[sheetEditIdx]={...records[sheetEditIdx],...recData};
+  } else {
+    records.push({id:'R-'+Date.now(),ts:Date.now(),timestamp:new Date().toISOString(),groupId:null,...recData});
+  }
+
+  document.getElementById('sheet-overlay').style.display='none';
+  if(sheetEditIdx===null){an1Id=null;an2Id=null;}
+  sheetEditIdx=null;sheetLinkedRef=null;
+  // If in review mode, write changes back to stored session immediately
+  if(reviewMode) saveReviewEvent();
+  updateHint();updateRecPanel();renderSVG('evt-svg');doFlash();
+}
+
+// ═══════════════════════════════════════════
+//  RECORD PANEL
+// ═══════════════════════════════════════════
+function updateRecPanel(){
+  const panel=document.getElementById('rec-panel');
+  document.getElementById('evt-sub').textContent=records.length+' record'+(records.length!==1?'s':'');
+  if(!records.length){panel.style.display='none';return;}
+  panel.style.display='flex';
+  const labels=computeLabels();
+
+  // Build visual list — group simultaneous records together
+  let html='';
+  let i=0;
+  while(i<records.length){
+    const rec=records[i];
+    const gid=rec.groupId;
+    // Find all members of this group (contiguous block — they may not be contiguous after reorder, just same groupId)
+    const groupIdxs=gid?records.map((r,ri)=>ri).filter(ri=>records[ri].groupId===gid):[i];
+    const isGroup=gid&&groupIdxs.length>1&&groupIdxs[0]===i;
+
+    if(isGroup){
+      html+=`<div style="border-left:3px solid var(--tp);margin-left:6px;">`;
+      groupIdxs.forEach(ri=>{ html+=recRowHtml(ri,labels); });
+      html+=`</div>`;
+      i+=groupIdxs.length;
+    } else {
+      html+=recRowHtml(i,labels);
+      i++;
+    }
+  }
+  document.getElementById('rec-list').innerHTML=html;
+}
+
+function recRowHtml(i,labels){
+  const rec=records[i];
+  const a1=INDS.find(x=>x.id===rec.an1Id);
+  const a2=rec.an2Id?INDS.find(x=>x.id===rec.an2Id):null;
+  const pair=a2?`${a1.name} — ${a2.name}`:`${a1.name} (solo)`;
+  const {dots,lines}=behSummaryFull(rec);
+  const durLbl=DURATIONS.find(d=>d.id===rec.duration)?.label||'';
+  const time=new Date(rec.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const quaAll=[...rec.qualifiers.agg,...rec.qualifiers.sub,...rec.qualifiers.aff,...rec.qualifiers.ix];
+  const affAll=[...rec.affect.an1,...rec.affect.an2];
+  const tags=[];
+  if(rec.groupId) tags.push(`<span class="rec-tag" style="background:rgba(167,139,250,.2);color:var(--tp)">simultaneous</span>`);
+  if(rec.linkedRef!=null) tags.push(`<span class="rec-tag" style="background:rgba(78,205,196,.15);color:var(--accent)">→ rec #${computeLabels()[rec.linkedRef]}</span>`);
+  if(rec.solo) tags.push(`<span class="rec-tag" style="background:rgba(247,183,49,.15);color:var(--warn)">solo</span>`);
+  if(durLbl) tags.push(`<span class="rec-tag" style="background:var(--hi);color:var(--dim)">${durLbl}</span>`);
+  quaAll.forEach(qid=>{const q=ALL_QUALS.find(x=>x.id===qid);if(q)tags.push(`<span class="rec-tag" style="background:rgba(251,191,36,.15);color:#fbbf24">${q.label}</span>`);});
+  affAll.forEach(af=>tags.push(`<span class="rec-tag" style="background:rgba(96,165,250,.12);color:#60a5fa">${af}</span>`));
+  if(rec.notes) tags.push(`<span class="rec-tag" style="background:var(--hi);color:var(--dim)">📝</span>`);
+  const tpStr=[rec.tpAn3,rec.tpAn4].filter(Boolean).join(' / ');
+
+  // Show ⊕ Group button on all rows except self, only while a drag is active
+  const isDragging=dragSrc!==null;
+  const isMe=dragSrc===i;
+  const groupBtn=(isDragging&&!isMe)
+    ?`<button class="group-with-btn" onclick="event.stopPropagation();mergeRecords(${dragSrc},${i})">⊕ Group</button>`
+    :'';
+  const ungroupBtn=rec.groupId
+    ?`<button class="group-with-btn" style="color:var(--dim);border-color:var(--border);margin-top:2px" onclick="event.stopPropagation();ungroup(${i})">Ungroup</button>`
+    :'';
+
+  return `<div class="rec-row${isMe?' dragging':''}"
+    draggable="true"
+    ondragstart="dStart(${i})" ondragover="dOver(event,${i})" ondragend="dEnd()" ondrop="dDrop(event,${i})"
+    ontouchstart="tStart(event,${i})" ontouchmove="tMove(event)" ontouchend="tEnd(${i})"
+    onclick="editRecord(${i})">
+    <span class="drag-handle" onclick="event.stopPropagation()">⠿</span>
+    <div class="rec-body">
+      <div class="rec-num">#${labels[i]} · ${time}</div>
+      <div class="rec-pair">${dots}${pair}</div>
+      <div class="rec-behs">${lines.join('<br>')}</div>
+      ${tags.length?`<div class="rec-tags">${tags.join('')}</div>`:''}
+      ${tpStr?`<div class="rec-behs" style="color:var(--tp)">3P: ${tpStr}</div>`:''}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end;flex-shrink:0;">
+      ${groupBtn}${ungroupBtn}
+      <button class="rec-del" onclick="event.stopPropagation();delRec(${i})">✕</button>
+    </div>
+  </div>`;
+}
+
+function mergeRecords(srcIdx,tgtIdx){
+  const srcRec=records[srcIdx],tgtRec=records[tgtIdx];
+  if(tgtRec.groupId) srcRec.groupId=tgtRec.groupId;
+  else if(srcRec.groupId) tgtRec.groupId=srcRec.groupId;
+  else{const gid='G-'+Date.now();srcRec.groupId=gid;tgtRec.groupId=gid;}
+  dragSrc=null;
+  updateRecPanel(); renderSVG('evt-svg');
+}
+
+function ungroup(i){
+  const gid=records[i].groupId;
+  records[i].groupId=null;
+  if(gid){
+    const remaining=records.filter(r=>r.groupId===gid);
+    if(remaining.length===1) remaining[0].groupId=null;
+  }
+  updateRecPanel(); renderSVG('evt-svg');
+}
+
+function behSummaryFull(rec){
+  const dots=[],lines=[];
+  const domColors={agg:'#ef4444',sub:'#f97316',aff:'#22c55e',tp:'#a78bfa'};
+  const domNames={agg:'Agg',sub:'Sub',aff:'Aff',tp:'3P'};
+  ['agg','sub','aff','tp'].forEach(d=>{
+    const a1s=rec.beh[d].an1,a2s=d==='tp'?new Set():rec.beh[d].an2;
+    if(!a1s.size&&!a2s.size) return;
+    dots.push(`<span class="dot" style="background:${domColors[d]}"></span>`);
+    const parts=[];
+    if(a1s.size){
+      const an1=INDS.find(i=>i.id===rec.an1Id);
+      const names=[...a1s].map(bid=>(BEHAVIORS[d].find(x=>x.id===bid)||{label:bid}).label).join(', ');
+      parts.push(`<span style="color:${domColors[d]}">${an1?an1.name:'An1'}</span>: ${names}`);
+    }
+    if(a2s.size){
+      const an2=INDS.find(i=>i.id===rec.an2Id);
+      const names=[...a2s].map(bid=>(BEHAVIORS[d].find(x=>x.id===bid)||{label:bid}).label).join(', ');
+      parts.push(`<span style="color:var(--warn)">${an2?an2.name:'An2'}</span>: ${names}`);
+    }
+    if(parts.length) lines.push(parts.join(' · '));
+  });
+  return{
+    dots:dots.join('')||`<span class="dot" style="background:var(--dim)"></span>`,
+    lines:lines.length?lines:['No behaviors selected'],
+  };
+}
+
+function delRec(i){
+  const gid=records[i].groupId;
+  records.splice(i,1);
+  // If only one member left in group, ungroup it
+  if(gid){
+    const remaining=records.filter(r=>r.groupId===gid);
+    if(remaining.length===1) remaining[0].groupId=null;
+  }
+  updateRecPanel();renderSVG('evt-svg');
+}
+
+// ═══════════════════════════════════════════
+//  DRAG REORDER (merge via ⊕ Group button)
+// ═══════════════════════════════════════════
+function dStart(i){dragSrc=i; updateRecPanel();}
+function dOver(e,i){e.preventDefault(); dragOver=i;}
+function dEnd(){dragSrc=null; dragOver=null; updateRecPanel();}
+function dDrop(e,i){
+  e.preventDefault();
+  if(dragSrc===null||dragSrc===i){dEnd();return;}
+  const moved=records.splice(dragSrc,1)[0];
+  const insertAt=dragSrc<i?i-1:i;
+  records.splice(insertAt,0,moved);
+  dEnd();
+  updateRecPanel(); renderSVG('evt-svg');
+}
+
+// Touch drag (reorder only)
+function tStart(e,i){
+  if(!e.target.classList.contains('drag-handle')) return;
+  e.preventDefault(); touchDragIdx=i; dragSrc=i;
+  const row=e.currentTarget,rect=row.getBoundingClientRect();
+  touchClone=row.cloneNode(true);
+  Object.assign(touchClone.style,{position:'fixed',pointerEvents:'none',zIndex:'999',opacity:'.88',
+    width:rect.width+'px',left:rect.left+'px',top:rect.top+'px',
+    background:'var(--hi)',borderRadius:'8px',border:'1px solid var(--accent)'});
+  document.body.appendChild(touchClone);
+  updateRecPanel();
+}
+function tMove(e){
+  if(touchDragIdx===null||!touchClone) return;
+  e.preventDefault();
+  const t=e.touches[0];
+  touchClone.style.top=(t.clientY-18)+'px';
+  let over=null;
+  document.querySelectorAll('.rec-row').forEach((el,ri)=>{
+    const r=el.getBoundingClientRect();
+    if(t.clientY>=r.top&&t.clientY<=r.bottom) over=ri;
+  });
+  dragOver=over; updateRecPanel();
+}
+function tEnd(){
+  if(touchClone){touchClone.remove();touchClone=null;}
+  if(touchDragIdx!==null&&dragOver!==null&&touchDragIdx!==dragOver){
+    const m=records.splice(touchDragIdx,1)[0];
+    records.splice(dragOver,0,m);
+  }
+  touchDragIdx=null; dragSrc=null; dragOver=null;
+  updateRecPanel();
+}
+
+// ═══════════════════════════════════════════
+//  SESSION & EVENT MANAGEMENT
+// ═══════════════════════════════════════════
+function startSession(){
+  sessObserver=document.getElementById('sess-observer').value.trim();
+  sessGroup=document.getElementById('sess-group').value.trim();
+  sessEnclosure=document.getElementById('sess-enclosure').value.trim();
+  sessDatatype=document.getElementById('sess-datatype').value;
+  sessConditions=document.getElementById('sess-conditions').value;
+  sessScan=document.getElementById('sess-scan').value.trim();
+  sessNotes=document.getElementById('sess-notes').value.trim();
+  activeSession={
+    id:'SESS-'+Date.now(),
+    label:'Session '+(sessions.length+1),
+    timestamp:new Date().toISOString(),
+    observer:sessObserver,group:sessGroup,enclosure:sessEnclosure,
+    datatype:sessDatatype,conditions:sessConditions,scanNum:sessScan,notes:sessNotes,
+  };
+  events=[];
+  beginNewEvent();
+}
+
+function beginNewEvent(){
+  // Start a fresh event within the current session — no layout reset
+  saveCurrentEvent();
+  activeEvent={
+    id:'EVT-'+Date.now(),
+    label:`Event ${events.length+1}`,
+    timestamp:new Date().toISOString(),
+  };
+  records=[]; an1Id=null; an2Id=null; recMids={};
+  view2d['evt-svg']={x:0,y:0,scale:1};
+  closeAllPopovers();
+  // Show event view (or stay on it) — only trigger layout if not already there
+  if(currentView!=='event'){
+    // Need to navigate in without re-running scheduleLayout if already settled
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-event').classList.add('active');
+    currentView='event';
+    scheduleLayout('evt-svg','evt-c');
+  } else {
+    renderSVG('evt-svg'); // just redraw to clear edges, keep positions
+  }
+  updateHint(); updateRecPanel();
+  document.getElementById('rec-panel').style.display='none';
+  document.getElementById('evt-name').textContent=activeEvent.label;
+  const sub=[sessObserver,sessGroup,sessEnclosure].filter(Boolean).join(' · ');
+  document.getElementById('evt-sub').textContent=sub;
+  updateEventHeaderButtons();
+}
+
+function saveCurrentEvent(){
+  if(!activeEvent) return;
+  events.push({...activeEvent, records:records.map(r=>({...r,
+    beh:{agg:{an1:[...r.beh.agg.an1],an2:[...r.beh.agg.an2]},sub:{an1:[...r.beh.sub.an1],an2:[...r.beh.sub.an2]},aff:{an1:[...r.beh.aff.an1],an2:[...r.beh.aff.an2]},tp:{an1:[...r.beh.tp.an1]}},
+    qualifiers:{agg:[...r.qualifiers.agg],sub:[...r.qualifiers.sub],aff:[...r.qualifiers.aff],ix:[...r.qualifiers.ix]},
+    affect:{an1:[...r.affect.an1],an2:[...r.affect.an2]},
+  }))});
+  activeEvent=null;
+}
+
+function endEvent(){
+  // Save current event and immediately start a new one — stays on network
+  if(records.length===0 && activeEvent){
+    // Empty event — just relabel rather than creating an empty record
+    activeEvent.label=`Event ${events.length+1}`;
+    document.getElementById('evt-name').textContent=activeEvent.label;
+    records=[]; an1Id=null; an2Id=null;
+    closeAllPopovers();
+    updateHint(); updateRecPanel();
+    return;
+  }
+  beginNewEvent();
+}
+
+function endSession(){
+  saveCurrentEvent();
+  if(activeSession && events.length>0){
+    sessions.push({...activeSession, events:[...events]});
+    updateHomeStats(); renderEvList();
+  }
+  activeSession=null; activeEvent=null; events=[]; records=[];
+  an1Id=null; an2Id=null;
+  showView('home');
+}
+
+// ═══════════════════════════════════════════
+//  HOME
+// ═══════════════════════════════════════════
+function updateHomeStats(){
+  document.getElementById('s-ind').textContent=INDS.length||'—';
+  document.getElementById('s-sess').textContent=sessions.length;
+  document.getElementById('s-ev').textContent=sessions.reduce((s,sess)=>s+sess.events.length,0);
+  document.getElementById('s-rec').textContent=sessions.reduce((s,sess)=>s+sess.events.reduce((e,ev)=>e+ev.records.length,0),0);
+  document.getElementById('export-btn').style.display=sessions.length>0?'block':'none';
+}
+
+function renderEvList(){
+  const lbl=document.getElementById('ev-lbl'),list=document.getElementById('ev-list');
+  if(!sessions.length){lbl.style.display='none';list.innerHTML='';return;}
+  lbl.style.display='block';
+  list.innerHTML=[...sessions].map((sess,si)=>{
+    const realIdx=sessions.length-1-si; // since we'll reverse display
+    const meta=[sess.observer,sess.group,sess.enclosure,sess.datatype,sess.conditions].filter(Boolean).join(' · ');
+    const totalRecs=sess.events.reduce((s,ev)=>s+ev.records.length,0);
+    const evLines=sess.events.map((ev,ei)=>
+      `<div style="display:flex;justify-content:space-between;padding:5px 0;border-top:1px solid var(--border);margin-top:4px;cursor:pointer;"
+        onclick="event.stopPropagation();openReview(${sessions.indexOf(sess)},${ei})">
+        <span style="font-size:11px;color:var(--dim)">${ev.label} · ${new Date(ev.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>
+        <span style="font-size:11px;color:var(--accent)">${ev.records.length} rec ›</span>
+      </div>`
+    ).join('');
+    return`<div class="ev-item" style="cursor:pointer" onclick="openReview(${sessions.indexOf(sess)},0)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div class="ev-name">${sess.label}</div>
+          <div class="ev-meta">${new Date(sess.timestamp).toLocaleString()}</div>
+          ${meta?`<div class="ev-meta">${meta}</div>`:''}
+        </div>
+        <div style="text-align:right;flex-shrink:0;margin-left:10px;">
+          <div class="ev-cnt">${sess.events.length} event${sess.events.length!==1?'s':''}</div>
+          <div style="font-size:11px;color:var(--dim)">${totalRecs} records</div>
+        </div>
+      </div>
+      ${evLines}
+    </div>`;
+  }).reverse().join('');
+}
+
+// ═══════════════════════════════════════════
+//  EXPORT CSV
+// ═══════════════════════════════════════════
+function exportData(){
+  const getName=id=>(INDS.find(i=>i.id===id)||{}).name||id;
+  const getL=(d,side,rec)=>[...(rec.beh[d][side]||[])].map(bid=>(BEHAVIORS[d].find(x=>x.id===bid)||{label:bid}).label).join('; ');
+  const getQ=(qd,rec)=>[...(rec.qualifiers[qd]||[])].map(qid=>(ALL_QUALS.find(x=>x.id===qid)||{label:qid}).label).join('; ');
+  const getA=(side,rec)=>[...(rec.affect[side]||[])].join('; ');
+  const rows=[['Session','Observer','Group','Enclosure','DataType','Conditions','ScanNum',
+    'Event','Record_Label','Timestamp','GroupID','An1_ID','An1_Name','An2_ID','An2_Name',
+    'Solo','Duration','LinkedToRecord',
+    'An1_Aggression','An1_Submission','An1_Affiliation',
+    'An2_Aggression','An2_Submission','An2_Affiliation',
+    'ThirdParty_Behaviors','An3_IDs','An4_IDs',
+    'Qualifiers_Agg','Qualifiers_Sub','Qualifiers_Aff','Qualifiers_Interaction',
+    'Affect_An1','Affect_An2','Notes']];
+  sessions.forEach(sess=>{
+    sess.events.forEach(ev=>{
+      const labels=computeLabelsFor(ev.records);
+      ev.records.forEach((rec,i)=>{
+        rows.push([
+          sess.label,sess.observer||'',sess.group||'',sess.enclosure||'',
+          sess.datatype||'',sess.conditions||'',sess.scanNum||'',
+          ev.label,labels[i],rec.timestamp,rec.groupId||'',
+          rec.an1Id,getName(rec.an1Id),rec.an2Id||'',rec.an2Id?getName(rec.an2Id):'',
+          rec.solo?'yes':'no',DURATIONS.find(d=>d.id===rec.duration)?.label||'',
+          rec.linkedRef!=null?labels[rec.linkedRef]:'',
+          getL('agg','an1',rec),getL('sub','an1',rec),getL('aff','an1',rec),
+          getL('agg','an2',rec),getL('sub','an2',rec),getL('aff','an2',rec),
+          getL('tp','an1',rec),rec.tpAn3||'',rec.tpAn4||'',
+          getQ('agg',rec),getQ('sub',rec),getQ('aff',rec),getQ('ix',rec),
+          getA('an1',rec),getA('an2',rec),rec.notes||'',
+        ]);
+      });
+    });
+  });
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download=`ethogram_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+function computeLabelsFor(recs){
+  const seen=new Map(); let next=1;
+  recs.forEach(rec=>{const gid=rec.groupId||rec.id;if(!seen.has(gid))seen.set(gid,next++);});
+  const cnt=new Map(); recs.forEach(rec=>{const gid=rec.groupId||rec.id;cnt.set(gid,(cnt.get(gid)||0)+1);});
+  const li=new Map();
+  return recs.map(rec=>{const gid=rec.groupId||rec.id;const n=seen.get(gid);if(cnt.get(gid)===1)return String(n);const idx=li.get(gid)||0;li.set(gid,idx+1);return`${n}${'abcdefghijklmnopqrstuvwxyz'[idx]}`;});
+}
+
+// ═══════════════════════════════════════════
+//  REVIEW MODE
+// ═══════════════════════════════════════════
+function openReview(sessIdx, evIdx){
+  reviewMode=true;
+  reviewSession=sessions[sessIdx];
+  reviewEventIdx=evIdx;
+  loadReviewEvent();
+}
+
+function loadReviewEvent(){
+  const ev=reviewSession.events[reviewEventIdx];
+  // Load records as live Sets so the sheet/edit machinery works
+  records=ev.records.map(r=>({...r,
+    beh:{
+      agg:{an1:new Set(r.beh.agg.an1),an2:new Set(r.beh.agg.an2)},
+      sub:{an1:new Set(r.beh.sub.an1),an2:new Set(r.beh.sub.an2)},
+      aff:{an1:new Set(r.beh.aff.an1),an2:new Set(r.beh.aff.an2)},
+      tp: {an1:new Set(r.beh.tp.an1)},
+    },
+    qualifiers:{agg:new Set(r.qualifiers.agg),sub:new Set(r.qualifiers.sub),aff:new Set(r.qualifiers.aff),ix:new Set(r.qualifiers.ix)},
+    affect:{an1:new Set(r.affect.an1),an2:new Set(r.affect.an2)},
+  }));
+  an1Id=null; an2Id=null; recMids={};
+  closeAllPopovers();
+
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-event').classList.add('active');
+  currentView='event';
+
+  scheduleLayout('evt-svg','evt-c');
+  updateHint(); updateRecPanel();
+  document.getElementById('evt-name').textContent=ev.label;
+  const meta=[reviewSession.observer,reviewSession.group,reviewSession.enclosure].filter(Boolean).join(' · ');
+  document.getElementById('evt-sub').textContent=
+    `${reviewSession.label}${meta?' · '+meta:''}`;
+  updateEventHeaderButtons();
+}
+
+function saveReviewEvent(){
+  // Write edited records back into the session
+  const ev=reviewSession.events[reviewEventIdx];
+  ev.records=records.map(r=>({...r,
+    beh:{agg:{an1:[...r.beh.agg.an1],an2:[...r.beh.agg.an2]},sub:{an1:[...r.beh.sub.an1],an2:[...r.beh.sub.an2]},aff:{an1:[...r.beh.aff.an1],an2:[...r.beh.aff.an2]},tp:{an1:[...r.beh.tp.an1]}},
+    qualifiers:{agg:[...r.qualifiers.agg],sub:[...r.qualifiers.sub],aff:[...r.qualifiers.aff],ix:[...r.qualifiers.ix]},
+    affect:{an1:[...r.affect.an1],an2:[...r.affect.an2]},
+  }));
+}
+
+function navEvent(dir){
+  if(reviewMode){
+    saveReviewEvent();
+    reviewEventIdx=Math.max(0,Math.min(reviewSession.events.length-1,reviewEventIdx+dir));
+    loadReviewEvent();
+  } else {
+    // Live session — navigate among saved events + current
+    const allEvts=[...events, activeEvent?{...activeEvent,_live:true}:null].filter(Boolean);
+    // find current position
+    const liveIdx=allEvts.length-1;
+    // for now just go Prev into saved events; Next is only meaningful in review
+    if(dir===-1 && events.length>0){
+      // Enter review of previous events without ending session
+      saveCurrentEvent(); // save what we have
+      // Reload as live after review — just show previous event's records read-only
+      // Simplest: open review on this session's saved events
+      reviewMode=true;
+      reviewSession={...activeSession,events:[...events]};
+      reviewEventIdx=events.length-1;
+      loadReviewEvent();
+    }
+  }
+}
+
+function exitReview(){
+  if(reviewMode){
+    saveReviewEvent();
+    renderEvList(); // refresh home list with any edits
+  }
+  reviewMode=false; reviewSession=null; reviewEventIdx=0;
+  records=[]; an1Id=null; an2Id=null; recMids={};
+  showView('home');
+}
+
+function updateEventHeaderButtons(){
+  const inReview=reviewMode;
+  const totalEvts=inReview?reviewSession.events.length:events.length+1;
+  const curIdx=inReview?reviewEventIdx:events.length;
+
+  const hasPrev=curIdx>0;
+  const hasNext=inReview&&curIdx<totalEvts-1;
+  const showNav=hasPrev||hasNext;
+
+  const navRow=document.getElementById('evt-nav-row');
+  navRow.style.display=showNav?'flex':'none';
+  document.getElementById('evt-prev-btn').style.display=hasPrev?'block':'none';
+  document.getElementById('evt-next-btn').style.display=hasNext?'block':'none';
+  document.getElementById('evt-nav-label').textContent=showNav?`${curIdx+1} / ${totalEvts}`:'';
+
+  // + Record always visible
+  // End Event / End Session only in live mode; Done only in review
+  document.getElementById('evt-end-btn').style.display=inReview?'none':'block';
+  document.getElementById('evt-sess-btn').style.display=inReview?'none':'block';
+  document.getElementById('evt-done-btn').style.display=inReview?'block':'none';
+
+  // Hint bar visible in both modes (needed for An1 selection)
+  document.getElementById('hint-bar').style.display='flex';
+}
+
+// + Record button — works in both live and review modes
+function newRecordBtn(){
+  // Reset any partial selection
+  an1Id=null; an2Id=null;
+  updateHint();
+  renderSVG('evt-svg');
+  // Scroll network into focus if record panel is open
+  document.getElementById('evt-c').scrollIntoView&&document.getElementById('evt-c').scrollIntoView({behavior:'smooth'});
+}
+function showSessionInfo(){
+  if(!activeSession) return;
+  document.getElementById('sess-info-title').textContent=activeSession.label;
+  const meta=[activeSession.observer,activeSession.group,activeSession.enclosure,
+    activeSession.datatype,activeSession.conditions].filter(Boolean).join(' · ');
+  document.getElementById('sess-info-meta').textContent=
+    new Date(activeSession.timestamp).toLocaleString()+(meta?' · '+meta:'');
+
+  // Build saved events + current in-progress event
+  const allEvents=[
+    ...events,
+    // Current event shown as in-progress
+    activeEvent?{...activeEvent,records,_inProgress:true}:null
+  ].filter(Boolean);
+
+  const body=document.getElementById('sess-info-body');
+  if(!allEvents.length){
+    body.innerHTML=`<div style="color:var(--dim);font-size:12px;padding:16px 0">No events recorded yet.</div>`;
+  } else {
+    body.innerHTML=allEvents.map((ev,evIdx)=>{
+      const labels=computeLabelsFor(ev.records);
+      const isLive=!!ev._inProgress;
+      const recRows=ev.records.length===0
+        ?`<div style="color:var(--dim);font-size:11px;padding:6px 0 4px">No records</div>`
+        :ev.records.map((rec,ri)=>{
+          const a1=INDS.find(x=>x.id===rec.an1Id);
+          const a2=rec.an2Id?INDS.find(x=>x.id===rec.an2Id):null;
+          const pair=a2?`${a1.name} — ${a2.name}`:`${a1.name} (solo)`;
+          const {dots,lines}=behSummaryFull(rec);
+          const time=new Date(rec.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+          const durLbl=DURATIONS.find(d=>d.id===rec.duration)?.label||'';
+          // Only allow editing if this is the current event
+          const editBtn=isLive
+            ?`<button style="background:none;border:1px solid var(--border);border-radius:5px;color:var(--accent);font-size:10px;padding:2px 7px;cursor:pointer;font-family:'JetBrains Mono',monospace;" onclick="closeSessionInfo();editRecord(${ri})">Edit</button>`
+            :'';
+          return`<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--border);">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:10px;color:var(--dim);margin-bottom:2px;">#${labels[ri]} · ${time}${durLbl?' · '+durLbl:''}</div>
+              <div style="font-size:12px;font-weight:700;">${dots}${pair}</div>
+              <div style="font-size:10px;color:var(--dim);margin-top:2px;line-height:1.5;">${lines.join('<br>')}</div>
+            </div>
+            ${editBtn}
+          </div>`;
+        }).join('');
+
+      return`<div style="margin-top:14px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:13px;color:${isLive?'var(--accent)':'var(--text)'}">
+            ${ev.label}${isLive?' <span style="font-size:10px;color:var(--accent);font-family:\'JetBrains Mono\',monospace;font-weight:600;">● LIVE</span>':''}
+          </div>
+          <div style="font-size:10px;color:var(--dim);">${new Date(ev.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+          <div style="font-size:10px;color:var(--dim);margin-left:auto;">${ev.records.length} record${ev.records.length!==1?'s':''}</div>
+        </div>
+        <div style="border-left:2px solid var(--border);padding-left:10px;">${recRows}</div>
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('sess-info-overlay').style.display='flex';
+}
+
+function closeSessionInfo(){
+  document.getElementById('sess-info-overlay').style.display='none';
+}
+function doFlash(){const f=document.getElementById('flash');f.classList.add('show');setTimeout(()=>f.classList.remove('show'),100);}
+
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
+updateHomeStats();
+initPanZoom('net-svg','net-c');
+initPanZoom('evt-svg','evt-c');
+// Auto-fetch roster from Google Sheets on load
+fetchRosterFromSheet();
+window.addEventListener('resize',()=>{
+  if(currentView==='network') renderSVG('net-svg');
+  if(currentView==='event')   renderSVG('evt-svg');
+});
+document.addEventListener('click',e=>{
+  if(!document.getElementById('d-tip').contains(e.target)) closeTip();
+  if(!document.getElementById('node-picker').contains(e.target)) closePicker();
+});
+</script>
+</body>
+</html>

@@ -320,16 +320,15 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
     <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
       <div id="an1-badge" style="display:none;font-size:11px;color:var(--accent);padding:3px 8px;background:rgba(94,240,232,.1);border-radius:6px;border:1px solid rgba(94,240,232,.3);"></div>
       <button class="btn btn-dim"  onclick="showSessionInfo()">Session</button>
-      <button class="btn btn-acc"  id="evt-new-btn"  onclick="newRecordBtn()">+ Record</button>
+      <button class="btn btn-acc"  onclick="newRecordBtn()">+ Record</button>
       <button class="btn btn-warn" id="evt-end-btn"  onclick="endEvent()"   style="display:none">End Event</button>
       <button class="btn btn-dng"  id="evt-sess-btn" onclick="endSession()" style="display:none">End Session</button>
-      <button class="btn btn-dim"  id="evt-done-btn" onclick="exitReview()" style="display:none">← Done</button>
     </div>
   </div>
-  <!-- Nav bar -->
-  <div id="evt-nav-row" style="display:none;gap:6px;align-items:center;padding:6px 14px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
+  <!-- Nav bar — always visible, buttons disabled when not applicable -->
+  <div style="display:flex;gap:6px;align-items:center;padding:6px 14px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
     <button class="btn btn-dim" id="evt-prev-btn" onclick="navEvent(-1)" style="flex:1">← Prev</button>
-    <div id="evt-nav-label" style="font-size:11px;color:var(--dim);white-space:nowrap;text-align:center;flex-shrink:0;min-width:50px;"></div>
+    <div id="evt-nav-label" style="font-size:11px;color:var(--dim);white-space:nowrap;text-align:center;flex-shrink:0;min-width:60px;"></div>
     <button class="btn btn-dim" id="evt-next-btn" onclick="navEvent(1)"  style="flex:1;text-align:right">Next →</button>
   </div>
   <!-- Hint bar — selection state indicator -->
@@ -338,10 +337,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
     <button class="btn-solo" id="solo-btn" style="display:none" onclick="openSheet(true)">Solo Record</button>
   </div>
   <div id="evt-c"><svg id="evt-svg"></svg></div>
-  <div class="rec-panel" id="rec-panel" style="display:none;">
+  <div class="rec-panel" id="rec-panel">
     <div class="rec-panel-hdr">
-      <span class="rec-panel-title">Records — drag ⠿ to reorder</span>
-      <span style="font-size:9px;color:var(--dim);">tap row to edit</span>
+      <span class="rec-panel-title" id="rec-panel-title">No records yet</span>
+      <span style="font-size:9px;color:var(--dim);">tap to edit</span>
     </div>
     <div class="rec-list" id="rec-list"></div>
   </div>
@@ -1699,9 +1698,15 @@ function commitRecord(){
 // ═══════════════════════════════════════════
 function updateRecPanel(){
   const panel=document.getElementById('rec-panel');
+  const titleEl=document.getElementById('rec-panel-title');
   document.getElementById('evt-sub').textContent=records.length+' record'+(records.length!==1?'s':'');
-  if(!records.length){panel.style.display='none';return;}
-  panel.style.display='flex';
+  panel.style.display='flex'; // always visible
+  if(!records.length){
+    if(titleEl) titleEl.textContent='No records yet';
+    document.getElementById('rec-list').innerHTML='';
+    return;
+  }
+  if(titleEl) titleEl.textContent='Records — drag ⠿ to reorder';
   const labels=computeLabels();
 
   // Build visual list — group simultaneous records together
@@ -1917,18 +1922,16 @@ function beginNewEvent(){
   records=[]; an1Id=null; an2Id=null; recMids={};
   view2d['evt-svg']={x:0,y:0,scale:1};
   closeAllPopovers();
-  // Show event view (or stay on it) — only trigger layout if not already there
   if(currentView!=='event'){
-    // Need to navigate in without re-running scheduleLayout if already settled
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
     document.getElementById('view-event').classList.add('active');
     currentView='event';
     scheduleLayout('evt-svg','evt-c');
   } else {
-    renderSVG('evt-svg'); // just redraw to clear edges, keep positions
+    cancelAnimationFrame(animFrame); // stop any running layout
+    renderSVG('evt-svg');            // clean redraw — no edges, positions preserved
   }
   updateHint(); updateRecPanel();
-  document.getElementById('rec-panel').style.display='none';
   document.getElementById('evt-name').textContent=activeEvent.label;
   const sub=[sessObserver,sessGroup,sessEnclosure].filter(Boolean).join(' · ');
   document.getElementById('evt-sub').textContent=sub;
@@ -2165,35 +2168,44 @@ function saveReviewEvent(){
 function navEvent(dir){
   if(reviewMode){
     saveReviewEvent();
-    reviewEventIdx=Math.max(0,Math.min(reviewSession.events.length-1,reviewEventIdx+dir));
+    const newIdx=reviewEventIdx+dir;
+    if(newIdx<0||newIdx>=reviewSession.events.length){
+      // Exiting review — return to live session or home
+      exitReview();
+      return;
+    }
+    reviewEventIdx=newIdx;
     loadReviewEvent();
   } else {
-    // Live session — navigate among saved events + current
-    const allEvts=[...events, activeEvent?{...activeEvent,_live:true}:null].filter(Boolean);
-    // find current position
-    const liveIdx=allEvts.length-1;
-    // for now just go Prev into saved events; Next is only meaningful in review
+    // Live session nav — Prev goes into review of saved events
     if(dir===-1 && events.length>0){
-      // Enter review of previous events without ending session
-      saveCurrentEvent(); // save what we have
-      // Reload as live after review — just show previous event's records read-only
-      // Simplest: open review on this session's saved events
+      saveCurrentEvent();
       reviewMode=true;
       reviewSession={...activeSession,events:[...events]};
       reviewEventIdx=events.length-1;
       loadReviewEvent();
     }
+    // Next does nothing in live mode (already at latest)
   }
 }
 
 function exitReview(){
   if(reviewMode){
     saveReviewEvent();
-    renderEvList(); // refresh home list with any edits
+    renderEvList();
   }
   reviewMode=false; reviewSession=null; reviewEventIdx=0;
   records=[]; an1Id=null; an2Id=null; recMids={};
-  showView('home');
+  // If we have an active session, go back to it
+  if(activeSession){
+    // Restore live event
+    records=[]; an1Id=null; an2Id=null; recMids={};
+    updateHint(); updateRecPanel();
+    renderSVG('evt-svg');
+    updateEventHeaderButtons();
+  } else {
+    showView('home');
+  }
 }
 
 function updateEventHeaderButtons(){
@@ -2203,21 +2215,23 @@ function updateEventHeaderButtons(){
 
   const hasPrev=curIdx>0;
   const hasNext=inReview&&curIdx<totalEvts-1;
-  const showNav=hasPrev||hasNext;
 
-  const navRow=document.getElementById('evt-nav-row');
-  navRow.style.display=showNav?'flex':'none';
-  document.getElementById('evt-prev-btn').style.display=hasPrev?'block':'none';
-  document.getElementById('evt-next-btn').style.display=hasNext?'block':'none';
-  document.getElementById('evt-nav-label').textContent=showNav?`${curIdx+1} / ${totalEvts}`:'';
+  // Prev/Next always visible, disabled when not applicable
+  const prevBtn=document.getElementById('evt-prev-btn');
+  const nextBtn=document.getElementById('evt-next-btn');
+  prevBtn.disabled=!hasPrev;
+  prevBtn.style.opacity=hasPrev?'1':'0.35';
+  nextBtn.disabled=!hasNext;
+  nextBtn.style.opacity=hasNext?'1':'0.35';
 
-  // + Record always visible
-  // End Event / End Session only in live mode; Done only in review
+  // Show position counter when in review
+  const label=document.getElementById('evt-nav-label');
+  label.textContent=(inReview||events.length>0)?`${curIdx+1} / ${totalEvts}`:'';
+
+  // End Event / End Session only in live mode
   document.getElementById('evt-end-btn').style.display=inReview?'none':'block';
   document.getElementById('evt-sess-btn').style.display=inReview?'none':'block';
-  document.getElementById('evt-done-btn').style.display=inReview?'block':'none';
 
-  // Hint bar visible in both modes (needed for An1 selection)
   document.getElementById('hint-bar').style.display='flex';
 }
 

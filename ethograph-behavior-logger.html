@@ -1916,12 +1916,83 @@ function endEvent(){
 function endSession(){
   saveCurrentEvent();
   if(activeSession && events.length>0){
-    sessions.push({...activeSession, events:[...events]});
+    const sess={...activeSession, events:[...events]};
+    sessions.push(sess);
     updateHomeStats(); renderEvList();
+    postSessionToSheet(sess); // auto-sync to Google Sheets
   }
   activeSession=null; activeEvent=null; events=[]; records=[];
   an1Id=null; an2Id=null;
   showView('home');
+}
+
+// ═══════════════════════════════════════════
+//  GOOGLE SHEETS SYNC
+// ═══════════════════════════════════════════
+const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbz-tlGnMZCq6M0nazbensaiPNeps3YpG8I0pj6lfSgqLOoo6puVJopgxs4f_XgfDkZADA/exec';
+
+async function postSessionToSheet(sess){
+  const rows=buildRows(sess);
+  if(!rows.length) return;
+  // Show syncing indicator
+  showSyncStatus('⏳ Syncing to Google Sheets…','var(--dim)');
+  try{
+    const resp=await fetch(APPS_SCRIPT_URL,{
+      method:'POST',
+      mode:'no-cors', // Apps Script requires no-cors from browsers
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(rows),
+    });
+    // no-cors means we can't read the response, but if no exception it sent
+    showSyncStatus(`✓ ${rows.length} row${rows.length!==1?'s':''} synced to Google Sheets`,'var(--aff)');
+  } catch(e){
+    showSyncStatus(`⚠ Sync failed — use Export CSV as backup`,'var(--warn)');
+    console.error('Sheet sync error:',e);
+  }
+}
+
+function showSyncStatus(msg,color){
+  // Show on home screen below session list
+  let el=document.getElementById('sync-status');
+  if(!el){
+    el=document.createElement('div');
+    el.id='sync-status';
+    el.style.cssText='padding:8px 14px;font-size:11px;font-family:\'JetBrains Mono\',monospace;';
+    document.getElementById('ev-list').before(el);
+  }
+  el.textContent=msg;
+  el.style.color=color;
+  setTimeout(()=>{if(el.textContent===msg) el.textContent='';},6000);
+}
+
+function buildRows(sess){
+  const getName=id=>{
+    const ind=INDS.find(i=>i.id===id)||ROSTER.find(r=>r.id===id);
+    return ind?(ind.name||ind.dye||id):id;
+  };
+  const getL=(d,side,rec)=>[...(rec.beh[d][side]||[])].map(bid=>(BEHAVIORS[d].find(x=>x.id===bid)||{label:bid}).label).join('; ');
+  const getQ=(qd,rec)=>[...(rec.qualifiers[qd]||[])].map(qid=>(ALL_QUALS.find(x=>x.id===qid)||{label:qid}).label).join('; ');
+  const getA=(side,rec)=>[...(rec.affect[side]||[])].join('; ');
+  const rows=[];
+  sess.events.forEach(ev=>{
+    const labels=computeLabelsFor(ev.records);
+    ev.records.forEach((rec,i)=>{
+      rows.push([
+        sess.label, sess.observer||'', sess.group||'', sess.enclosure||'',
+        sess.datatype||'', sess.conditions||'', sess.scanNum||'',
+        ev.label, labels[i], rec.timestamp, rec.groupId||'',
+        rec.an1Id, getName(rec.an1Id), rec.an2Id||'', rec.an2Id?getName(rec.an2Id):'',
+        rec.solo?'yes':'no', DURATIONS.find(d=>d.id===rec.duration)?.label||'',
+        rec.linkedRef!=null?labels[rec.linkedRef]:'',
+        getL('agg','an1',rec), getL('sub','an1',rec), getL('aff','an1',rec),
+        getL('agg','an2',rec), getL('sub','an2',rec), getL('aff','an2',rec),
+        getL('tp','an1',rec), rec.tpAn3||'', rec.tpAn4||'',
+        getQ('agg',rec), getQ('sub',rec), getQ('aff',rec), getQ('ix',rec),
+        getA('an1',rec), getA('an2',rec), rec.notes||'',
+      ]);
+    });
+  });
+  return rows;
 }
 
 // ═══════════════════════════════════════════
@@ -1968,45 +2039,23 @@ function renderEvList(){
 }
 
 // ═══════════════════════════════════════════
-//  EXPORT CSV
+//  EXPORT CSV (manual backup)
 // ═══════════════════════════════════════════
 function exportData(){
-  const getName=id=>(INDS.find(i=>i.id===id)||{}).name||id;
-  const getL=(d,side,rec)=>[...(rec.beh[d][side]||[])].map(bid=>(BEHAVIORS[d].find(x=>x.id===bid)||{label:bid}).label).join('; ');
-  const getQ=(qd,rec)=>[...(rec.qualifiers[qd]||[])].map(qid=>(ALL_QUALS.find(x=>x.id===qid)||{label:qid}).label).join('; ');
-  const getA=(side,rec)=>[...(rec.affect[side]||[])].join('; ');
-  const rows=[['Session','Observer','Group','Enclosure','DataType','Conditions','ScanNum',
+  const header=['Session','Observer','Group','Enclosure','DataType','Conditions','ScanNum',
     'Event','Record_Label','Timestamp','GroupID','An1_ID','An1_Name','An2_ID','An2_Name',
     'Solo','Duration','LinkedToRecord',
     'An1_Aggression','An1_Submission','An1_Affiliation',
     'An2_Aggression','An2_Submission','An2_Affiliation',
     'ThirdParty_Behaviors','An3_IDs','An4_IDs',
     'Qualifiers_Agg','Qualifiers_Sub','Qualifiers_Aff','Qualifiers_Interaction',
-    'Affect_An1','Affect_An2','Notes']];
-  sessions.forEach(sess=>{
-    sess.events.forEach(ev=>{
-      const labels=computeLabelsFor(ev.records);
-      ev.records.forEach((rec,i)=>{
-        rows.push([
-          sess.label,sess.observer||'',sess.group||'',sess.enclosure||'',
-          sess.datatype||'',sess.conditions||'',sess.scanNum||'',
-          ev.label,labels[i],rec.timestamp,rec.groupId||'',
-          rec.an1Id,getName(rec.an1Id),rec.an2Id||'',rec.an2Id?getName(rec.an2Id):'',
-          rec.solo?'yes':'no',DURATIONS.find(d=>d.id===rec.duration)?.label||'',
-          rec.linkedRef!=null?labels[rec.linkedRef]:'',
-          getL('agg','an1',rec),getL('sub','an1',rec),getL('aff','an1',rec),
-          getL('agg','an2',rec),getL('sub','an2',rec),getL('aff','an2',rec),
-          getL('tp','an1',rec),rec.tpAn3||'',rec.tpAn4||'',
-          getQ('agg',rec),getQ('sub',rec),getQ('aff',rec),getQ('ix',rec),
-          getA('an1',rec),getA('an2',rec),rec.notes||'',
-        ]);
-      });
-    });
-  });
-  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    'Affect_An1','Affect_An2','Notes'];
+  const allRows=[header];
+  sessions.forEach(sess=>buildRows(sess).forEach(r=>allRows.push(r)));
+  const csv=allRows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-  a.download=`ethogram_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download=`ethograph_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
 }
 

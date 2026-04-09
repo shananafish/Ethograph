@@ -735,10 +735,18 @@ async function fetchRosterFromSheet(){
   if(statusEl) statusEl.textContent='Fetching…';
   if(btn) btn.disabled=true;
   try{
-    const resp=await fetch(SHEET_CSV_URL);
+    // Add cache-bust timestamp so Google doesn't serve a stale cached response
+    const url=SHEET_CSV_URL+'&t='+Date.now();
+    const resp=await fetch(url,{
+      method:'GET',
+      mode:'cors',
+      credentials:'omit',
+      cache:'no-cache',
+    });
     if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const text=await resp.text();
-    applyRosterText(text, 'csv');
+    if(!text||text.length<10) throw new Error('Empty response');
+    applyRosterText(text,'csv');
   } catch(e){
     const msg=`❌ Could not fetch: ${e.message}. Try pasting manually below.`;
     if(statusEl) statusEl.textContent=msg;

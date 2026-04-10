@@ -198,7 +198,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
       <span id="home-group-label" style="font-size:11px;font-weight:700;color:var(--accent);"></span>
       <button class="btn btn-dim" onclick="showView('filter')" style="margin-left:8px;padding:3px 9px;font-size:10px;">Change</button>
     </div>
-    <button class="btn-big" onclick="showView('setup')" id="new-event-btn" style="display:none">+ NEW EVENT</button>
+    <button class="btn-big" onclick="showView('setup')" id="new-event-btn" style="display:none">+ NEW SESSION</button>
   </div>
   <div style="padding:12px 0 0;">
     <div class="sec-title" id="ev-lbl" style="display:none">Recorded Events</div>
@@ -243,40 +243,63 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
 <div id="view-setup" class="view">
   <div class="hdr" style="padding:11px 14px;">
     <button class="btn btn-dim" onclick="showView('home')">← Back</button>
-    <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:var(--accent);">Session Setup</div>
+    <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:var(--accent);">New Session</div>
     <div></div>
   </div>
   <div style="overflow-y:auto;flex:1;padding:14px;">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:7px;">
-      <div><div class="field-lbl">Observer</div><input class="field-in" id="sess-observer" placeholder="Initials"></div>
-      <div><div class="field-lbl">Group ID</div><input class="field-in" id="sess-group" placeholder="e.g. Group A"></div>
+    <!-- Auto-populated info -->
+    <div style="background:var(--hi);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;line-height:1.8;">
+      <div><span style="color:var(--dim);">Group:</span> <span id="setup-group" style="color:var(--accent);font-weight:700;"></span></div>
+      <div><span style="color:var(--dim);">Demog:</span> <span id="setup-demog" style="color:var(--text);"></span></div>
+      <div><span style="color:var(--dim);">Date/Time:</span> <span id="setup-datetime" style="color:var(--text);"></span></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:7px;">
-      <div><div class="field-lbl">Enclosure</div><input class="field-in" id="sess-enclosure" placeholder="e.g. Enclosure 3"></div>
+    <!-- Manual fields -->
+    <div style="margin-bottom:9px;">
+      <div class="field-lbl">Observer</div>
+      <input class="field-in" id="sess-observer" placeholder="Initials">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:9px;">
       <div><div class="field-lbl">Data Type</div>
         <select class="field-sel" id="sess-datatype">
-          <option value="opportunistic">General / Opportunistic</option>
+          <option value="opportunistic">Opportunistic</option>
           <option value="systematic">Systematic</option>
-          <option value="scan">Affiliation Scan</option>
+          <option value="scan">Scan</option>
         </select>
       </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:7px;">
       <div><div class="field-lbl">Conditions</div>
         <select class="field-sel" id="sess-conditions">
           <option value="unprovisioned">Unprovisioned</option>
           <option value="provisioned">Provisioned</option>
           <option value="release">Release</option>
           <option value="group_release">Group Release</option>
-          <option value="male_intro">Male Introduction</option>
-          <option value="monitoring">Monitoring / Unrest</option>
+          <option value="male_intro">Male Intro</option>
+          <option value="monitoring">Monitoring</option>
         </select>
       </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:9px;">
       <div><div class="field-lbl">Scan # (if scan)</div><input class="field-in" id="sess-scan" type="number" placeholder="1"></div>
+      <div></div>
     </div>
     <div style="margin-bottom:14px;"><div class="field-lbl">Session Notes</div><textarea class="notes-in" id="sess-notes" placeholder="Notes…"></textarea></div>
-    <button class="btn-big" onclick="startEvent()">Start Recording</button>
+    <button class="btn-big" onclick="startSession()">Begin Session</button>
   </div>
+</div>
+
+<!-- ════ SESSION VIEW ════ -->
+<div id="view-session" class="view">
+  <div class="hdr" style="padding:11px 14px;">
+    <div>
+      <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:var(--accent);" id="sess-view-name">Session</div>
+      <div style="font-size:10px;color:var(--dim);" id="sess-view-meta"></div>
+    </div>
+    <button class="btn btn-dng" onclick="endSession()">End Session</button>
+  </div>
+  <div style="padding:12px 14px;">
+    <button class="btn-big" onclick="startEvent()">+ New Event</button>
+  </div>
+  <div style="padding:4px 14px 8px;font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;" id="sess-ev-lbl" style="display:none">Events</div>
+  <div class="ev-list" id="sess-ev-list"></div>
 </div>
 
 <!-- ════ NETWORK VIEW ════ -->
@@ -676,12 +699,13 @@ const DURATIONS=[
 //  STATE
 // ═══════════════════════════════════════════
 let currentView='home';
+let sessions=[];
+let activeSession=null;
 let events=[], activeEvent=null, records=[];
 let an1Id=null, an2Id=null;
 
-// Session
-let sessObserver='',sessGroup='',sessEnclosure='';
-let sessDatatype='opportunistic',sessConditions='unprovisioned';
+// Session defaults (persist across sessions)
+let sessObserver='',sessDatatype='opportunistic',sessConditions='unprovisioned';
 let sessScan='',sessNotes='';
 
 // Sheet
@@ -708,6 +732,7 @@ function showView(name){
   if(name==='network') scheduleLayout('net-svg','net-c');
   if(name==='event')   scheduleLayout('evt-svg','evt-c');
   if(name==='filter')  buildFilterUI();
+  if(name==='setup')   populateSetupForm();
   if(name==='home'){
     // show/hide elements depending on whether roster is loaded
     const ready=INDS.length>0;
@@ -1508,16 +1533,167 @@ function startEvent(){
   document.getElementById('evt-sub').textContent=sub||'0 records';
 }
 
+// ═══════════════════════════════════════════
+//  GOOGLE SHEETS SYNC
+// ═══════════════════════════════════════════
+const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbz-tlGnMZCq6M0nazbensaiPNeps3YpG8I0pj6lfSgqLOoo6puVJopgxs4f_XgfDkZADA/exec';
+
+async function postSessionToSheet(sess){
+  const rows=buildRows(sess);
+  if(!rows.length){showSyncStatus('⚠ No records to sync','var(--warn)');return;}
+  showSyncStatus('⏳ Syncing…','var(--dim)');
+  try{
+    await fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(rows)});
+    showSyncStatus('✓ '+rows.length+' row'+(rows.length!==1?'s':'')+' synced to Google Sheets','var(--aff)');
+  } catch(e){
+    showSyncStatus('⚠ Sync failed — use Export CSV as backup','var(--warn)');
+  }
+}
+
+function showSyncStatus(msg,color){
+  let el=document.getElementById('sync-status');
+  if(!el){
+    el=document.createElement('div');
+    el.id='sync-status';
+    el.style.cssText='padding:6px 14px;font-size:11px;font-family:\'JetBrains Mono\',monospace;';
+    document.getElementById('ev-list').before(el);
+  }
+  el.textContent=msg; el.style.color=color;
+  setTimeout(()=>{if(el.textContent===msg)el.textContent='';},7000);
+}
+
+function buildRows(sess){
+  const getName=id=>{const a=INDS.find(i=>i.id===id)||ROSTER.find(r=>r.id===id);return a?(a.name||a.dye||id):id;};
+  const getL=(d,side,rec)=>[...(rec.beh[d][side]||[])].map(bid=>(BEHAVIORS[d].find(x=>x.id===bid)||{label:bid}).label).join('; ');
+  const getQ=(qd,rec)=>[...(rec.qualifiers[qd]||[])].map(qid=>(ALL_QUALS.find(x=>x.id===qid)||{label:qid}).label).join('; ');
+  const getA=(side,rec)=>[...(rec.affect[side]||[])].join('; ');
+  const rows=[];
+  sess.events.forEach(ev=>{
+    const labels=computeLabelsFor(ev.records);
+    ev.records.forEach((rec,i)=>{
+      rows.push([
+        sess.label,sess.observer||'',sess.group||'',sess.demog||'',
+        sess.datatype||'',sess.conditions||'',sess.scanNum||'',sess.startTime||'',
+        ev.label,labels[i],rec.timestamp,rec.groupId||'',
+        rec.an1Id,getName(rec.an1Id),rec.an2Id||'',rec.an2Id?getName(rec.an2Id):'',
+        rec.solo?'yes':'no',DURATIONS.find(d=>d.id===rec.duration)?.label||'',
+        rec.linkedRef!=null?labels[rec.linkedRef]:'',
+        getL('agg','an1',rec),getL('sub','an1',rec),getL('aff','an1',rec),
+        getL('agg','an2',rec),getL('sub','an2',rec),getL('aff','an2',rec),
+        getL('tp','an1',rec),rec.tpAn3||'',rec.tpAn4||'',
+        getQ('agg',rec),getQ('sub',rec),getQ('aff',rec),getQ('ix',rec),
+        getA('an1',rec),getA('an2',rec),rec.notes||'',
+      ]);
+    });
+  });
+  return rows;
+}
+
+// ═══════════════════════════════════════════
+//  SESSION & EVENT MANAGEMENT
+// ═══════════════════════════════════════════
+function populateSetupForm(){
+  // Auto-fill read-only info
+  const da=[...activeDemogs];
+  document.getElementById('setup-group').textContent=activeGroup||'(no group selected)';
+  document.getElementById('setup-demog').textContent=da.length?da.join(', '):'All';
+  document.getElementById('setup-datetime').textContent=new Date().toLocaleString([],{
+    month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  // Restore last-used values
+  document.getElementById('sess-observer').value=sessObserver||'';
+  const dt=document.getElementById('sess-datatype');
+  if(dt) dt.value=sessDatatype||'opportunistic';
+  const cd=document.getElementById('sess-conditions');
+  if(cd) cd.value=sessConditions||'unprovisioned';
+  document.getElementById('sess-scan').value=sessScan||'';
+  document.getElementById('sess-notes').value='';
+}
+
+function startSession(){
+  if(!INDS.length){alert('Load a roster and select a group first.');showView('home');return;}
+  sessObserver=document.getElementById('sess-observer').value.trim();
+  sessDatatype=document.getElementById('sess-datatype').value;
+  sessConditions=document.getElementById('sess-conditions').value;
+  sessScan=document.getElementById('sess-scan').value.trim();
+  sessNotes=document.getElementById('sess-notes').value.trim();
+  const da=[...activeDemogs];
+  const now=new Date();
+  activeSession={
+    id:'SESS-'+Date.now(),
+    label:'Session '+(sessions.length+1),
+    startTime:now.toISOString(),
+    observer:sessObserver,
+    group:activeGroup,
+    demog:da.length?da.join(', '):'All',
+    datatype:sessDatatype,
+    conditions:sessConditions,
+    scanNum:sessScan,
+    notes:sessNotes,
+    events:[],
+  };
+  events=[];
+  showView('session');
+  updateSessionView();
+}
+
+function updateSessionView(){
+  if(!activeSession) return;
+  document.getElementById('sess-view-name').textContent=activeSession.label;
+  const meta=[activeSession.observer,activeSession.group,activeSession.demog,activeSession.conditions]
+    .filter(Boolean).join(' · ');
+  document.getElementById('sess-view-meta').textContent=meta;
+  const lbl=document.getElementById('sess-ev-lbl');
+  const list=document.getElementById('sess-ev-list');
+  if(!events.length){lbl.style.display='none';list.innerHTML='';return;}
+  lbl.style.display='block';
+  list.innerHTML=[...events].reverse().map((ev,ri)=>
+    `<div class="ev-item">
+      <div class="ev-name">${ev.label}</div>
+      <div class="ev-cnt">${ev.records.length} record${ev.records.length!==1?'s':''}</div>
+    </div>`
+  ).join('');
+}
+
+function startEvent(){
+  activeEvent={
+    id:'EVT-'+Date.now(),
+    label:'Event '+(events.length+1),
+    timestamp:new Date().toISOString(),
+    observer:activeSession?.observer||sessObserver,
+    group:activeSession?.group||activeGroup,
+    demog:activeSession?.demog||'',
+    datatype:activeSession?.datatype||sessDatatype,
+    conditions:activeSession?.conditions||sessConditions,
+    scanNum:activeSession?.scanNum||sessScan,
+  };
+  records=[]; an1Id=null; an2Id=null;
+  showView('event'); updateHint(); updateRecPanel();
+  document.getElementById('evt-name').textContent=activeEvent.label;
+  document.getElementById('evt-sub').textContent='0 records';
+}
+
 function endEvent(){
   if(activeEvent){
-    events.push({...activeEvent,records:records.map(r=>({...r,
+    const savedRecs=records.map(r=>({...r,
       beh:{agg:{an1:[...r.beh.agg.an1],an2:[...r.beh.agg.an2]},sub:{an1:[...r.beh.sub.an1],an2:[...r.beh.sub.an2]},aff:{an1:[...r.beh.aff.an1],an2:[...r.beh.aff.an2]},tp:{an1:[...r.beh.tp.an1]}},
       qualifiers:{agg:[...r.qualifiers.agg],sub:[...r.qualifiers.sub],aff:[...r.qualifiers.aff],ix:[...r.qualifiers.ix]},
       affect:{an1:[...r.affect.an1],an2:[...r.affect.an2]},
-    }))});
-    updateHomeStats();renderEvList();
+    }));
+    events.push({...activeEvent,records:savedRecs});
   }
-  activeEvent=null;records=[];an1Id=null;an2Id=null;
+  activeEvent=null; records=[]; an1Id=null; an2Id=null;
+  showView('session');
+  updateSessionView();
+}
+
+function endSession(){
+  if(activeSession){
+    const sess={...activeSession,events:[...events]};
+    sessions.push(sess);
+    postSessionToSheet(sess);
+    activeSession=null; events=[];
+    updateHomeStats(); renderEvList();
+  }
   showView('home');
 }
 
@@ -1526,20 +1702,25 @@ function endEvent(){
 // ═══════════════════════════════════════════
 function updateHomeStats(){
   document.getElementById('s-ind').textContent=INDS.length||'—';
-  document.getElementById('s-ev').textContent=events.length;
-  document.getElementById('s-rec').textContent=events.reduce((s,e)=>s+e.records.length,0);
-  document.getElementById('export-btn').style.display=events.length>0?'block':'none';
+  const totalEvs=sessions.reduce((s,sess)=>s+sess.events.length,0);
+  const totalRecs=sessions.reduce((s,sess)=>s+sess.events.reduce((e,ev)=>e+ev.records.length,0),0);
+  document.getElementById('s-ev').textContent=totalEvs;
+  document.getElementById('s-rec').textContent=totalRecs;
+  document.getElementById('export-btn').style.display=sessions.length>0?'block':'none';
 }
 function renderEvList(){
   const lbl=document.getElementById('ev-lbl'),list=document.getElementById('ev-list');
-  if(!events.length){lbl.style.display='none';list.innerHTML='';return;}
+  if(!sessions.length){lbl.style.display='none';list.innerHTML='';return;}
   lbl.style.display='block';
-  list.innerHTML=[...events].reverse().map(ev=>{
-    const meta=[ev.observer,ev.group,ev.enclosure,ev.datatype,ev.conditions].filter(Boolean).join(' · ');
-    return`<div class="ev-item"><div class="ev-name">${ev.label}</div>
-      <div class="ev-meta">${new Date(ev.timestamp).toLocaleString()}</div>
+  list.innerHTML=[...sessions].reverse().map(sess=>{
+    const meta=[sess.observer,sess.group,sess.demog,sess.conditions].filter(Boolean).join(' · ');
+    const totalRecs=sess.events.reduce((s,ev)=>s+ev.records.length,0);
+    return`<div class="ev-item">
+      <div class="ev-name">${sess.label}</div>
+      <div class="ev-meta">${new Date(sess.startTime).toLocaleString()}</div>
       ${meta?`<div class="ev-meta">${meta}</div>`:''}
-      <div class="ev-cnt">${ev.records.length} record${ev.records.length!==1?'s':''}</div></div>`;
+      <div class="ev-cnt">${sess.events.length} event${sess.events.length!==1?'s':''} · ${totalRecs} record${totalRecs!==1?'s':''}</div>
+    </div>`;
   }).join('');
 }
 
@@ -1559,10 +1740,11 @@ function exportData(){
     'ThirdParty_Behaviors','An3_IDs','An4_IDs',
     'Qualifiers_Agg','Qualifiers_Sub','Qualifiers_Aff','Qualifiers_Interaction',
     'Affect_An1','Affect_An2','Notes']];
-  events.forEach(ev=>{
+  sessions.forEach(sess=>{
+   sess.events.forEach(ev=>{
     const labels=computeLabelsFor(ev.records);
     ev.records.forEach((rec,i)=>{
-      rows.push([ev.label,ev.observer||'',ev.group||'',ev.enclosure||'',ev.datatype||'',ev.conditions||'',ev.scanNum||'',
+      rows.push([sess.label+'/'+ev.label,sess.observer||'',sess.group||'',sess.demog||'',sess.datatype||'',sess.conditions||'',sess.scanNum||'',
         labels[i],rec.timestamp,rec.groupId||'',
         rec.an1Id,getName(rec.an1Id),rec.an2Id||'',rec.an2Id?getName(rec.an2Id):'',
         rec.solo?'yes':'no',DURATIONS.find(d=>d.id===rec.duration)?.label||'',
@@ -1573,6 +1755,7 @@ function exportData(){
         getQ('agg',rec),getQ('sub',rec),getQ('aff',rec),getQ('ix',rec),
         getA('an1',rec),getA('an2',rec),rec.notes||'']);
     });
+   });
   });
   const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a');

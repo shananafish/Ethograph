@@ -182,7 +182,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
     <div><div class="hdr-title">ETHOGRAPH</div><div class="hdr-sub">Behavioral Network Recorder</div></div>
     <div style="display:flex;gap:7px;">
       <button class="btn btn-dim" onclick="showView('roster')">Roster</button>
-      <button class="btn btn-acc" onclick="showView('network')" id="network-btn" style="display:none">Network</button>
       <button class="btn btn-warn" id="export-btn" onclick="exportData()" style="display:none">Export CSV</button>
     </div>
   </div>
@@ -198,10 +197,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
       <span id="home-group-label" style="font-size:11px;font-weight:700;color:var(--accent);"></span>
       <button class="btn btn-dim" onclick="showView('filter')" style="margin-left:8px;padding:3px 9px;font-size:10px;">Change</button>
     </div>
-    <button class="btn-big" onclick="showView('setup')" id="new-event-btn" style="display:none">+ NEW SESSION</button>
+    <button class="btn-big" onclick="showView('setup')" id="new-sess-btn" style="display:none">+ NEW SESSION</button>
   </div>
-  <div style="padding:12px 0 0;">
-    <div class="sec-title" id="ev-lbl" style="display:none">Recorded Events</div>
+  <div style="padding:8px 0 0;flex:1;display:flex;flex-direction:column;">
+    <div id="sync-status" style="padding:4px 14px;font-size:11px;font-family:'JetBrains Mono',monospace;"></div>
+    <div class="sec-title" id="home-sess-lbl" style="display:none;padding-top:8px;">Sessions</div>
     <div class="ev-list" id="ev-list"></div>
   </div>
 </div>
@@ -247,13 +247,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
     <div></div>
   </div>
   <div style="overflow-y:auto;flex:1;padding:14px;">
-    <!-- Auto-populated info -->
-    <div style="background:var(--hi);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;line-height:1.8;">
+    <div style="background:var(--hi);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;line-height:1.9;">
       <div><span style="color:var(--dim);">Group:</span> <span id="setup-group" style="color:var(--accent);font-weight:700;"></span></div>
       <div><span style="color:var(--dim);">Demog:</span> <span id="setup-demog" style="color:var(--text);"></span></div>
       <div><span style="color:var(--dim);">Date/Time:</span> <span id="setup-datetime" style="color:var(--text);"></span></div>
     </div>
-    <!-- Manual fields -->
     <div style="margin-bottom:9px;">
       <div class="field-lbl">Observer</div>
       <input class="field-in" id="sess-observer" placeholder="Initials">
@@ -277,65 +275,89 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
         </select>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:9px;">
-      <div><div class="field-lbl">Scan # (if scan)</div><input class="field-in" id="sess-scan" type="number" placeholder="1"></div>
-      <div></div>
+    <div style="margin-bottom:9px;">
+      <div class="field-lbl">Scan # (if scan)</div>
+      <input class="field-in" id="sess-scan" type="number" placeholder="1" style="width:50%;">
     </div>
-    <div style="margin-bottom:14px;"><div class="field-lbl">Session Notes</div><textarea class="notes-in" id="sess-notes" placeholder="Notes…"></textarea></div>
+    <div style="margin-bottom:14px;">
+      <div class="field-lbl">Session Notes</div>
+      <textarea class="notes-in" id="sess-notes" placeholder="Notes…"></textarea>
+    </div>
     <button class="btn-big" onclick="startSession()">Begin Session</button>
   </div>
 </div>
 
-<!-- ════ SESSION VIEW ════ -->
-<div id="view-session" class="view">
-  <div class="hdr" style="padding:11px 14px;">
-    <div>
-      <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:var(--accent);" id="sess-view-name">Session</div>
-      <div style="font-size:10px;color:var(--dim);" id="sess-view-meta"></div>
-    </div>
-    <button class="btn btn-dng" onclick="endSession()">End Session</button>
-  </div>
-  <div style="padding:12px 14px;">
-    <button class="btn-big" onclick="startEvent()">+ New Event</button>
-  </div>
-  <div style="padding:4px 14px 8px;font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;" id="sess-ev-lbl" style="display:none">Events</div>
-  <div class="ev-list" id="sess-ev-list"></div>
-</div>
-
-<!-- ════ NETWORK VIEW ════ -->
-<div id="view-network" class="view">
-  <div class="hdr" style="padding:11px 14px;">
-    <button class="btn btn-dim" onclick="showView('home')">← Back</button>
-    <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:var(--accent);">Baseline Network</div>
-    <div style="font-size:10px;color:var(--dim);">9 individuals</div>
-  </div>
-  <div id="net-c"><svg id="net-svg"></svg></div>
-</div>
-
-<!-- ════ EVENT VIEW ════ -->
-<div id="view-event" class="view">
+<!-- ════ RECORDING VIEW (network + events) ════ -->
+<div id="view-recording" class="view">
   <div class="evt-hdr">
-    <div><div class="evt-name" id="evt-name">Event 1</div><div class="evt-sub" id="evt-sub">0 records</div></div>
-    <div style="display:flex;gap:7px;align-items:center;">
+    <div>
+      <div class="evt-name" id="rec-sess-label">Session</div>
+      <div class="evt-sub" id="rec-event-label" style="color:var(--dim);">Tap a node to begin recording</div>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;">
       <div id="an1-badge" style="display:none;font-size:11px;color:var(--accent);padding:3px 8px;background:rgba(78,205,196,.1);border-radius:6px;border:1px solid rgba(78,205,196,.3);"></div>
-      <button class="btn btn-dng" onclick="endEvent()">End Event</button>
+      <button class="btn btn-dim" id="del-evt-btn" onclick="deleteEvent()" style="display:none">✕ Event</button>
+      <button class="btn btn-warn" id="end-evt-btn" onclick="endEvent()" style="display:none">End Event</button>
+      <button class="btn btn-dim" onclick="closeSession()">Close Session</button>
     </div>
   </div>
   <div class="hint hint-a1" id="hint-bar">
-    <span id="hint-text">Tap a node to select <span style="color:var(--accent)">An1</span></span>
+    <span id="hint-text">Tap a node to start a new event</span>
     <button class="btn-solo" id="solo-btn" style="display:none" onclick="openSheet(true)">Solo Record</button>
   </div>
   <div id="evt-c"><svg id="evt-svg"></svg></div>
   <div class="rec-panel" id="rec-panel" style="display:none;">
     <div class="rec-panel-hdr">
-      <span class="rec-panel-title">Records — drag ⠿ onto another to group simultaneous</span>
-      <span style="font-size:9px;color:var(--dim);">tap row to edit</span>
+      <span class="rec-panel-title" id="rec-panel-title">Records</span>
+      <span style="font-size:9px;color:var(--dim);">tap to edit</span>
     </div>
     <div class="rec-list" id="rec-list"></div>
   </div>
 </div>
 
-<!-- ════ RECORD SHEET ════ -->
+<!-- ════ SESSION REVIEW ════ -->
+<div id="view-session" class="view">
+  <div class="hdr" style="padding:11px 14px;">
+    <div>
+      <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:var(--accent);" id="sess-review-name"></div>
+      <div style="font-size:10px;color:var(--dim);" id="sess-review-meta"></div>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button class="btn btn-acc" onclick="resumeRecording()">+ Record</button>
+      <button class="btn btn-dng" onclick="endSession()">End Session</button>
+    </div>
+  </div>
+  <!-- Prev/Next event nav -->
+  <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border);flex-shrink:0;" id="sess-nav" style="display:none;">
+    <button class="btn btn-dim" id="prev-ev-btn" onclick="reviewNav(-1)">← Prev</button>
+    <div style="flex:1;text-align:center;font-size:11px;color:var(--dim);" id="sess-nav-label"></div>
+    <button class="btn btn-dim" id="next-ev-btn" onclick="reviewNav(1)">Next →</button>
+  </div>
+  <!-- Event network -->
+  <div id="sess-net-c" style="flex:1;position:relative;overflow:hidden;min-height:180px;">
+    <svg id="sess-svg" style="position:absolute;inset:0;width:100%;height:100%;"></svg>
+    <div id="sess-empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:12px;">No events yet</div>
+  </div>
+  <!-- Event record list -->
+  <div style="flex-shrink:0;max-height:240px;display:flex;flex-direction:column;border-top:1px solid var(--border);">
+    <div style="padding:4px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+      <span style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;" id="sess-rec-panel-title">Records</span>
+      <button class="btn btn-dim" id="sess-del-ev-btn" onclick="deleteReviewEvent()" style="display:none;padding:2px 8px;font-size:9px;">✕ Delete Event</button>
+    </div>
+    <div class="rec-list" id="sess-rec-list" style="overflow-y:auto;flex:1;"></div>
+  </div>
+</div>
+
+<!-- ════ NETWORK VIEW (standalone) ════ -->
+<div id="view-network" class="view">
+  <div class="hdr" style="padding:11px 14px;">
+    <button class="btn btn-dim" onclick="showView('home')">← Back</button>
+    <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:var(--accent);">Baseline Network</div>
+    <div></div>
+  </div>
+  <div id="net-c"><svg id="net-svg"></svg></div>
+</div>
+
 <div class="sheet-overlay" id="sheet-overlay" style="display:none;">
   <div class="sheet">
     <div class="sheet-hdr">
@@ -373,10 +395,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
 
 </div>
 <script>
-// ═══════════════════════════════════════════
-//  DATA
-// ═══════════════════════════════════════════
-// ── Roster ────────────────────────────────────────────────────────────
 let ROSTER=[], INDS=[], DAM_EDGES=[], MATRILINE_COLORS={};
 let activeGroup='', activeDemogs=new Set();
 
@@ -696,56 +714,6 @@ const DURATIONS=[
 ];
 
 // ═══════════════════════════════════════════
-//  STATE
-// ═══════════════════════════════════════════
-let currentView='home';
-let sessions=[];
-let activeSession=null;
-let events=[], activeEvent=null, records=[];
-let an1Id=null, an2Id=null;
-
-// Session defaults (persist across sessions)
-let sessObserver='',sessDatatype='opportunistic',sessConditions='unprovisioned';
-let sessScan='',sessNotes='';
-
-// Sheet
-let sheetSolo=false,sheetAn1=null,sheetAn2=null,activeTab='aggsub';
-let sheetEditIdx=null; // null = new record, number = editing existing
-let sheetLinkedRef=null;
-let sel={},selQua={},selAffect={},dur='lt5',tpAn3='',tpAn4='',recNotes='';
-
-// Layout
-let positions={},velocities={},animFrame=null;
-let recMids={};
-
-// Drag
-let dragSrc=null,dragOver=null,touchDragIdx=null,touchClone=null;
-
-// ═══════════════════════════════════════════
-//  VIEW
-// ═══════════════════════════════════════════
-function showView(name){
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  document.getElementById('view-'+name).classList.add('active');
-  currentView=name;
-  closeAllPopovers();
-  if(name==='network') scheduleLayout('net-svg','net-c');
-  if(name==='event')   scheduleLayout('evt-svg','evt-c');
-  if(name==='filter')  buildFilterUI();
-  if(name==='setup')   populateSetupForm();
-  if(name==='home'){
-    // show/hide elements depending on whether roster is loaded
-    const ready=INDS.length>0;
-    const el=id=>document.getElementById(id);
-    el('home-group-bar').style.display=ready?'block':'none';
-    el('new-event-btn').style.display=ready?'block':'none';
-    el('network-btn').style.display=ready?'block':'none';
-    if(!ready && !el('home-roster-status').textContent)
-      el('home-roster-status').textContent='Tap Roster to load animals.';
-  }
-}
-
-// ═══════════════════════════════════════════
 //  FORCE LAYOUT
 // ═══════════════════════════════════════════
 function initLayout(cId){
@@ -1035,14 +1003,14 @@ function openSheetLinked(refRecIdx, an2Override){
 //  NODE TAP — select An1/An2 or show picker
 // ═══════════════════════════════════════════
 function tapNode(id,evt){
-  if(currentView!=='event') return;
+  if(currentView!=='recording') return;
   closeTip();
   evt.stopPropagation();
-
+  // Auto-start a new event on first tap if none active
+  if(!activeEvent) startEvent();
   if(!an1Id){
-    // Check if this node is in any existing records → offer picker or select
     const involved=records.map((r,i)=>({r,i})).filter(({r})=>r.an1Id===id||r.an2Id===id||parseIds(r.tpAn3).includes(id)||parseIds(r.tpAn4).includes(id));
-    if(involved.length>0 && !an1Id){
+    if(involved.length>0){
       showNodePicker(id,involved,evt);
     } else {
       an1Id=id; updateHint(); renderSVG('evt-svg');
@@ -1109,7 +1077,11 @@ function updateHint(){
   const hintTxt=document.getElementById('hint-text');
   const soloBtn=document.getElementById('solo-btn');
   const badge=document.getElementById('an1-badge');
-  if(!an1Id){
+  if(!activeEvent){
+    hintBar.className='hint hint-a1';
+    hintTxt.innerHTML='Tap a node to start a new event';
+    soloBtn.style.display='none'; badge.style.display='none';
+  } else if(!an1Id){
     hintBar.className='hint hint-a1';
     hintTxt.innerHTML='Tap a node to select <span style="color:var(--accent)">An1</span>';
     soloBtn.style.display='none'; badge.style.display='none';
@@ -1145,8 +1117,10 @@ function openSheet(solo){
 
 function closeSheet(){
   document.getElementById('sheet-overlay').style.display='none';
+  if(window._reviewEditMode) window._reviewEditMode=false;
   if(sheetEditIdx===null){an1Id=null; an2Id=null; updateHint(); renderSVG('evt-svg');}
   sheetEditIdx=null; sheetLinkedRef=null;
+  updateRecordingHeader();
 }
 
 function swapAnimals(){
@@ -1317,9 +1291,24 @@ function commitRecord(){
   }
 
   document.getElementById('sheet-overlay').style.display='none';
+
+  // Review edit mode: save back into the reviewed event
+  if(window._reviewEditMode){
+    window._reviewEditMode=false;
+    const evs=reviewSession===activeSession?events:reviewSession.events;
+    const ev=evs[reviewEventIdx];
+    if(ev) ev.records[sheetEditIdx]={...ev.records[sheetEditIdx],...recData};
+    sheetEditIdx=null; sheetLinkedRef=null;
+    renderSessionReview();
+    doFlash();
+    return;
+  }
+
   if(sheetEditIdx===null){an1Id=null;an2Id=null;}
   sheetEditIdx=null;sheetLinkedRef=null;
-  updateHint();updateRecPanel();renderSVG('evt-svg');doFlash();
+  updateHint();updateRecPanel();renderSVG('evt-svg');
+  updateRecordingHeader();
+  doFlash();
 }
 
 // ═══════════════════════════════════════════
@@ -1459,7 +1448,7 @@ function delRec(i){
     const remaining=records.filter(r=>r.groupId===gid);
     if(remaining.length===1) remaining[0].groupId=null;
   }
-  updateRecPanel();renderSVG('evt-svg');
+  updateRecPanel();renderSVG('evt-svg');updateRecordingHeader();
 }
 
 // ═══════════════════════════════════════════
@@ -1514,23 +1503,426 @@ function tEnd(){
 
 // ═══════════════════════════════════════════
 //  EVENT MANAGEMENT
+
 // ═══════════════════════════════════════════
-function startEvent(){
+//  STATE
+// ═══════════════════════════════════════════
+let currentView='home';
+
+// Sessions
+let sessions=[];          // completed sessions
+let activeSession=null;   // session being recorded
+
+// Events within active session
+let events=[];            // saved events in current session
+let activeEvent=null;     // event currently being recorded
+let records=[];           // records in current event
+
+// Selection
+let an1Id=null, an2Id=null;
+
+// Session defaults (persist across sessions)
+let sessObserver='', sessDatatype='opportunistic', sessConditions='unprovisioned';
+let sessScan='', sessNotes='';
+
+// Review state
+let reviewSession=null;   // session being reviewed (may be activeSession or a past one)
+let reviewEventIdx=0;     // which event is shown in session review
+
+// Sheet
+let sheetSolo=false, sheetAn1=null, sheetAn2=null, activeTab='aggsub';
+let sheetEditIdx=null, sheetLinkedRef=null;
+let sel={}, selQua={}, selAffect={}, dur='lt5', tpAn3='', tpAn4='', recNotes='';
+
+// Layout
+let positions={}, velocities={}, animFrame=null;
+let recMids={};
+
+// Drag
+let dragSrc=null, dragOver=null, touchDragIdx=null, touchClone=null;
+
+// ═══════════════════════════════════════════
+//  VIEW
+// ═══════════════════════════════════════════
+function showView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  currentView=name;
+  closeAllPopovers();
+  if(name==='network')   scheduleLayout('net-svg','net-c');
+  if(name==='recording') scheduleLayout('evt-svg','evt-c');
+  if(name==='filter')    buildFilterUI();
+  if(name==='setup')     populateSetupForm();
+  if(name==='session')   renderSessionReview();
+  if(name==='home')      updateHome();
+}
+
+function updateHome(){
+  const ready=INDS.length>0;
+  document.getElementById('home-group-bar').style.display=ready?'block':'none';
+  document.getElementById('new-sess-btn').style.display=ready?'block':'none';
+  if(!ready && !document.getElementById('home-roster-status').textContent)
+    document.getElementById('home-roster-status').textContent='Tap Roster to load animals.';
+  updateHomeStats();
+  renderEvList();
+}
+
+// ═══════════════════════════════════════════
+//  SESSION SETUP
+// ═══════════════════════════════════════════
+function populateSetupForm(){
+  const da=[...activeDemogs];
+  document.getElementById('setup-group').textContent=activeGroup||'(no group selected)';
+  document.getElementById('setup-demog').textContent=da.length?da.join(', '):'All';
+  document.getElementById('setup-datetime').textContent=new Date().toLocaleString([],
+    {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  document.getElementById('sess-observer').value=sessObserver;
+  document.getElementById('sess-datatype').value=sessDatatype;
+  document.getElementById('sess-conditions').value=sessConditions;
+  document.getElementById('sess-scan').value=sessScan;
+  document.getElementById('sess-notes').value='';
+}
+
+function startSession(){
+  if(!INDS.length){alert('Load a roster and select a group first.');return;}
   sessObserver=document.getElementById('sess-observer').value.trim();
-  sessGroup=document.getElementById('sess-group').value.trim();
-  sessEnclosure=document.getElementById('sess-enclosure').value.trim();
   sessDatatype=document.getElementById('sess-datatype').value;
   sessConditions=document.getElementById('sess-conditions').value;
   sessScan=document.getElementById('sess-scan').value.trim();
   sessNotes=document.getElementById('sess-notes').value.trim();
-  activeEvent={id:'EVT-'+Date.now(),label:'Event '+(events.length+1),timestamp:new Date().toISOString(),
-    observer:sessObserver,group:sessGroup,enclosure:sessEnclosure,
-    datatype:sessDatatype,conditions:sessConditions,scanNum:sessScan,notes:sessNotes};
-  records=[]; an1Id=null; an2Id=null;
-  showView('event'); updateHint(); updateRecPanel();
-  document.getElementById('evt-name').textContent=activeEvent.label;
-  const sub=[sessObserver,sessGroup,sessEnclosure].filter(Boolean).join(' · ');
-  document.getElementById('evt-sub').textContent=sub||'0 records';
+  const da=[...activeDemogs];
+  activeSession={
+    id:'SESS-'+Date.now(),
+    label:'Session '+(sessions.length+1),
+    startTime:new Date().toISOString(),
+    observer:sessObserver,
+    group:activeGroup,
+    demog:da.length?da.join(', '):'All',
+    datatype:sessDatatype,
+    conditions:sessConditions,
+    scanNum:sessScan,
+    notes:sessNotes,
+  };
+  events=[];
+  activeEvent=null;
+  records=[];
+  an1Id=null; an2Id=null;
+  showView('recording');
+  updateRecordingHeader();
+  updateHint();
+  scheduleLayout('evt-svg','evt-c');
+}
+
+// ═══════════════════════════════════════════
+//  RECORDING VIEW
+// ═══════════════════════════════════════════
+function updateRecordingHeader(){
+  const sessLabel=activeSession?activeSession.label:'Session';
+  document.getElementById('rec-sess-label').textContent=sessLabel;
+  if(activeEvent){
+    document.getElementById('rec-event-label').textContent=
+      activeEvent.label+' · '+records.length+' record'+(records.length!==1?'s':'');
+    document.getElementById('end-evt-btn').style.display='block';
+    document.getElementById('del-evt-btn').style.display='block';
+  } else {
+    document.getElementById('rec-event-label').textContent='Tap a node to start a new event';
+    document.getElementById('end-evt-btn').style.display='none';
+    document.getElementById('del-evt-btn').style.display='none';
+  }
+}
+
+function startEvent(){
+  activeEvent={
+    id:'EVT-'+Date.now(),
+    label:'Event '+(events.length+1),
+    timestamp:new Date().toISOString(),
+  };
+  records=[];
+  updateRecordingHeader();
+  updateHint();
+  updateRecPanel();
+}
+
+function endEvent(){
+  if(!activeEvent) return;
+  const savedRecs=serializeRecords(records);
+  events.push({...activeEvent, records:savedRecs});
+  activeEvent=null;
+  records=[];
+  an1Id=null; an2Id=null;
+  // Clear edges, keep node positions
+  renderSVG('evt-svg');
+  updateRecPanel();
+  updateRecordingHeader();
+  updateHint();
+}
+
+function deleteEvent(){
+  if(!activeEvent) return;
+  if(records.length>0 && !confirm('Delete this event and all its records?')) return;
+  activeEvent=null;
+  records=[];
+  an1Id=null; an2Id=null;
+  renderSVG('evt-svg');
+  updateRecPanel();
+  updateRecordingHeader();
+  updateHint();
+}
+
+function closeSession(){
+  // Save any active event first
+  if(activeEvent && records.length>0){
+    events.push({...activeEvent, records:serializeRecords(records)});
+    activeEvent=null; records=[];
+  }
+  reviewSession=activeSession;
+  reviewSession.events=[...events];
+  reviewEventIdx=events.length>0?events.length-1:0;
+  showView('session');
+}
+
+function resumeRecording(){
+  // Go back to recording from session review (only for active session)
+  if(reviewSession===activeSession){
+    an1Id=null; an2Id=null;
+    activeEvent=null; records=[];
+    showView('recording');
+    updateRecordingHeader();
+    updateHint();
+    scheduleLayout('evt-svg','evt-c');
+  }
+}
+
+function serializeRecords(recs){
+  return recs.map(r=>({...r,
+    beh:{
+      agg:{an1:[...r.beh.agg.an1],an2:[...r.beh.agg.an2]},
+      sub:{an1:[...r.beh.sub.an1],an2:[...r.beh.sub.an2]},
+      aff:{an1:[...r.beh.aff.an1],an2:[...r.beh.aff.an2]},
+      tp:{an1:[...r.beh.tp.an1]},
+    },
+    qualifiers:{agg:[...r.qualifiers.agg],sub:[...r.qualifiers.sub],aff:[...r.qualifiers.aff],ix:[...r.qualifiers.ix]},
+    affect:{an1:[...r.affect.an1],an2:[...r.affect.an2]},
+  }));
+}
+
+// ═══════════════════════════════════════════
+//  SESSION REVIEW
+// ═══════════════════════════════════════════
+function renderSessionReview(){
+  if(!reviewSession) return;
+  const sess=reviewSession;
+  const evs=sess===activeSession?events:sess.events;
+
+  document.getElementById('sess-review-name').textContent=sess.label;
+  const meta=[sess.observer,sess.group,sess.demog,sess.conditions].filter(Boolean).join(' · ');
+  document.getElementById('sess-review-meta').textContent=meta;
+
+  // Show/hide resume button only for active session
+  document.querySelector('#view-session .btn-acc').style.display=
+    sess===activeSession?'block':'none';
+
+  const nav=document.getElementById('sess-nav');
+  if(!evs.length){
+    nav.style.display='none';
+    document.getElementById('sess-empty').style.display='flex';
+    document.getElementById('sess-rec-list').innerHTML='';
+    document.getElementById('sess-rec-panel-title').textContent='No events yet';
+    document.getElementById('sess-del-ev-btn').style.display='none';
+    renderSessionSVG(null);
+    return;
+  }
+
+  nav.style.display='flex';
+  document.getElementById('sess-empty').style.display='none';
+  reviewEventIdx=Math.max(0,Math.min(reviewEventIdx,evs.length-1));
+  document.getElementById('sess-nav-label').textContent=
+    `Event ${reviewEventIdx+1} of ${evs.length}`;
+  document.getElementById('prev-ev-btn').disabled=reviewEventIdx===0;
+  document.getElementById('next-ev-btn').disabled=reviewEventIdx===evs.length-1;
+  document.getElementById('sess-del-ev-btn').style.display='block';
+
+  const ev=evs[reviewEventIdx];
+  document.getElementById('sess-rec-panel-title').textContent=
+    ev.label+' · '+ev.records.length+' record'+(ev.records.length!==1?'s':'');
+
+  renderSessionSVG(ev);
+  renderSessionRecList(ev);
+}
+
+function renderSessionSVG(ev){
+  // Render a read-only network with this event's edges
+  const svg=document.getElementById('sess-svg');
+  if(!svg) return;
+  const w=svg.parentElement.clientWidth,h=svg.parentElement.clientHeight;
+  svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+
+  // Use same positions as evt-svg if available, else init fresh
+  if(!Object.keys(positions).length) initLayout('sess-net-c');
+
+  let html=`<defs>
+    <marker id="s-m-agg" markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5z" fill="#ef4444"/></marker>
+    <marker id="s-m-sub" markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5z" fill="#f97316"/></marker>
+    <marker id="s-m-aff" markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5z" fill="#22c55e"/></marker>
+    <marker id="s-m-tp"  markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5z" fill="#a78bfa"/></marker>
+    <marker id="s-m-dam" markerWidth="6" markerHeight="6" refX="5" refY="2.5" orient="auto"><path d="M0,0 L0,5 L6,2.5z" fill="rgba(255,255,255,.4)"/></marker>
+  </defs>`;
+
+  // Dam edges
+  DAM_EDGES.forEach(e=>{
+    const s=positions[e.src],t=positions[e.tgt]; if(!s||!t) return;
+    const dx=t.x-s.x,dy=t.y-s.y,dist=Math.max(Math.sqrt(dx*dx+dy*dy),.1);
+    const nx=dx/dist,ny=dy/dist;
+    const rs=nodeRadius(INDS.find(i=>i.id===e.src)||{})+2;
+    const rt=nodeRadius(INDS.find(i=>i.id===e.tgt)||{})+8;
+    html+=`<line x1="${s.x+nx*rs}" y1="${s.y+ny*rs}" x2="${t.x-nx*rt}" y2="${t.y-ny*rt}" stroke="rgba(255,255,255,.2)" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#s-m-dam)"/>`;
+  });
+
+  // Event edges if we have one
+  if(ev && ev.records.length){
+    const recs=ev.records;
+    const pairBuckets={};
+    recs.forEach((rec,i)=>{
+      if(!rec.an2Id) return;
+      const key=[rec.an1Id,rec.an2Id].sort().join('|');
+      if(!pairBuckets[key]) pairBuckets[key]=[];
+      pairBuckets[key].push(i);
+    });
+    const mids={};
+    Object.values(pairBuckets).forEach(idxArr=>{
+      idxArr.forEach((ri,offset)=>{
+        const rec=recs[ri];
+        const s=positions[rec.an1Id],t=positions[rec.an2Id];
+        if(s&&t) mids[ri]=edgeMidpoint(s,t,offset,idxArr.length);
+      });
+    });
+    const labels=computeLabelsFor(recs);
+    recs.forEach((rec,i)=>{
+      if(!rec.an2Id) return;
+      const s=positions[rec.an1Id],t=positions[rec.an2Id],mid=mids[i];
+      if(!s||!t||!mid) return;
+      const dom=primaryDomain(rec),col=domainColor(dom);
+      const nr=NODE_R;
+      const dx1=mid.x-s.x,dy1=mid.y-s.y,d1=Math.max(Math.sqrt(dx1*dx1+dy1*dy1),.1);
+      html+=`<line x1="${s.x+(dx1/d1)*(nr+2)}" y1="${s.y+(dy1/d1)*(nr+2)}" x2="${mid.x}" y2="${mid.y}" stroke="${col}" stroke-width="2" stroke-opacity=".65"/>`;
+      const dx2=t.x-mid.x,dy2=t.y-mid.y,d2=Math.max(Math.sqrt(dx2*dx2+dy2*dy2),.1);
+      html+=`<line x1="${mid.x}" y1="${mid.y}" x2="${t.x-(dx2/d2)*(nr+9)}" y2="${t.y-(dy2/d2)*(nr+9)}" stroke="${col}" stroke-width="2" stroke-opacity=".65" marker-end="url(#s-m-${dom})"/>`;
+      const ds=8;
+      html+=`<polygon points="${mid.x},${mid.y-ds} ${mid.x+ds},${mid.y} ${mid.x},${mid.y+ds} ${mid.x-ds},${mid.y}" fill="${col}" stroke="${col}" stroke-width=".5" opacity=".9"/>`;
+      html+=`<text x="${mid.x}" y="${mid.y+ds+11}" text-anchor="middle" fill="${col}" font-size="8" font-family="'JetBrains Mono',monospace" font-weight="700" style="pointer-events:none">${labels[i]||''}</text>`;
+    });
+  }
+
+  // Nodes
+  INDS.forEach(ind=>{
+    const p=positions[ind.id]; if(!p) return;
+    const r=nodeRadius(ind);
+    const col=matrilineColor(ind.matriline);
+    const sc='rgba(255,255,255,.18)';
+    if(ind.sex==='m'){
+      html+=`<rect x="${p.x-r}" y="${p.y-r}" width="${r*2}" height="${r*2}" rx="5" fill="${col}" stroke="${sc}" stroke-width="1.5"/>`;
+    } else {
+      html+=`<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${col}" stroke="${sc}" stroke-width="1.5"/>`;
+    }
+    const label=ind.name||ind.dye||ind.id;
+    const fs=Math.max(9,Math.round(r*0.42));
+    html+=`<text x="${p.x}" y="${p.y-2}" text-anchor="middle" dominant-baseline="middle" fill="#e8eaf0" font-size="${fs}" font-family="'Sora',sans-serif" font-weight="700" style="pointer-events:none;user-select:none">${label}</text>`;
+    if(ind.dye&&ind.name){
+      html+=`<text x="${p.x}" y="${p.y+r*0.5}" text-anchor="middle" dominant-baseline="middle" fill="rgba(232,234,240,.55)" font-size="${Math.max(8,Math.round(r*0.33))}" font-family="'JetBrains Mono',monospace" style="pointer-events:none;user-select:none">${ind.dye}</text>`;
+    }
+  });
+
+  svg.innerHTML=html;
+}
+
+function renderSessionRecList(ev){
+  const list=document.getElementById('sess-rec-list');
+  if(!ev||!ev.records.length){list.innerHTML='<div style="padding:10px 14px;font-size:11px;color:var(--dim);">No records in this event</div>';return;}
+  const labels=computeLabelsFor(ev.records);
+  list.innerHTML=ev.records.map((rec,i)=>{
+    const a1=INDS.find(x=>x.id===rec.an1Id);
+    const a2=rec.an2Id?INDS.find(x=>x.id===rec.an2Id):null;
+    if(!a1) return '';
+    const pair=a2?`${a1.name} — ${a2.name}`:`${a1.name} (solo)`;
+    const {dots}=behSummaryFull(rec);
+    const time=new Date(rec.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    return `<div class="rec-row" onclick="editReviewRecord(${i})" style="cursor:pointer;">
+      <div class="rec-body">
+        <div class="rec-num">#${labels[i]} · ${time}</div>
+        <div class="rec-pair">${dots}${pair}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function reviewNav(dir){
+  const evs=reviewSession===activeSession?events:reviewSession.events;
+  reviewEventIdx=Math.max(0,Math.min(reviewEventIdx+dir,evs.length-1));
+  renderSessionReview();
+}
+
+function editReviewRecord(recIdx){
+  const evs=reviewSession===activeSession?events:reviewSession.events;
+  const ev=evs[reviewEventIdx];
+  if(!ev) return;
+  // Load record into sheet for editing
+  const rec=ev.records[recIdx];
+  sheetEditIdx=recIdx;
+  sheetLinkedRef=null;
+  sheetSolo=rec.solo;
+  sheetAn1=rec.an1Id; sheetAn2=rec.an2Id||null;
+  sel={
+    agg:{an1:new Set(rec.beh.agg.an1),an2:new Set(rec.beh.agg.an2)},
+    sub:{an1:new Set(rec.beh.sub.an1),an2:new Set(rec.beh.sub.an2)},
+    aff:{an1:new Set(rec.beh.aff.an1),an2:new Set(rec.beh.aff.an2)},
+    tp: {an1:new Set(rec.beh.tp.an1)},
+  };
+  selQua={agg:new Set(rec.qualifiers.agg),sub:new Set(rec.qualifiers.sub),aff:new Set(rec.qualifiers.aff),ix:new Set(rec.qualifiers.ix)};
+  selAffect={an1:new Set(rec.affect.an1),an2:new Set(rec.affect.an2)};
+  dur=rec.duration||'lt5';
+  tpAn3=rec.tpAn3||''; tpAn4=rec.tpAn4||''; recNotes=rec.notes||'';
+  activeTab='aggsub';
+  const a1=INDS.find(x=>x.id===sheetAn1),a2=sheetAn2?INDS.find(x=>x.id===sheetAn2):null;
+  const labels=computeLabelsFor(ev.records);
+  document.getElementById('sheet-pair').textContent=a1.name+(a2?' — '+a2.name:' (solo)');
+  document.getElementById('sheet-meta').textContent=`Editing record #${labels[recIdx]} (${evs[reviewEventIdx].label})`;
+  document.getElementById('swap-btn').style.display=sheetSolo?'none':'inline-block';
+  // Override commitRecord to save back into review event
+  window._reviewEditMode=true;
+  buildTabs(); buildContent();
+  document.getElementById('sheet-overlay').style.display='flex';
+}
+
+function deleteReviewEvent(){
+  const evs=reviewSession===activeSession?events:reviewSession.events;
+  if(!evs.length) return;
+  if(!confirm('Delete '+evs[reviewEventIdx].label+'?')) return;
+  evs.splice(reviewEventIdx,1);
+  if(reviewSession===activeSession) events=[...evs];
+  reviewEventIdx=Math.max(0,reviewEventIdx-1);
+  renderSessionReview();
+}
+
+function endSession(){
+  if(!reviewSession) return;
+  // Finalize: merge active events into session
+  if(reviewSession===activeSession){
+    if(activeEvent && records.length>0){
+      events.push({...activeEvent,records:serializeRecords(records)});
+      activeEvent=null; records=[];
+    }
+    reviewSession.events=[...events];
+    sessions.push({...reviewSession});
+    activeSession=null;
+    events=[];
+  } else {
+    // Re-save edited past session
+    const idx=sessions.findIndex(s=>s.id===reviewSession.id);
+    if(idx>=0) sessions[idx]={...reviewSession};
+  }
+  postSessionToSheet(reviewSession);
+  reviewSession=null;
+  showView('home');
 }
 
 // ═══════════════════════════════════════════
@@ -1543,21 +1935,17 @@ async function postSessionToSheet(sess){
   if(!rows.length){showSyncStatus('⚠ No records to sync','var(--warn)');return;}
   showSyncStatus('⏳ Syncing…','var(--dim)');
   try{
-    await fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(rows)});
-    showSyncStatus('✓ '+rows.length+' row'+(rows.length!==1?'s':'')+' synced to Google Sheets','var(--aff)');
+    await fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(rows)});
+    showSyncStatus('✓ '+rows.length+' row'+(rows.length!==1?'s':'')+' synced','var(--aff)');
   } catch(e){
-    showSyncStatus('⚠ Sync failed — use Export CSV as backup','var(--warn)');
+    showSyncStatus('⚠ Sync failed — use Export CSV','var(--warn)');
   }
 }
 
 function showSyncStatus(msg,color){
-  let el=document.getElementById('sync-status');
-  if(!el){
-    el=document.createElement('div');
-    el.id='sync-status';
-    el.style.cssText='padding:6px 14px;font-size:11px;font-family:\'JetBrains Mono\',monospace;';
-    document.getElementById('ev-list').before(el);
-  }
+  const el=document.getElementById('sync-status');
+  if(!el) return;
   el.textContent=msg; el.style.color=color;
   setTimeout(()=>{if(el.textContent===msg)el.textContent='';},7000);
 }
@@ -1568,7 +1956,7 @@ function buildRows(sess){
   const getQ=(qd,rec)=>[...(rec.qualifiers[qd]||[])].map(qid=>(ALL_QUALS.find(x=>x.id===qid)||{label:qid}).label).join('; ');
   const getA=(side,rec)=>[...(rec.affect[side]||[])].join('; ');
   const rows=[];
-  sess.events.forEach(ev=>{
+  (sess.events||[]).forEach(ev=>{
     const labels=computeLabelsFor(ev.records);
     ev.records.forEach((rec,i)=>{
       rows.push([
@@ -1590,138 +1978,41 @@ function buildRows(sess){
 }
 
 // ═══════════════════════════════════════════
-//  SESSION & EVENT MANAGEMENT
-// ═══════════════════════════════════════════
-function populateSetupForm(){
-  // Auto-fill read-only info
-  const da=[...activeDemogs];
-  document.getElementById('setup-group').textContent=activeGroup||'(no group selected)';
-  document.getElementById('setup-demog').textContent=da.length?da.join(', '):'All';
-  document.getElementById('setup-datetime').textContent=new Date().toLocaleString([],{
-    month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-  // Restore last-used values
-  document.getElementById('sess-observer').value=sessObserver||'';
-  const dt=document.getElementById('sess-datatype');
-  if(dt) dt.value=sessDatatype||'opportunistic';
-  const cd=document.getElementById('sess-conditions');
-  if(cd) cd.value=sessConditions||'unprovisioned';
-  document.getElementById('sess-scan').value=sessScan||'';
-  document.getElementById('sess-notes').value='';
-}
-
-function startSession(){
-  if(!INDS.length){alert('Load a roster and select a group first.');showView('home');return;}
-  sessObserver=document.getElementById('sess-observer').value.trim();
-  sessDatatype=document.getElementById('sess-datatype').value;
-  sessConditions=document.getElementById('sess-conditions').value;
-  sessScan=document.getElementById('sess-scan').value.trim();
-  sessNotes=document.getElementById('sess-notes').value.trim();
-  const da=[...activeDemogs];
-  const now=new Date();
-  activeSession={
-    id:'SESS-'+Date.now(),
-    label:'Session '+(sessions.length+1),
-    startTime:now.toISOString(),
-    observer:sessObserver,
-    group:activeGroup,
-    demog:da.length?da.join(', '):'All',
-    datatype:sessDatatype,
-    conditions:sessConditions,
-    scanNum:sessScan,
-    notes:sessNotes,
-    events:[],
-  };
-  events=[];
-  showView('session');
-  updateSessionView();
-}
-
-function updateSessionView(){
-  if(!activeSession) return;
-  document.getElementById('sess-view-name').textContent=activeSession.label;
-  const meta=[activeSession.observer,activeSession.group,activeSession.demog,activeSession.conditions]
-    .filter(Boolean).join(' · ');
-  document.getElementById('sess-view-meta').textContent=meta;
-  const lbl=document.getElementById('sess-ev-lbl');
-  const list=document.getElementById('sess-ev-list');
-  if(!events.length){lbl.style.display='none';list.innerHTML='';return;}
-  lbl.style.display='block';
-  list.innerHTML=[...events].reverse().map((ev,ri)=>
-    `<div class="ev-item">
-      <div class="ev-name">${ev.label}</div>
-      <div class="ev-cnt">${ev.records.length} record${ev.records.length!==1?'s':''}</div>
-    </div>`
-  ).join('');
-}
-
-function startEvent(){
-  activeEvent={
-    id:'EVT-'+Date.now(),
-    label:'Event '+(events.length+1),
-    timestamp:new Date().toISOString(),
-    observer:activeSession?.observer||sessObserver,
-    group:activeSession?.group||activeGroup,
-    demog:activeSession?.demog||'',
-    datatype:activeSession?.datatype||sessDatatype,
-    conditions:activeSession?.conditions||sessConditions,
-    scanNum:activeSession?.scanNum||sessScan,
-  };
-  records=[]; an1Id=null; an2Id=null;
-  showView('event'); updateHint(); updateRecPanel();
-  document.getElementById('evt-name').textContent=activeEvent.label;
-  document.getElementById('evt-sub').textContent='0 records';
-}
-
-function endEvent(){
-  if(activeEvent){
-    const savedRecs=records.map(r=>({...r,
-      beh:{agg:{an1:[...r.beh.agg.an1],an2:[...r.beh.agg.an2]},sub:{an1:[...r.beh.sub.an1],an2:[...r.beh.sub.an2]},aff:{an1:[...r.beh.aff.an1],an2:[...r.beh.aff.an2]},tp:{an1:[...r.beh.tp.an1]}},
-      qualifiers:{agg:[...r.qualifiers.agg],sub:[...r.qualifiers.sub],aff:[...r.qualifiers.aff],ix:[...r.qualifiers.ix]},
-      affect:{an1:[...r.affect.an1],an2:[...r.affect.an2]},
-    }));
-    events.push({...activeEvent,records:savedRecs});
-  }
-  activeEvent=null; records=[]; an1Id=null; an2Id=null;
-  showView('session');
-  updateSessionView();
-}
-
-function endSession(){
-  if(activeSession){
-    const sess={...activeSession,events:[...events]};
-    sessions.push(sess);
-    postSessionToSheet(sess);
-    activeSession=null; events=[];
-    updateHomeStats(); renderEvList();
-  }
-  showView('home');
-}
-
-// ═══════════════════════════════════════════
 //  HOME
 // ═══════════════════════════════════════════
 function updateHomeStats(){
   document.getElementById('s-ind').textContent=INDS.length||'—';
-  const totalEvs=sessions.reduce((s,sess)=>s+sess.events.length,0);
-  const totalRecs=sessions.reduce((s,sess)=>s+sess.events.reduce((e,ev)=>e+ev.records.length,0),0);
+  const allSess=[...sessions,...(activeSession?[{...activeSession,events}]:[])];
+  const totalEvs=allSess.reduce((s,sess)=>s+(sess.events||[]).length,0);
+  const totalRecs=allSess.reduce((s,sess)=>(sess.events||[]).reduce((e,ev)=>e+ev.records.length,s),0);
   document.getElementById('s-ev').textContent=totalEvs;
   document.getElementById('s-rec').textContent=totalRecs;
   document.getElementById('export-btn').style.display=sessions.length>0?'block':'none';
 }
+
 function renderEvList(){
-  const lbl=document.getElementById('ev-lbl'),list=document.getElementById('ev-list');
+  const lbl=document.getElementById('home-sess-lbl');
+  const list=document.getElementById('ev-list');
   if(!sessions.length){lbl.style.display='none';list.innerHTML='';return;}
   lbl.style.display='block';
-  list.innerHTML=[...sessions].reverse().map(sess=>{
+  list.innerHTML=[...sessions].reverse().map((sess,ri)=>{
+    const totalRecs=(sess.events||[]).reduce((s,ev)=>s+ev.records.length,0);
     const meta=[sess.observer,sess.group,sess.demog,sess.conditions].filter(Boolean).join(' · ');
-    const totalRecs=sess.events.reduce((s,ev)=>s+ev.records.length,0);
-    return`<div class="ev-item">
+    return`<div class="ev-item" onclick="openPastSession('${sess.id}')" style="cursor:pointer;">
       <div class="ev-name">${sess.label}</div>
       <div class="ev-meta">${new Date(sess.startTime).toLocaleString()}</div>
       ${meta?`<div class="ev-meta">${meta}</div>`:''}
-      <div class="ev-cnt">${sess.events.length} event${sess.events.length!==1?'s':''} · ${totalRecs} record${totalRecs!==1?'s':''}</div>
+      <div class="ev-cnt">${(sess.events||[]).length} event${(sess.events||[]).length!==1?'s':''} · ${totalRecs} record${totalRecs!==1?'s':''}</div>
     </div>`;
   }).join('');
+}
+
+function openPastSession(sessId){
+  const sess=sessions.find(s=>s.id===sessId);
+  if(!sess) return;
+  reviewSession=sess;
+  reviewEventIdx=(sess.events||[]).length>0?(sess.events.length-1):0;
+  showView('session');
 }
 
 // ═══════════════════════════════════════════
@@ -1732,8 +2023,8 @@ function exportData(){
   const getL=(d,side,rec)=>[...(rec.beh[d][side]||[])].map(bid=>(BEHAVIORS[d].find(x=>x.id===bid)||{label:bid}).label).join('; ');
   const getQ=(qd,rec)=>[...(rec.qualifiers[qd]||[])].map(qid=>(ALL_QUALS.find(x=>x.id===qid)||{label:qid}).label).join('; ');
   const getA=(side,rec)=>[...(rec.affect[side]||[])].join('; ');
-  const rows=[['Event','Observer','Group','Enclosure','DataType','Conditions','ScanNum',
-    'Record_Label','Timestamp','GroupID','An1_ID','An1_Name','An2_ID','An2_Name',
+  const rows=[['Session','Observer','Group','Demog','DataType','Conditions','ScanNum','StartTime',
+    'Event','Record_Label','Timestamp','GroupID','An1_ID','An1_Name','An2_ID','An2_Name',
     'Solo','Duration','LinkedToRecord',
     'An1_Aggression','An1_Submission','An1_Affiliation',
     'An2_Aggression','An2_Submission','An2_Affiliation',
@@ -1741,35 +2032,28 @@ function exportData(){
     'Qualifiers_Agg','Qualifiers_Sub','Qualifiers_Aff','Qualifiers_Interaction',
     'Affect_An1','Affect_An2','Notes']];
   sessions.forEach(sess=>{
-   sess.events.forEach(ev=>{
-    const labels=computeLabelsFor(ev.records);
-    ev.records.forEach((rec,i)=>{
-      rows.push([sess.label+'/'+ev.label,sess.observer||'',sess.group||'',sess.demog||'',sess.datatype||'',sess.conditions||'',sess.scanNum||'',
-        labels[i],rec.timestamp,rec.groupId||'',
-        rec.an1Id,getName(rec.an1Id),rec.an2Id||'',rec.an2Id?getName(rec.an2Id):'',
-        rec.solo?'yes':'no',DURATIONS.find(d=>d.id===rec.duration)?.label||'',
-        rec.linkedRef!=null?labels[rec.linkedRef]:'',
-        getL('agg','an1',rec),getL('sub','an1',rec),getL('aff','an1',rec),
-        getL('agg','an2',rec),getL('sub','an2',rec),getL('aff','an2',rec),
-        getL('tp','an1',rec),rec.tpAn3||'',rec.tpAn4||'',
-        getQ('agg',rec),getQ('sub',rec),getQ('aff',rec),getQ('ix',rec),
-        getA('an1',rec),getA('an2',rec),rec.notes||'']);
+    (sess.events||[]).forEach(ev=>{
+      const labels=computeLabelsFor(ev.records);
+      ev.records.forEach((rec,i)=>{
+        rows.push([sess.label,sess.observer||'',sess.group||'',sess.demog||'',
+          sess.datatype||'',sess.conditions||'',sess.scanNum||'',sess.startTime||'',
+          ev.label,labels[i],rec.timestamp,rec.groupId||'',
+          rec.an1Id,getName(rec.an1Id),rec.an2Id||'',rec.an2Id?getName(rec.an2Id):'',
+          rec.solo?'yes':'no',DURATIONS.find(d=>d.id===rec.duration)?.label||'',
+          rec.linkedRef!=null?labels[rec.linkedRef]:'',
+          getL('agg','an1',rec),getL('sub','an1',rec),getL('aff','an1',rec),
+          getL('agg','an2',rec),getL('sub','an2',rec),getL('aff','an2',rec),
+          getL('tp','an1',rec),rec.tpAn3||'',rec.tpAn4||'',
+          getQ('agg',rec),getQ('sub',rec),getQ('aff',rec),getQ('ix',rec),
+          getA('an1',rec),getA('an2',rec),rec.notes||'']);
+      });
     });
-   });
   });
   const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-  a.download=`ethogram_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download=`ethograph_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
-}
-
-function computeLabelsFor(recs){
-  const seen=new Map(); let next=1;
-  recs.forEach(rec=>{const gid=rec.groupId||rec.id;if(!seen.has(gid))seen.set(gid,next++);});
-  const cnt=new Map(); recs.forEach(rec=>{const gid=rec.groupId||rec.id;cnt.set(gid,(cnt.get(gid)||0)+1);});
-  const li=new Map();
-  return recs.map(rec=>{const gid=rec.groupId||rec.id;const n=seen.get(gid);if(cnt.get(gid)===1)return String(n);const idx=li.get(gid)||0;li.set(gid,idx+1);return`${n}${'abcdefghijklmnopqrstuvwxyz'[idx]}`;});
 }
 
 // ═══════════════════════════════════════════
@@ -1783,8 +2067,11 @@ function doFlash(){const f=document.getElementById('flash');f.classList.add('sho
 updateHomeStats();
 fetchRosterFromSheet();
 window.addEventListener('resize',()=>{
-  if(currentView==='network') renderSVG('net-svg');
-  if(currentView==='event')   renderSVG('evt-svg');
+  if(currentView==='recording') renderSVG('evt-svg');
+  if(currentView==='network')   renderSVG('net-svg');
+  if(currentView==='session')   renderSessionSVG(
+    reviewSession?(reviewSession===activeSession?events:reviewSession.events)[reviewEventIdx]:null
+  );
 });
 document.addEventListener('click',e=>{
   if(!document.getElementById('d-tip').contains(e.target)) closeTip();

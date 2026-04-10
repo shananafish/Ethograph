@@ -909,11 +909,11 @@ function tapNode(id,evt){
   if(currentView!=='recording') return;
   closeTip();
   evt.stopPropagation();
-
+  // Auto-start a new event on first tap if none active
+  if(!activeEvent) startEvent();
   if(!an1Id){
-    // Check if this node is in any existing records → offer picker or select
     const involved=records.map((r,i)=>({r,i})).filter(({r})=>r.an1Id===id||r.an2Id===id||parseIds(r.tpAn3).includes(id)||parseIds(r.tpAn4).includes(id));
-    if(involved.length>0 && !an1Id){
+    if(involved.length>0){
       showNodePicker(id,involved,evt);
     } else {
       an1Id=id; updateHint(); renderSVG('evt-svg');
@@ -980,7 +980,11 @@ function updateHint(){
   const hintTxt=document.getElementById('hint-text');
   const soloBtn=document.getElementById('solo-btn');
   const badge=document.getElementById('an1-badge');
-  if(!an1Id){
+  if(!activeEvent){
+    hintBar.className='hint hint-a1';
+    hintTxt.innerHTML='Tap a node to start a new event';
+    soloBtn.style.display='none'; badge.style.display='none';
+  } else if(!an1Id){
     hintBar.className='hint hint-a1';
     hintTxt.innerHTML='Tap a node to select <span style="color:var(--accent)">An1</span>';
     soloBtn.style.display='none'; badge.style.display='none';
@@ -1474,6 +1478,7 @@ function startEvent(){
   showView('recording');updateHint();updateRecPanel();
   document.getElementById('evt-name').textContent=activeEvent.label;
   document.getElementById('evt-sub').textContent='0 records';
+
 }
 function endEvent(){
   if(activeEvent){

@@ -285,10 +285,17 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
       <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:var(--accent);" id="sess-view-name">Session</div>
       <div style="font-size:10px;color:var(--dim);" id="sess-view-meta"></div>
     </div>
-    <button class="btn btn-dng" onclick="endSession()">End Session</button>
+    <div style="display:flex;gap:6px;">
+      <button class="btn btn-dim" id="sess-back-btn" onclick="showView('home')">← Back</button>
+      <button class="btn btn-acc" id="sess-new-event-btn" onclick="resumeToRecording()">+ Record</button>
+      <button class="btn btn-dng" id="sess-end-btn" onclick="endSession()">End Session</button>
+    </div>
   </div>
-  <div style="padding:12px 14px;">
-    <button class="btn-big" onclick="startEvent()">+ New Event</button>
+  <!-- Prev/Next event navigation -->
+  <div id="sess-nav" style="display:none;flex-shrink:0;display:flex;align-items:center;gap:8px;padding:7px 14px;border-bottom:1px solid var(--border);background:var(--surface);">
+    <button class="btn btn-dim" id="sess-prev-btn" onclick="sessionNavStep(-1)">← Prev</button>
+    <div style="flex:1;text-align:center;font-size:11px;color:var(--dim);" id="sess-nav-label"></div>
+    <button class="btn btn-dim" id="sess-next-btn" onclick="sessionNavStep(1)">Next →</button>
   </div>
   <div style="padding:4px 14px 8px;font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;" id="sess-ev-lbl">Events</div>
   <div class="ev-list" id="sess-ev-list"></div>
@@ -590,6 +597,8 @@ const DURATIONS=[
 let currentView='home';
 let sessions=[];
 let activeSession=null;
+let reviewSession=null; // null = viewing activeSession, otherwise a past session object
+let reviewEventIdx=0;   // which event is focused in session view
 let events=[], activeEvent=null, records=[];
 let an1Id=null, an2Id=null;
 let sessObserver='',sessDatatype='opportunistic',sessConditions='unprovisioned';
@@ -1199,7 +1208,8 @@ function commitRecord(){
   if(window._sessionEdit){
     const {evIdx,recIdx}=window._sessionEdit;
     window._sessionEdit=null;
-    events[evIdx].records[recIdx]={...events[evIdx].records[recIdx],...recData};
+    const ev=reviewSession?reviewSession.events[evIdx]:events[evIdx];
+    ev.records[recIdx]={...ev.records[recIdx],...recData};
     sheetEditIdx=null;sheetLinkedRef=null;
     updateSessionView();doFlash();
     return;
@@ -1497,15 +1507,66 @@ function startSession(){
   showView('session');
   updateSessionView();
 }
+function openPastSession(sessId){
+  const sess=sessions.find(s=>s.id===sessId);
+  if(!sess)return;
+  reviewSession=sess;
+  reviewEventIdx=0;
+  showView('session');
+}
+
+function resumeToRecording(){
+  // Go back to the active recording view
+  reviewSession=null;
+  showView('recording');
+}
+
+function sessionNavStep(dir){
+  const sess=reviewSession||activeSession;
+  const evs=reviewSession?reviewSession.events:events;
+  reviewEventIdx=Math.max(0,Math.min(reviewEventIdx+dir,evs.length-1));
+  updateSessionView();
+}
+
 function updateSessionView(){
-  if(!activeSession)return;
-  document.getElementById('sess-view-name').textContent=activeSession.label;
-  const meta=[activeSession.observer,activeSession.group,activeSession.demog,activeSession.conditions].filter(Boolean).join(' · ');
+  const sess=reviewSession||activeSession;
+  if(!sess)return;
+  const evs=reviewSession?reviewSession.events:events;
+  const isActive=!reviewSession;
+
+  // Header buttons
+  document.getElementById('sess-back-btn').style.display=reviewSession?'block':'none';
+  document.getElementById('sess-new-event-btn').style.display=isActive?'block':'none';
+  document.getElementById('sess-end-btn').style.display=isActive?'block':'none';
+
+  document.getElementById('sess-view-name').textContent=sess.label;
+  const meta=[sess.observer,sess.group,sess.demog,sess.conditions].filter(Boolean).join(' · ');
   document.getElementById('sess-view-meta').textContent=meta;
+
   const lbl=document.getElementById('sess-ev-lbl'),list=document.getElementById('sess-ev-list');
-  if(!events.length){lbl.style.display='none';list.innerHTML='';return;}
+
+  // Prev/Next nav — show when reviewing a past session
+  const nav=document.getElementById('sess-nav');
+  if(reviewSession && evs.length>0){
+    nav.style.display='flex';
+    reviewEventIdx=Math.max(0,Math.min(reviewEventIdx,evs.length-1));
+    document.getElementById('sess-nav-label').textContent=
+      `Event ${reviewEventIdx+1} of ${evs.length}`;
+    document.getElementById('sess-prev-btn').disabled=reviewEventIdx===0;
+    document.getElementById('sess-next-btn').disabled=reviewEventIdx===evs.length-1;
+  } else {
+    nav.style.display='none';
+  }
+
+  if(!evs.length){lbl.style.display='none';list.innerHTML='';return;}
   lbl.style.display='block';
-  list.innerHTML=[...events].map((ev,evIdx)=>{
+
+  // In review mode show only the focused event; in active mode show all
+  const displayEvs=reviewSession?[evs[reviewEventIdx]]:evs;
+  const displayIdxs=reviewSession?[reviewEventIdx]:evs.map((_,i)=>i);
+
+  list.innerHTML=displayEvs.map((ev,di)=>{
+    const evIdx=displayIdxs[di];
     const labels=computeLabelsFor(ev.records);
     const recRows=ev.records.map((rec,ri)=>{
       const a1=INDS.find(x=>x.id===rec.an1Id);
@@ -1524,7 +1585,7 @@ function updateSessionView(){
     return `<div class="ev-item" style="padding:0;overflow:hidden;">
       <div style="padding:11px 14px;display:flex;justify-content:space-between;align-items:center;">
         <div><div class="ev-name">${ev.label}</div><div class="ev-cnt">${ev.records.length} record${ev.records.length!==1?'s':''}</div></div>
-        <button class="btn btn-dim" style="font-size:9px;padding:3px 8px;" onclick="event.stopPropagation();resumeEvent(${evIdx})">Resume</button>
+        ${isActive?`<button class="btn btn-dim" style="font-size:9px;padding:3px 8px;" onclick="event.stopPropagation();resumeEvent(${evIdx})">Resume</button>`:''}
       </div>
       ${recRows?`<div style="border-top:1px solid var(--border);">${recRows}</div>`:''}
     </div>`;
@@ -1533,7 +1594,7 @@ function updateSessionView(){
 
 function editSessionRecord(evIdx,recIdx){
   // Load a record from a saved event into the sheet for editing
-  const ev=events[evIdx];
+  const ev=reviewSession?reviewSession.events[evIdx]:events[evIdx];
   const rec=ev.records[recIdx];
   sheetEditIdx=recIdx;
   sheetLinkedRef=null;
@@ -1610,6 +1671,7 @@ function endSession(){
     activeSession=null;events=[];
     updateHomeStats();renderEvList();
   }
+  reviewSession=null;
   showView('home');
 }
 
@@ -1632,7 +1694,8 @@ function renderEvList(){
   list.innerHTML=[...sessions].reverse().map(sess=>{
     const meta=[sess.observer,sess.group,sess.demog,sess.conditions].filter(Boolean).join(' · ');
     const totalRecs=sess.events.reduce((s,ev)=>s+ev.records.length,0);
-    return`<div class="ev-item"><div class="ev-name">${sess.label}</div>
+    return`<div class="ev-item" onclick="openPastSession('${sess.id}')" style="cursor:pointer;">
+      <div class="ev-name">${sess.label}</div>
       <div class="ev-meta">${new Date(sess.startTime).toLocaleString()}</div>
       ${meta?`<div class="ev-meta">${meta}</div>`:''}
       <div class="ev-cnt">${sess.events.length} event${sess.events.length!==1?'s':''} · ${totalRecs} record${totalRecs!==1?'s':''}</div></div>`;

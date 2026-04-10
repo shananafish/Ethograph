@@ -305,7 +305,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
 </div>
 
 <!-- ════ EVENT VIEW ════ -->
-<div id="view-event" class="view">
+<div id="view-recording" class="view">
   <div class="evt-hdr">
     <div><div class="evt-name" id="evt-name">Event 1</div><div class="evt-sub" id="evt-sub">0 records</div></div>
     <div style="display:flex;gap:7px;align-items:center;">
@@ -616,7 +616,7 @@ function showView(name){
   currentView=name;
   closeAllPopovers();
   if(name==='network') scheduleLayout('net-svg','net-c');
-  if(name==='event')   scheduleLayout('evt-svg','evt-c');
+  if(name==='recording') scheduleLayout('evt-svg','evt-c');
   if(name==='filter')  buildFilterUI();
   if(name==='setup')   populateSetupForm();
   if(name==='home'){
@@ -906,7 +906,7 @@ function openSheetLinked(refRecIdx, an2Override){
 //  NODE TAP — select An1/An2 or show picker
 // ═══════════════════════════════════════════
 function tapNode(id,evt){
-  if(currentView!=='event') return;
+  if(currentView!=='recording') return;
   closeTip();
   evt.stopPropagation();
 
@@ -1471,7 +1471,7 @@ function startEvent(){
     demog:activeSession?.demog||'',datatype:activeSession?.datatype||sessDatatype,
     conditions:activeSession?.conditions||sessConditions,scanNum:activeSession?.scanNum||sessScan};
   records=[];an1Id=null;an2Id=null;
-  showView('event');updateHint();updateRecPanel();
+  showView('recording');updateHint();updateRecPanel();
   document.getElementById('evt-name').textContent=activeEvent.label;
   document.getElementById('evt-sub').textContent='0 records';
 }
@@ -1595,7 +1595,7 @@ updateHomeStats();
 fetchRosterFromSheet();
 window.addEventListener('resize',()=>{
   if(currentView==='network') renderSVG('net-svg');
-  if(currentView==='event')   renderSVG('evt-svg');
+  if(currentView==='recording') renderSVG('evt-svg');
 });
 document.addEventListener('click',e=>{
   if(!document.getElementById('d-tip').contains(e.target)) closeTip();

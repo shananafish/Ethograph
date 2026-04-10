@@ -310,6 +310,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
     <div><div class="evt-name" id="evt-name">Event 1</div><div class="evt-sub" id="evt-sub">0 records</div></div>
     <div style="display:flex;gap:7px;align-items:center;">
       <div id="an1-badge" style="display:none;font-size:11px;color:var(--accent);padding:3px 8px;background:rgba(78,205,196,.1);border-radius:6px;border:1px solid rgba(78,205,196,.3);"></div>
+      <button class="btn btn-dim" onclick="showView('session')">Session</button>
       <button class="btn btn-dng" onclick="endEvent()">End Event</button>
     </div>
   </div>
@@ -619,6 +620,7 @@ function showView(name){
   if(name==='recording') scheduleLayout('evt-svg','evt-c');
   if(name==='filter')  buildFilterUI();
   if(name==='setup')   populateSetupForm();
+  if(name==='session') updateSessionView();
   if(name==='home'){
     const ready=INDS.length>0;
     const el=id=>document.getElementById(id);
@@ -1192,6 +1194,17 @@ function commitRecord(){
   }
 
   document.getElementById('sheet-overlay').style.display='none';
+
+  // If editing a record from the session view, write back there
+  if(window._sessionEdit){
+    const {evIdx,recIdx}=window._sessionEdit;
+    window._sessionEdit=null;
+    events[evIdx].records[recIdx]={...events[evIdx].records[recIdx],...recData};
+    sheetEditIdx=null;sheetLinkedRef=null;
+    updateSessionView();doFlash();
+    return;
+  }
+
   if(sheetEditIdx===null){an1Id=null;an2Id=null;}
   sheetEditIdx=null;sheetLinkedRef=null;
   updateHint();updateRecPanel();renderSVG('evt-svg');doFlash();
@@ -1391,7 +1404,7 @@ function tEnd(){
 //  EVENT MANAGEMENT
 // ═══════════════════════════════════════════
 // ═══ GOOGLE SHEETS SYNC ═══════════════════════════════════════════════
-const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbz-tlGnMZCq6M0nazbensaiPNeps3YpG8I0pj6lfSgqLOoo6puVJopgxs4f_XgfDkZADA/exec';
+const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbw9Z7yQt67KBdOsJbNjS3QnR5aBdISnTQzQ8ImWCzC9fTUmIuC18Ndsgrec1IkK5T0j1A/exec';
 async function postSessionToSheet(sess){
   const rows=buildRows(sess);
   if(!rows.length){showSyncStatus('⚠ No records to sync','var(--warn)');return;}
@@ -1416,16 +1429,43 @@ function buildRows(sess){
   (sess.events||[]).forEach(ev=>{
     const labels=computeLabelsFor(ev.records);
     ev.records.forEach((rec,i)=>{
-      rows.push([sess.label,sess.observer||'',sess.group||'',sess.demog||'',sess.datatype||'',sess.conditions||'',sess.scanNum||'',sess.startTime||'',
-        ev.label,labels[i],rec.timestamp,rec.groupId||'',
-        rec.an1Id,getName(rec.an1Id),rec.an2Id||'',rec.an2Id?getName(rec.an2Id):'',
-        rec.solo?'yes':'no',DURATIONS.find(d=>d.id===rec.duration)?.label||'',
-        rec.linkedRef!=null?labels[rec.linkedRef]:'',
-        getL('agg','an1',rec),getL('sub','an1',rec),getL('aff','an1',rec),
-        getL('agg','an2',rec),getL('sub','an2',rec),getL('aff','an2',rec),
-        getL('tp','an1',rec),rec.tpAn3||'',rec.tpAn4||'',
-        getQ('agg',rec),getQ('sub',rec),getQ('aff',rec),getQ('ix',rec),
-        getA('an1',rec),getA('an2',rec),rec.notes||'']);
+      rows.push({
+        Session:       sess.label,
+        Observer:      sess.observer||'',
+        Group:         sess.group||'',
+        Demog:         sess.demog||'',
+        DataType:      sess.datatype||'',
+        Conditions:    sess.conditions||'',
+        ScanNum:       sess.scanNum||'',
+        StartTime:     sess.startTime||'',
+        Event:         ev.label,
+        Record_Label:  labels[i],
+        Timestamp:     rec.timestamp,
+        GroupID:       rec.groupId||'',
+        An1_ID:        rec.an1Id,
+        An1_Name:      getName(rec.an1Id),
+        An2_ID:        rec.an2Id||'',
+        An2_Name:      rec.an2Id?getName(rec.an2Id):'',
+        Solo:          rec.solo?'yes':'no',
+        Duration:      DURATIONS.find(d=>d.id===rec.duration)?.label||'',
+        LinkedToRecord:rec.linkedRef!=null?labels[rec.linkedRef]:'',
+        An1_Aggression:   getL('agg','an1',rec),
+        An1_Submission:   getL('sub','an1',rec),
+        An1_Affiliation:  getL('aff','an1',rec),
+        An2_Aggression:   getL('agg','an2',rec),
+        An2_Submission:   getL('sub','an2',rec),
+        An2_Affiliation:  getL('aff','an2',rec),
+        ThirdParty_Behaviors: getL('tp','an1',rec),
+        An3_IDs:       rec.tpAn3||'',
+        An4_IDs:       rec.tpAn4||'',
+        Qualifiers_Agg:         getQ('agg',rec),
+        Qualifiers_Sub:         getQ('sub',rec),
+        Qualifiers_Aff:         getQ('aff',rec),
+        Qualifiers_Interaction: getQ('ix',rec),
+        Affect_An1:    getA('an1',rec),
+        Affect_An2:    getA('an2',rec),
+        Notes:         rec.notes||'',
+      });
     });
   });
   return rows;
@@ -1465,9 +1505,74 @@ function updateSessionView(){
   const lbl=document.getElementById('sess-ev-lbl'),list=document.getElementById('sess-ev-list');
   if(!events.length){lbl.style.display='none';list.innerHTML='';return;}
   lbl.style.display='block';
-  list.innerHTML=[...events].reverse().map(ev=>
-    `<div class="ev-item"><div class="ev-name">${ev.label}</div><div class="ev-cnt">${ev.records.length} record${ev.records.length!==1?'s':''}</div></div>`
-  ).join('');
+  list.innerHTML=[...events].map((ev,evIdx)=>{
+    const labels=computeLabelsFor(ev.records);
+    const recRows=ev.records.map((rec,ri)=>{
+      const a1=INDS.find(x=>x.id===rec.an1Id);
+      const a2=rec.an2Id?INDS.find(x=>x.id===rec.an2Id):null;
+      if(!a1) return '';
+      const pair=a2?`${a1.name} — ${a2.name}`:`${a1.name} (solo)`;
+      const {dots}=behSummaryFull(rec);
+      const time=new Date(rec.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      return `<div class="rec-row" onclick="editSessionRecord(${evIdx},${ri})" style="padding:5px 10px 5px 28px;">
+        <div class="rec-body">
+          <div class="rec-num">#${labels[ri]} · ${time}</div>
+          <div class="rec-pair" style="font-size:10px;">${dots}${pair}</div>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="ev-item" style="padding:0;overflow:hidden;">
+      <div style="padding:11px 14px;display:flex;justify-content:space-between;align-items:center;">
+        <div><div class="ev-name">${ev.label}</div><div class="ev-cnt">${ev.records.length} record${ev.records.length!==1?'s':''}</div></div>
+        <button class="btn btn-dim" style="font-size:9px;padding:3px 8px;" onclick="event.stopPropagation();resumeEvent(${evIdx})">Resume</button>
+      </div>
+      ${recRows?`<div style="border-top:1px solid var(--border);">${recRows}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function editSessionRecord(evIdx,recIdx){
+  // Load a record from a saved event into the sheet for editing
+  const ev=events[evIdx];
+  const rec=ev.records[recIdx];
+  sheetEditIdx=recIdx;
+  sheetLinkedRef=null;
+  sheetSolo=rec.solo;sheetAn1=rec.an1Id;sheetAn2=rec.an2Id||null;
+  sel={
+    agg:{an1:new Set(rec.beh.agg.an1),an2:new Set(rec.beh.agg.an2)},
+    sub:{an1:new Set(rec.beh.sub.an1),an2:new Set(rec.beh.sub.an2)},
+    aff:{an1:new Set(rec.beh.aff.an1),an2:new Set(rec.beh.aff.an2)},
+    tp:{an1:new Set(rec.beh.tp.an1)},
+  };
+  selQua={agg:new Set(rec.qualifiers.agg),sub:new Set(rec.qualifiers.sub),aff:new Set(rec.qualifiers.aff),ix:new Set(rec.qualifiers.ix)};
+  selAffect={an1:new Set(rec.affect.an1),an2:new Set(rec.affect.an2)};
+  dur=rec.duration||'lt5';tpAn3=rec.tpAn3||'';tpAn4=rec.tpAn4||'';recNotes=rec.notes||'';
+  activeTab='aggsub';
+  const a1=INDS.find(x=>x.id===sheetAn1),a2=sheetAn2?INDS.find(x=>x.id===sheetAn2):null;
+  const labels=computeLabelsFor(ev.records);
+  document.getElementById('sheet-pair').textContent=a1.name+(a2?' — '+a2.name:' (solo)');
+  document.getElementById('sheet-meta').textContent=`Editing ${ev.label} record #${labels[recIdx]}`;
+  document.getElementById('swap-btn').style.display=sheetSolo?'none':'inline-block';
+  // When saved, write back to the session event (not the live records array)
+  window._sessionEdit={evIdx,recIdx};
+  buildTabs();buildContent();
+  document.getElementById('sheet-overlay').style.display='flex';
+}
+
+function resumeEvent(evIdx){
+  // Put a past event back as the active event so you can add more records to it
+  const ev=events[evIdx];
+  events.splice(evIdx,1); // remove from saved list
+  activeEvent={...ev};
+  records=ev.records.map(r=>({...r,
+    beh:{agg:{an1:new Set(r.beh.agg.an1),an2:new Set(r.beh.agg.an2)},sub:{an1:new Set(r.beh.sub.an1),an2:new Set(r.beh.sub.an2)},aff:{an1:new Set(r.beh.aff.an1),an2:new Set(r.beh.aff.an2)},tp:{an1:new Set(r.beh.tp.an1)}},
+    qualifiers:{agg:new Set(r.qualifiers.agg),sub:new Set(r.qualifiers.sub),aff:new Set(r.qualifiers.aff),ix:new Set(r.qualifiers.ix)},
+    affect:{an1:new Set(r.affect.an1),an2:new Set(r.affect.an2)},
+  }));
+  an1Id=null;an2Id=null;
+  showView('recording');updateHint();updateRecPanel();
+  document.getElementById('evt-name').textContent=activeEvent.label;
+  document.getElementById('evt-sub').textContent=records.length+' record'+(records.length!==1?'s':'');
 }
 function startEvent(){
   activeEvent={id:'EVT-'+Date.now(),label:'Event '+(events.length+1),timestamp:new Date().toISOString(),
@@ -1490,8 +1595,12 @@ function endEvent(){
     events.push({...activeEvent,records:savedRecs});
   }
   activeEvent=null;records=[];an1Id=null;an2Id=null;
-  showView('session');
-  updateSessionView();
+  // Stay on recording view — edges clear, ready for next node tap
+  renderSVG('evt-svg');
+  updateRecPanel();
+  updateHint();
+  document.getElementById('evt-name').textContent='—';
+  document.getElementById('evt-sub').textContent='tap a node to start next event';
 }
 function endSession(){
   if(activeSession){
@@ -1504,18 +1613,6 @@ function endSession(){
   showView('home');
 }
 
-function endEvent(){
-  if(activeEvent){
-    events.push({...activeEvent,records:records.map(r=>({...r,
-      beh:{agg:{an1:[...r.beh.agg.an1],an2:[...r.beh.agg.an2]},sub:{an1:[...r.beh.sub.an1],an2:[...r.beh.sub.an2]},aff:{an1:[...r.beh.aff.an1],an2:[...r.beh.aff.an2]},tp:{an1:[...r.beh.tp.an1]}},
-      qualifiers:{agg:[...r.qualifiers.agg],sub:[...r.qualifiers.sub],aff:[...r.qualifiers.aff],ix:[...r.qualifiers.ix]},
-      affect:{an1:[...r.affect.an1],an2:[...r.affect.an2]},
-    }))});
-    updateHomeStats();renderEvList();
-  }
-  activeEvent=null;records=[];an1Id=null;an2Id=null;
-  showView('home');
-}
 
 // ═══════════════════════════════════════════
 //  HOME

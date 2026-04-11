@@ -183,6 +183,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
     <div style="display:flex;gap:7px;">
       <button class="btn btn-dim" onclick="showView('roster')">Roster</button>
       <button class="btn btn-acc" onclick="showView('network')" id="network-btn" style="display:none">Network</button>
+      <button class="btn btn-dim" id="sync-all-btn" onclick="syncAll()" style="display:none">↑ Sync All</button>
       <button class="btn btn-warn" id="export-btn" onclick="exportData()" style="display:none">Export CSV</button>
     </div>
   </div>
@@ -291,11 +292,17 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
       <button class="btn btn-dng" id="sess-end-btn" onclick="endSession()">End Session</button>
     </div>
   </div>
-  <!-- Prev/Next event navigation -->
-  <div id="sess-nav" style="display:none;flex-shrink:0;display:flex;align-items:center;gap:8px;padding:7px 14px;border-bottom:1px solid var(--border);background:var(--surface);">
-    <button class="btn btn-dim" id="sess-prev-btn" onclick="sessionNavStep(-1)">← Prev</button>
-    <div style="flex:1;text-align:center;font-size:11px;color:var(--dim);" id="sess-nav-label"></div>
-    <button class="btn btn-dim" id="sess-next-btn" onclick="sessionNavStep(1)">Next →</button>
+
+  <!-- Editable timestamps -->
+  <div id="sess-times" style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;gap:12px;flex-shrink:0;background:var(--surface);">
+    <div style="flex:1;">
+      <div class="field-lbl">Start Time</div>
+      <input class="field-in" id="sess-start-time" style="font-size:10px;" onchange="saveSessionTimes()">
+    </div>
+    <div style="flex:1;">
+      <div class="field-lbl">End Time</div>
+      <input class="field-in" id="sess-end-time" style="font-size:10px;" placeholder="In progress…" onchange="saveSessionTimes()">
+    </div>
   </div>
   <div style="padding:4px 14px 8px;font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;" id="sess-ev-lbl">Events</div>
   <div class="ev-list" id="sess-ev-list"></div>
@@ -320,6 +327,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
       <button class="btn btn-dim" onclick="showView('session')">Session</button>
       <button class="btn btn-dng" onclick="endEvent()">End Event</button>
     </div>
+  </div>
+  <!-- Event prev/next nav -->
+  <div id="rec-nav" style="display:none;flex-shrink:0;align-items:center;gap:8px;padding:5px 14px;border-bottom:1px solid var(--border);background:var(--surface);">
+    <button class="btn btn-dim" id="rec-prev-btn" onclick="recNavStep(-1)">← Prev</button>
+    <div style="flex:1;text-align:center;font-size:11px;color:var(--dim);" id="rec-nav-label"></div>
+    <button class="btn btn-dim" id="rec-next-btn" onclick="recNavStep(1)">Next →</button>
   </div>
   <div class="hint hint-a1" id="hint-bar">
     <span id="hint-text">Tap a node to select <span style="color:var(--accent)">An1</span></span>
@@ -599,6 +612,7 @@ let sessions=[];
 let activeSession=null;
 let reviewSession=null; // null = viewing activeSession, otherwise a past session object
 let reviewEventIdx=0;   // which event is focused in session view
+let recNavIdx=-1;        // -1 = live active event; 0..n-1 = browsing a saved event
 let events=[], activeEvent=null, records=[];
 let an1Id=null, an2Id=null;
 let sessObserver='',sessDatatype='opportunistic',sessConditions='unprovisioned';
@@ -741,9 +755,10 @@ function domainColor(dom){
   return dom==='agg'?'#ef4444':dom==='sub'?'#f97316':dom==='aff'?'#22c55e':'#a78bfa';
 }
 function primaryDomain(rec){
-  if(rec.beh.agg.an1.size+rec.beh.agg.an2.size>0) return 'agg';
-  if(rec.beh.sub.an1.size+rec.beh.sub.an2.size>0) return 'sub';
-  if(rec.beh.aff.an1.size+rec.beh.aff.an2.size>0) return 'aff';
+  const sz=v=>v instanceof Set?v.size:(Array.isArray(v)?v.length:0);
+  if(sz(rec.beh.agg.an1)+sz(rec.beh.agg.an2)>0) return 'agg';
+  if(sz(rec.beh.sub.an1)+sz(rec.beh.sub.an2)>0) return 'sub';
+  if(sz(rec.beh.aff.an1)+sz(rec.beh.aff.an2)>0) return 'aff';
   return 'tp';
 }
 
@@ -752,7 +767,15 @@ function renderSVG(svgId){
   const isEvt=svgId==='evt-svg';
   const w=svg.parentElement.clientWidth,h=svg.parentElement.clientHeight;
   svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
-  const labels=isEvt?computeLabels():[];
+  // Pick which records to render — saved event when browsing, live records otherwise
+  const dispRecords=isEvt&&recNavIdx>=0&&events[recNavIdx]
+    ?events[recNavIdx].records.map(r=>({...r,
+        beh:{agg:{an1:new Set(r.beh.agg.an1),an2:new Set(r.beh.agg.an2)},sub:{an1:new Set(r.beh.sub.an1),an2:new Set(r.beh.sub.an2)},aff:{an1:new Set(r.beh.aff.an1),an2:new Set(r.beh.aff.an2)},tp:{an1:new Set(r.beh.tp.an1)}},
+        qualifiers:{agg:new Set(r.qualifiers.agg),sub:new Set(r.qualifiers.sub),aff:new Set(r.qualifiers.aff),ix:new Set(r.qualifiers.ix)},
+        affect:{an1:new Set(r.affect.an1),an2:new Set(r.affect.an2)},
+      }))
+    :records;
+  const labels=isEvt?computeLabelsFor(dispRecords):[];
 
   let html=`<defs>
     <marker id="m-agg" markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5z" fill="#ef4444"/></marker>
@@ -761,11 +784,10 @@ function renderSVG(svgId){
     <marker id="m-tp"  markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5z" fill="#a78bfa"/></marker>
     <marker id="m-dam" markerWidth="6" markerHeight="6" refX="5" refY="2.5" orient="auto"><path d="M0,0 L0,5 L6,2.5z" fill="rgba(255,255,255,.4)"/></marker>
   </defs>`;
-
-  if(isEvt && records.length>0){
+  if(isEvt && dispRecords.length>0){
     // bucket by sorted pair for midpoint offsets
     const pairBuckets={};
-    records.forEach((rec,i)=>{
+    dispRecords.forEach((rec,i)=>{
       if(!rec.an2Id) return;
       const key=[rec.an1Id,rec.an2Id].sort().join('|');
       if(!pairBuckets[key]) pairBuckets[key]=[];
@@ -774,14 +796,14 @@ function renderSVG(svgId){
     recMids={};
     Object.values(pairBuckets).forEach(idxArr=>{
       idxArr.forEach((ri,offset)=>{
-        const rec=records[ri];
+        const rec=dispRecords[ri];
         const s=positions[rec.an1Id],t=positions[rec.an2Id];
         if(s&&t) recMids[ri]=edgeMidpoint(s,t,offset,idxArr.length);
       });
     });
 
     // Primary edges
-    records.forEach((rec,i)=>{
+    dispRecords.forEach((rec,i)=>{
       if(!rec.an2Id) return;
       const s=positions[rec.an1Id],t=positions[rec.an2Id],mid=recMids[i];
       if(!s||!t||!mid) return;
@@ -793,7 +815,7 @@ function renderSVG(svgId){
     });
 
     // TP spokes — same color as primary domain for both An3 and An4
-    records.forEach((rec,i)=>{
+    dispRecords.forEach((rec,i)=>{
       if(!rec.an2Id) return;
       const mid=recMids[i]; if(!mid) return;
       const col=domainColor(primaryDomain(rec));
@@ -805,7 +827,7 @@ function renderSVG(svgId){
     });
 
     // Diamonds
-    records.forEach((rec,i)=>{
+    dispRecords.forEach((rec,i)=>{
       if(!rec.an2Id) return;
       const mid=recMids[i]; if(!mid) return;
       const dom=primaryDomain(rec),col=domainColor(dom);
@@ -916,6 +938,42 @@ function openSheetLinked(refRecIdx, an2Override){
 // ═══════════════════════════════════════════
 //  NODE TAP — select An1/An2 or show picker
 // ═══════════════════════════════════════════
+function updateRecNav(){
+  const nav=document.getElementById('rec-nav');
+  // Only show nav after at least one event has been saved
+  if(events.length===0){nav.style.display='none';return;}
+  nav.style.display='flex';
+  const liveLabel=activeEvent?'Live ('+activeEvent.label+')':'—';
+  const label=recNavIdx===-1?liveLabel:events[recNavIdx].label;
+  document.getElementById('rec-nav-label').textContent=label;
+  document.getElementById('rec-prev-btn').disabled=recNavIdx===0;
+  document.getElementById('rec-next-btn').disabled=recNavIdx===-1;
+  // Update event header to show which event we're viewing
+  const dispEv=recNavIdx===-1?activeEvent:events[recNavIdx];
+  if(dispEv){
+    document.getElementById('evt-name').textContent=recNavIdx===-1?dispEv.label:dispEv.label+' (saved)';
+    const rc=recNavIdx===-1?records:dispEv.records;
+    document.getElementById('evt-sub').textContent=rc.length+' record'+(rc.length!==1?'s':'');
+  }
+}
+
+function recNavStep(dir){
+  // -1 = live, 0..n-1 = saved events
+  const maxIdx=events.length-1;
+  if(dir===1){
+    // Next → toward live
+    if(recNavIdx<maxIdx) recNavIdx++;
+    else if(recNavIdx===maxIdx && activeEvent) recNavIdx=-1;
+  } else {
+    // Prev → toward older events
+    if(recNavIdx===-1 && events.length>0) recNavIdx=maxIdx;
+    else if(recNavIdx>0) recNavIdx--;
+  }
+  updateRecNav();
+  renderSVG('evt-svg');
+  updateRecPanel();
+}
+
 function tapNode(id,evt){
   if(currentView!=='recording') return;
   closeTip();
@@ -1199,7 +1257,7 @@ function commitRecord(){
     // Update existing record, preserve id/ts/groupId
     records[sheetEditIdx]={...records[sheetEditIdx],...recData};
   } else {
-    records.push({id:'R-'+Date.now(),ts:Date.now(),timestamp:new Date().toISOString(),groupId:null,...recData});
+    records.push({id:'R-'+(sessObserver||'X')+'-'+Date.now(),ts:Date.now(),timestamp:new Date().toISOString(),groupId:null,...recData});
   }
 
   document.getElementById('sheet-overlay').style.display='none';
@@ -1225,36 +1283,37 @@ function commitRecord(){
 // ═══════════════════════════════════════════
 function updateRecPanel(){
   const panel=document.getElementById('rec-panel');
-  document.getElementById('evt-sub').textContent=records.length+' record'+(records.length!==1?'s':'');
-  if(!records.length){panel.style.display='none';return;}
+  const panelRecs=recNavIdx>=0&&events[recNavIdx]?events[recNavIdx].records:records;
+  const isBrowsing=recNavIdx>=0;
+  if(!panelRecs.length){panel.style.display='none';return;}
   panel.style.display='flex';
-  const labels=computeLabels();
+  const labels=computeLabelsFor(panelRecs);
 
   // Build visual list — group simultaneous records together
   let html='';
   let i=0;
-  while(i<records.length){
-    const rec=records[i];
+  while(i<panelRecs.length){
+    const rec=panelRecs[i];
     const gid=rec.groupId;
-    // Find all members of this group (contiguous block — they may not be contiguous after reorder, just same groupId)
-    const groupIdxs=gid?records.map((r,ri)=>ri).filter(ri=>records[ri].groupId===gid):[i];
+    const groupIdxs=gid?panelRecs.map((r,ri)=>ri).filter(ri=>panelRecs[ri].groupId===gid):[i];
     const isGroup=gid&&groupIdxs.length>1&&groupIdxs[0]===i;
 
     if(isGroup){
       html+=`<div style="border-left:3px solid var(--tp);margin-left:6px;">`;
-      groupIdxs.forEach(ri=>{ html+=recRowHtml(ri,labels); });
+      groupIdxs.forEach(ri=>{ html+=recRowHtml(ri,labels,panelRecs,isBrowsing); });
       html+=`</div>`;
       i+=groupIdxs.length;
     } else {
-      html+=recRowHtml(i,labels);
+      html+=recRowHtml(i,labels,panelRecs,isBrowsing);
       i++;
     }
   }
   document.getElementById('rec-list').innerHTML=html;
 }
 
-function recRowHtml(i,labels){
-  const rec=records[i];
+function recRowHtml(i,labels,recs,readOnly){
+  recs=recs||records; readOnly=readOnly||false;
+  const rec=recs[i];
   const a1=INDS.find(x=>x.id===rec.an1Id);
   const a2=rec.an2Id?INDS.find(x=>x.id===rec.an2Id):null;
   const pair=a2?`${a1.name} — ${a2.name}`:`${a1.name} (solo)`;
@@ -1283,6 +1342,18 @@ function recRowHtml(i,labels){
     ?`<button class="group-with-btn" style="color:var(--dim);border-color:var(--border);margin-top:2px" onclick="event.stopPropagation();ungroup(${i})">Ungroup</button>`
     :'';
 
+  if(readOnly){
+    // Browsing a saved event — tappable to edit, but no drag/delete
+    return `<div class="rec-row" onclick="editSavedRecord(${i})" style="cursor:pointer;">
+      <div class="rec-body">
+        <div class="rec-num">#${labels[i]} · ${time}</div>
+        <div class="rec-pair">${dots}${pair}</div>
+        <div class="rec-behs">${lines.join('<br>')}</div>
+        ${tags.length?`<div class="rec-tags">${tags.join('')}</div>`:''}
+        ${tpStr?`<div class="rec-behs" style="color:var(--tp)">3P: ${tpStr}</div>`:''}
+      </div>
+    </div>`;
+  }
   return `<div class="rec-row${isMe?' dragging':''}"
     draggable="true"
     ondragstart="dStart(${i})" ondragover="dOver(event,${i})" ondragend="dEnd()" ondrop="dDrop(event,${i})"
@@ -1326,8 +1397,10 @@ function behSummaryFull(rec){
   const dots=[],lines=[];
   const domColors={agg:'#ef4444',sub:'#f97316',aff:'#22c55e',tp:'#a78bfa'};
   const domNames={agg:'Agg',sub:'Sub',aff:'Aff',tp:'3P'};
+  // Normalize: saved records store arrays, live records store Sets
+  const toSet=v=>v instanceof Set?v:new Set(Array.isArray(v)?v:[]);
   ['agg','sub','aff','tp'].forEach(d=>{
-    const a1s=rec.beh[d].an1,a2s=d==='tp'?new Set():rec.beh[d].an2;
+    const a1s=toSet(rec.beh[d].an1),a2s=d==='tp'?new Set():toSet(rec.beh[d].an2);
     if(!a1s.size&&!a2s.size) return;
     dots.push(`<span class="dot" style="background:${domColors[d]}"></span>`);
     const parts=[];
@@ -1440,6 +1513,7 @@ function buildRows(sess){
     const labels=computeLabelsFor(ev.records);
     ev.records.forEach((rec,i)=>{
       rows.push({
+        Record_ID:     rec.id,
         Session:       sess.label,
         Observer:      sess.observer||'',
         Group:         sess.group||'',
@@ -1447,7 +1521,8 @@ function buildRows(sess){
         DataType:      sess.datatype||'',
         Conditions:    sess.conditions||'',
         ScanNum:       sess.scanNum||'',
-        StartTime:     sess.startTime||'',
+        Session_Start: sess.startTime||'',
+        Session_End:   sess.endTime||'',
         Event:         ev.label,
         Record_Label:  labels[i],
         Timestamp:     rec.timestamp,
@@ -1509,9 +1584,9 @@ function startSession(){
 }
 function openPastSession(sessId){
   const sess=sessions.find(s=>s.id===sessId);
-  if(!sess)return;
-  reviewSession=sess;
-  reviewEventIdx=0;
+  if(sess){reviewSession=sess;}
+  else if(activeSession&&activeSession.id===sessId){reviewSession=null;}
+  else return;
   showView('session');
 }
 
@@ -1519,13 +1594,6 @@ function resumeToRecording(){
   // Go back to the active recording view
   reviewSession=null;
   showView('recording');
-}
-
-function sessionNavStep(dir){
-  const sess=reviewSession||activeSession;
-  const evs=reviewSession?reviewSession.events:events;
-  reviewEventIdx=Math.max(0,Math.min(reviewEventIdx+dir,evs.length-1));
-  updateSessionView();
 }
 
 function updateSessionView(){
@@ -1543,30 +1611,18 @@ function updateSessionView(){
   const meta=[sess.observer,sess.group,sess.demog,sess.conditions].filter(Boolean).join(' · ');
   document.getElementById('sess-view-meta').textContent=meta;
 
+  // Populate editable timestamps
+  const sess2=reviewSession||activeSession;
+  const fmtTime=iso=>iso?new Date(iso).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+  document.getElementById('sess-start-time').value=fmtTime(sess2.startTime);
+  document.getElementById('sess-end-time').value=fmtTime(sess2.endTime)||'';
+
   const lbl=document.getElementById('sess-ev-lbl'),list=document.getElementById('sess-ev-list');
-
-  // Prev/Next nav — show when reviewing a past session
-  const nav=document.getElementById('sess-nav');
-  if(reviewSession && evs.length>0){
-    nav.style.display='flex';
-    reviewEventIdx=Math.max(0,Math.min(reviewEventIdx,evs.length-1));
-    document.getElementById('sess-nav-label').textContent=
-      `Event ${reviewEventIdx+1} of ${evs.length}`;
-    document.getElementById('sess-prev-btn').disabled=reviewEventIdx===0;
-    document.getElementById('sess-next-btn').disabled=reviewEventIdx===evs.length-1;
-  } else {
-    nav.style.display='none';
-  }
-
   if(!evs.length){lbl.style.display='none';list.innerHTML='';return;}
   lbl.style.display='block';
 
-  // In review mode show only the focused event; in active mode show all
-  const displayEvs=reviewSession?[evs[reviewEventIdx]]:evs;
-  const displayIdxs=reviewSession?[reviewEventIdx]:evs.map((_,i)=>i);
-
-  list.innerHTML=displayEvs.map((ev,di)=>{
-    const evIdx=displayIdxs[di];
+  // Show all events as a list; tapping an event jumps to it in the network view
+  list.innerHTML=evs.map((ev,evIdx)=>{
     const labels=computeLabelsFor(ev.records);
     const recRows=ev.records.map((rec,ri)=>{
       const a1=INDS.find(x=>x.id===rec.an1Id);
@@ -1575,14 +1631,14 @@ function updateSessionView(){
       const pair=a2?`${a1.name} — ${a2.name}`:`${a1.name} (solo)`;
       const {dots}=behSummaryFull(rec);
       const time=new Date(rec.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-      return `<div class="rec-row" onclick="editSessionRecord(${evIdx},${ri})" style="padding:5px 10px 5px 28px;">
+      return `<div class="rec-row" onclick="event.stopPropagation();editSessionRecord(${evIdx},${ri})" style="padding:5px 10px 5px 28px;">
         <div class="rec-body">
           <div class="rec-num">#${labels[ri]} · ${time}</div>
           <div class="rec-pair" style="font-size:10px;">${dots}${pair}</div>
         </div>
       </div>`;
     }).join('');
-    return `<div class="ev-item" style="padding:0;overflow:hidden;">
+    return `<div class="ev-item" style="padding:0;overflow:hidden;cursor:pointer;" onclick="jumpToEvent(${evIdx})">
       <div style="padding:11px 14px;display:flex;justify-content:space-between;align-items:center;">
         <div><div class="ev-name">${ev.label}</div><div class="ev-cnt">${ev.records.length} record${ev.records.length!==1?'s':''}</div></div>
         ${isActive?`<button class="btn btn-dim" style="font-size:9px;padding:3px 8px;" onclick="event.stopPropagation();resumeEvent(${evIdx})">Resume</button>`:''}
@@ -1592,6 +1648,40 @@ function updateSessionView(){
   }).join('');
 }
 
+function saveSessionTimes(){
+  const sess=reviewSession||activeSession;
+  if(!sess) return;
+  const startVal=document.getElementById('sess-start-time').value;
+  const endVal=document.getElementById('sess-end-time').value;
+  // Try to parse — keep original if invalid
+  if(startVal){const d=new Date(startVal);if(!isNaN(d))sess.startTime=d.toISOString();}
+  if(endVal){const d=new Date(endVal);if(!isNaN(d))sess.endTime=d.toISOString();}
+  else sess.endTime='';
+}
+
+function syncSession(){
+  const sess=reviewSession||activeSession;
+  if(!sess) return;
+  // For active session, include current in-progress events
+  if(!reviewSession) sess.events=[...events];
+  postSessionToSheet(sess);
+}
+
+function jumpToEvent(evIdx){
+  // Navigate to the recording view with this event focused in the nav
+  recNavIdx=evIdx;
+  showView('recording');
+  updateRecNav();
+  renderSVG('evt-svg');
+  updateRecPanel();
+}
+
+function editSavedRecord(recIdx){
+  // Edit a record currently being displayed from a saved event (recNavIdx)
+  if(recNavIdx<0||!events[recNavIdx]) return;
+  editSessionRecord(recNavIdx, recIdx);
+}
+
 function editSessionRecord(evIdx,recIdx){
   // Load a record from a saved event into the sheet for editing
   const ev=reviewSession?reviewSession.events[evIdx]:events[evIdx];
@@ -1599,14 +1689,15 @@ function editSessionRecord(evIdx,recIdx){
   sheetEditIdx=recIdx;
   sheetLinkedRef=null;
   sheetSolo=rec.solo;sheetAn1=rec.an1Id;sheetAn2=rec.an2Id||null;
+  const toSet=v=>v instanceof Set?v:new Set(Array.isArray(v)?v:[]);
   sel={
-    agg:{an1:new Set(rec.beh.agg.an1),an2:new Set(rec.beh.agg.an2)},
-    sub:{an1:new Set(rec.beh.sub.an1),an2:new Set(rec.beh.sub.an2)},
-    aff:{an1:new Set(rec.beh.aff.an1),an2:new Set(rec.beh.aff.an2)},
-    tp:{an1:new Set(rec.beh.tp.an1)},
+    agg:{an1:toSet(rec.beh.agg.an1),an2:toSet(rec.beh.agg.an2)},
+    sub:{an1:toSet(rec.beh.sub.an1),an2:toSet(rec.beh.sub.an2)},
+    aff:{an1:toSet(rec.beh.aff.an1),an2:toSet(rec.beh.aff.an2)},
+    tp:{an1:toSet(rec.beh.tp.an1)},
   };
-  selQua={agg:new Set(rec.qualifiers.agg),sub:new Set(rec.qualifiers.sub),aff:new Set(rec.qualifiers.aff),ix:new Set(rec.qualifiers.ix)};
-  selAffect={an1:new Set(rec.affect.an1),an2:new Set(rec.affect.an2)};
+  selQua={agg:toSet(rec.qualifiers.agg),sub:toSet(rec.qualifiers.sub),aff:toSet(rec.qualifiers.aff),ix:toSet(rec.qualifiers.ix)};
+  selAffect={an1:toSet(rec.affect.an1),an2:toSet(rec.affect.an2)};
   dur=rec.duration||'lt5';tpAn3=rec.tpAn3||'';tpAn4=rec.tpAn4||'';recNotes=rec.notes||'';
   activeTab='aggsub';
   const a1=INDS.find(x=>x.id===sheetAn1),a2=sheetAn2?INDS.find(x=>x.id===sheetAn2):null;
@@ -1640,8 +1731,8 @@ function startEvent(){
     observer:activeSession?.observer||sessObserver,group:activeSession?.group||activeGroup,
     demog:activeSession?.demog||'',datatype:activeSession?.datatype||sessDatatype,
     conditions:activeSession?.conditions||sessConditions,scanNum:activeSession?.scanNum||sessScan};
-  records=[];an1Id=null;an2Id=null;
-  showView('recording');updateHint();updateRecPanel();
+  records=[];an1Id=null;an2Id=null;recNavIdx=-1;
+  showView('recording');updateHint();updateRecPanel();updateRecNav();
   document.getElementById('evt-name').textContent=activeEvent.label;
   document.getElementById('evt-sub').textContent='0 records';
 
@@ -1655,19 +1746,20 @@ function endEvent(){
     }));
     events.push({...activeEvent,records:savedRecs});
   }
-  activeEvent=null;records=[];an1Id=null;an2Id=null;
+  activeEvent=null;records=[];an1Id=null;an2Id=null;recNavIdx=-1;
   // Stay on recording view — edges clear, ready for next node tap
   renderSVG('evt-svg');
   updateRecPanel();
+  updateRecNav();
   updateHint();
   document.getElementById('evt-name').textContent='—';
   document.getElementById('evt-sub').textContent='tap a node to start next event';
 }
 function endSession(){
   if(activeSession){
+    if(!activeSession.endTime) activeSession.endTime=new Date().toISOString();
     const sess={...activeSession,events:[...events]};
     sessions.push(sess);
-    postSessionToSheet(sess);
     activeSession=null;events=[];
     updateHomeStats();renderEvList();
   }
@@ -1679,6 +1771,14 @@ function endSession(){
 // ═══════════════════════════════════════════
 //  HOME
 // ═══════════════════════════════════════════
+function syncAll(){
+  const allSess=[...sessions,...(activeSession?[{...activeSession,events:[...events]}]:[])];
+  if(!allSess.length){showSyncStatus('⚠ No sessions to sync','var(--warn)');return;}
+  // Post each session sequentially
+  Promise.all(allSess.map(s=>postSessionToSheet(s)))
+    .then(()=>showSyncStatus('✓ All sessions synced','var(--aff)'));
+}
+
 function updateHomeStats(){
   document.getElementById('s-ind').textContent=INDS.length||'—';
   const totalEvs=sessions.reduce((s,sess)=>s+sess.events.length,0);
@@ -1686,19 +1786,27 @@ function updateHomeStats(){
   document.getElementById('s-ev').textContent=totalEvs;
   document.getElementById('s-rec').textContent=totalRecs;
   document.getElementById('export-btn').style.display=sessions.length>0?'block':'none';
+  document.getElementById('sync-all-btn').style.display=(sessions.length>0||activeSession)?'block':'none';
 }
 function renderEvList(){
   const lbl=document.getElementById('ev-lbl'),list=document.getElementById('ev-list');
   if(!sessions.length){lbl.style.display='none';list.innerHTML='';return;}
   lbl.style.display='block';
-  list.innerHTML=[...sessions].reverse().map(sess=>{
+  // Active session at top (if any), then past sessions newest-first
+  const activeSessEntry=activeSession
+    ?[{...activeSession,events,_active:true}]:[];
+  const allSess=[...activeSessEntry,...[...sessions].reverse()];
+  list.innerHTML=allSess.map(sess=>{
     const meta=[sess.observer,sess.group,sess.demog,sess.conditions].filter(Boolean).join(' · ');
-    const totalRecs=sess.events.reduce((s,ev)=>s+ev.records.length,0);
+    const evs=sess._active?events:sess.events;
+    const totalRecs=evs.reduce((s,ev)=>s+ev.records.length,0);
+    const badge=sess._active?`<span style="font-size:9px;color:var(--aff);margin-left:6px;">● Live</span>`
+      :(sess.endTime?'':`<span style="font-size:9px;color:var(--warn);margin-left:6px;">open</span>`);
     return`<div class="ev-item" onclick="openPastSession('${sess.id}')" style="cursor:pointer;">
-      <div class="ev-name">${sess.label}</div>
+      <div class="ev-name">${sess.label}${badge}</div>
       <div class="ev-meta">${new Date(sess.startTime).toLocaleString()}</div>
       ${meta?`<div class="ev-meta">${meta}</div>`:''}
-      <div class="ev-cnt">${sess.events.length} event${sess.events.length!==1?'s':''} · ${totalRecs} record${totalRecs!==1?'s':''}</div></div>`;
+      <div class="ev-cnt">${evs.length} event${evs.length!==1?'s':''} · ${totalRecs} record${totalRecs!==1?'s':''}</div></div>`;
   }).join('');
 }
 

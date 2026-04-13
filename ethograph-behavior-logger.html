@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>ETHOGRAM</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Sora:wght@300;600;800&display=swap" rel="stylesheet">
 <style>
@@ -14,6 +14,8 @@
   --agg:#ef4444;--sub:#f97316;--aff:#22c55e;--tp:#a78bfa;
 }
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;overflow:hidden;}
+#app{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
+.sheet-foot{padding-bottom:calc(24px + env(safe-area-inset-bottom));}
 #app{height:100vh;display:flex;flex-direction:column;}
 .view{display:none;flex-direction:column;height:100%;}.view.active{display:flex;}
 
@@ -103,7 +105,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
 
 /* tabs */
 .tabs{display:flex;padding:10px 16px 0;flex-shrink:0;border-bottom:1px solid var(--border);overflow-x:auto;}
-.tab{flex-shrink:0;padding:7px 10px;font-size:10px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:var(--dim);white-space:nowrap;}
+.tab{flex-shrink:0;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;color:var(--text);white-space:nowrap;}
 .tab.aggsub.active{color:#fb923c;border-bottom-color:#fb923c;}
 .tab.aff.active{color:var(--aff);border-bottom-color:var(--aff);}
 .tab.tp.active{color:var(--tp);border-bottom-color:var(--tp);}
@@ -116,35 +118,35 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
 /* ── Agg+Sub 4-column grid ── */
 /* Animal header spans 2 behavior columns */
 .as-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;}
-.as-animal-hdr{grid-column:span 2;text-align:center;font-size:10px;font-weight:700;padding:5px 4px;border-radius:6px;margin-bottom:2px;}
+.as-animal-hdr{grid-column:span 2;text-align:center;font-size:12px;font-weight:800;padding:6px 4px;border-radius:6px;margin-bottom:2px;}
 .as-animal-hdr.a1{background:rgba(78,205,196,.12);color:var(--accent);}
 .as-animal-hdr.a2{background:rgba(247,183,49,.12);color:var(--warn);}
-.as-domain-hdr{text-align:center;font-size:8px;font-weight:600;padding:3px 2px;color:var(--dim);text-transform:uppercase;letter-spacing:.4px;}
+.as-domain-hdr{text-align:center;font-size:11px;font-weight:800;padding:5px 2px;color:var(--text);text-transform:uppercase;letter-spacing:.4px;}
 .as-domain-hdr.agg{color:var(--agg);}
 .as-domain-hdr.sub{color:var(--sub);}
 
 /* aff 2-column */
 .col-hdrs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:7px;}
-.col-hdr{text-align:center;font-size:10px;font-weight:700;padding:4px;border-radius:5px;}
+.col-hdr{text-align:center;font-size:12px;font-weight:800;padding:6px;border-radius:5px;}
 .col-hdr.a1{background:rgba(78,205,196,.1);color:var(--accent);}
 .col-hdr.a2{background:rgba(247,183,49,.1);color:var(--warn);}
 
 /* behavior buttons */
-.beh-btn{background:var(--hi);border:1.5px solid var(--border);border-radius:7px;padding:6px 3px;cursor:pointer;font-size:9px;font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--dim);text-align:center;line-height:1.3;transition:all .08s;width:100%;}.beh-btn:active{opacity:.65;}
-.beh-btn.on-agg{background:rgba(239,68,68,.18);border-color:var(--agg);color:var(--agg);}
-.beh-btn.on-sub{background:rgba(249,115,22,.18);border-color:var(--sub);color:var(--sub);}
-.beh-btn.on-aff{background:rgba(34,197,94,.18);border-color:var(--aff);color:var(--aff);}
-.beh-btn.on-tp{background:rgba(167,139,250,.18);border-color:var(--tp);color:var(--tp);}
-.beh-btn.on-qua{background:rgba(251,191,36,.18);border-color:#fbbf24;color:#fbbf24;}
-.beh-btn.on-affect{background:rgba(96,165,250,.18);border-color:#60a5fa;color:#60a5fa;}
+.beh-btn{background:var(--hi);border:1.5px solid var(--border);border-radius:7px;padding:8px 4px;cursor:pointer;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--text);text-align:center;line-height:1.3;transition:all .08s;width:100%;}.beh-btn:active{opacity:.65;}
+.beh-btn.on-agg{background:rgba(239,68,68,.25);border-color:var(--agg);color:#ff7070;font-weight:800;}
+.beh-btn.on-sub{background:rgba(249,115,22,.25);border-color:var(--sub);color:#ffaa55;font-weight:800;}
+.beh-btn.on-aff{background:rgba(34,197,94,.25);border-color:var(--aff);color:#55ee88;font-weight:800;}
+.beh-btn.on-tp{background:rgba(167,139,250,.25);border-color:var(--tp);color:#c4aaff;font-weight:800;}
+.beh-btn.on-qua{background:rgba(251,191,36,.25);border-color:#fbbf24;color:#ffd966;font-weight:800;}
+.beh-btn.on-affect{background:rgba(96,165,250,.25);border-color:#60a5fa;color:#99ccff;font-weight:800;}
 
 /* grid helpers */
 .beh-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px;}
 .beh-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:10px;}
 
-.sec-lbl{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 5px;}
+.sec-lbl{font-size:10px;color:var(--text);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 5px;font-weight:700;}
 .dur-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
-.dur-btn{background:var(--hi);border:1.5px solid var(--border);border-radius:6px;padding:6px 9px;font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--dim);cursor:pointer;}
+.dur-btn{background:var(--hi);border:1.5px solid var(--border);border-radius:6px;padding:8px 11px;font-size:12px;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--text);cursor:pointer;}
 .dur-btn.on{background:rgba(78,205,196,.15);border-color:var(--accent);color:var(--accent);}
 .tp-in{width:100%;background:var(--hi);border:1px solid var(--border);border-radius:6px;padding:7px 9px;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text);outline:none;margin-bottom:8px;}.tp-in:focus{border-color:var(--accent);}
 
@@ -475,6 +477,7 @@ function applyRosterFilter(){
   INDS=filtered.map(r=>({id:String(r.id),name:r.name||'',dye:r.dye||'',sex:r.sex||'f',matriline:r.matriline||'',demog_cat:r.demog_cat||'',dam:String(r.dam||'')}));
   DAM_EDGES=INDS.filter(i=>i.dam&&idSet.has(i.dam)).map(i=>({src:i.dam,tgt:i.id}));
   [...new Set(INDS.map(i=>i.matriline))].sort().forEach(m=>matrilineColor(m));
+  positions={}; velocities={}; // Fresh layout for new group
   const lbl=document.getElementById('home-group-label');
   if(lbl)lbl.textContent=activeGroup+(da.length?' · '+da.join(', '):'');
   updateHomeStats();showView('home');
@@ -542,12 +545,12 @@ const QUALIFIERS={
   agg:[
     {id:"redirected",       label:"Redirected"},
     {id:"spontaneous",      label:"Spontaneous"},
-    {id:"interv_general",   label:"Intervention–General"},
-    {id:"interv_political", label:"Intervention–Political"},
-    {id:"interv_defend",    label:"Intervention–Defend"},
-    {id:"interv_reinforce", label:"Intervention–Reinforce"},
-    {id:"interv_reprimand", label:"Intervention–Reprimand"},
-    {id:"interv_disrupt",   label:"Intervention–Disrupt"},
+    {id:"interv_general",   label:"Int–General"},
+    {id:"interv_political", label:"Int–Political"},
+    {id:"interv_defend",    label:"Int–Defend"},
+    {id:"interv_reinforce", label:"Int–Reinforce"},
+    {id:"interv_reprimand", label:"Int–Reprimand"},
+    {id:"interv_disrupt",   label:"Int–Disrupt"},
     {id:"sexual_pursuit",   label:"Sexual Pursuit"},
     {id:"insistent",        label:"Insistent"},
     {id:"sheltered",        label:"Sheltered"},
@@ -573,7 +576,7 @@ const QUALIFIERS={
     {id:"reconciliation",      label:"Reconciliation"},
     {id:"reluctant_aff",       label:"Reluctant"},
     {id:"hesitant",            label:"Hesitant"},
-    {id:"interv_affiliative",  label:"Intervention–Affiliative"},
+    {id:"interv_affiliative",  label:"Int–Affiliative"},
     {id:"infant_oriented_aff", label:"Infant Oriented"},
   ],
   ix:[
@@ -622,7 +625,7 @@ let sessScan='',sessNotes='';
 let sheetSolo=false,sheetAn1=null,sheetAn2=null,activeTab='aggsub';
 let sheetEditIdx=null; // null = new record, number = editing existing
 let sheetLinkedRef=null;
-let sel={},selQua={},selAffect={},dur='lt5',tpAn3='',tpAn4='',recNotes='';
+let sel={},selQua={},selAffect={},dur='lt5',recNotes='';
 
 // Layout
 let positions={},velocities={},animFrame=null;
@@ -640,7 +643,7 @@ function showView(name){
   currentView=name;
   closeAllPopovers();
   if(name==='network') scheduleLayout('net-svg','net-c');
-  if(name==='recording') scheduleLayout('evt-svg','evt-c');
+  if(name==='recording'){scheduleLayout('evt-svg','evt-c');updateRecPanel();updateRecNav();}
   if(name==='filter')  buildFilterUI();
   if(name==='setup')   populateSetupForm();
   if(name==='session') updateSessionView();
@@ -663,20 +666,37 @@ function initLayout(cId){
   const w=c.clientWidth,h=c.clientHeight,n=INDS.length;
   const cx=w/2,cy=h/2,r=Math.min(w,h)*.36;
   positions={}; velocities={};
-  INDS.forEach((ind,i)=>{
-    const a=(2*Math.PI*i/n)-Math.PI/2;
-    positions[ind.id]={x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)};
+  // Seed offspring near their dam, others on circle
+  const placed=new Set();
+  function place(ind,i){
+    if(placed.has(ind.id)) return;
+    const dam=ind.dam?INDS.find(x=>x.id===ind.dam):null;
+    if(dam&&!placed.has(dam.id)) place(dam,INDS.indexOf(dam));
+    if(dam&&placed.has(dam.id)){
+      const ang=Math.random()*Math.PI*2;
+      const dist=nodeRadius(dam)+nodeRadius(ind)+8;
+      positions[ind.id]={x:positions[dam.id].x+Math.cos(ang)*dist,y:positions[dam.id].y+Math.sin(ang)*dist};
+    } else {
+      const a=(2*Math.PI*i/n)-Math.PI/2;
+      positions[ind.id]={x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)};
+    }
     velocities[ind.id]={x:0,y:0};
-  });
+    placed.add(ind.id);
+  }
+  INDS.forEach((ind,i)=>place(ind,i));
   return {w,h,cx,cy};
 }
-function scheduleLayout(svgId,cId){
-  cancelAnimationFrame(animFrame);
-  if(!INDS.length){renderSVG(svgId);return;}
-  const dims=initLayout(cId);
-  let iter=0;
-  function step(){
-    const {w,h,cx,cy}=dims,damp=0.62;
+
+function computePositions(cId){
+  // Run simulation synchronously to completion — no animation, no jank
+  const c=document.getElementById(cId);
+  if(!c) return;
+  const w=c.clientWidth,h=c.clientHeight,cx=w/2,cy=h/2;
+  // Build dam lookup
+  const damOf={};
+  INDS.forEach(ind=>{if(ind.dam&&INDS.find(x=>x.id===ind.dam))damOf[ind.id]=ind.dam;});
+  for(let iter=0;iter<400;iter++){
+    const damp=iter<100?0.5:0.72;
     INDS.forEach(a=>{
       let fx=0,fy=0;const ra=nodeRadius(a);
       INDS.forEach(b=>{
@@ -684,25 +704,48 @@ function scheduleLayout(svgId,cId){
         const rb=nodeRadius(b);const minSep=ra+rb+20;
         const dx=positions[a.id].x-positions[b.id].x,dy=positions[a.id].y-positions[b.id].y;
         const dist=Math.max(Math.sqrt(dx*dx+dy*dy),.1);
-        const f=(minSep*minSep*7000)/(dist*dist*dist);
+        const f=(minSep*minSep*6000)/(dist*dist*dist);
         fx+=(dx/dist)*f;fy+=(dy/dist)*f;
       });
-      fx+=(cx-positions[a.id].x)*.025;fy+=(cy-positions[a.id].y)*.025;
-      velocities[a.id].x=(velocities[a.id].x+fx*.016)*damp;
-      velocities[a.id].y=(velocities[a.id].y+fy*.016)*damp;
+      // Centering
+      fx+=(cx-positions[a.id].x)*.03;fy+=(cy-positions[a.id].y)*.03;
+      // Dam spring — strong attraction keeping offspring near dam
+      if(damOf[a.id]){
+        const dp=positions[damOf[a.id]];
+        if(dp){
+          const dx=dp.x-positions[a.id].x,dy=dp.y-positions[a.id].y;
+          const dist=Math.max(Math.sqrt(dx*dx+dy*dy),.1);
+          const target=nodeRadius(a)+nodeRadius(INDS.find(x=>x.id===damOf[a.id]))+12;
+          const stretch=dist-target;
+          fx+=(dx/dist)*stretch*0.25;fy+=(dy/dist)*stretch*0.25;
+        }
+      }
+      velocities[a.id].x=(velocities[a.id].x+fx*0.018)*damp;
+      velocities[a.id].y=(velocities[a.id].y+fy*0.018)*damp;
     });
     INDS.forEach(a=>{
       const pad=nodeRadius(a)+14;
       positions[a.id].x=Math.max(pad,Math.min(w-pad,positions[a.id].x+velocities[a.id].x));
       positions[a.id].y=Math.max(pad,Math.min(h-pad,positions[a.id].y+velocities[a.id].y));
     });
-    iter++;
-    if(iter%2===0) renderSVG(svgId);
-    if(iter<320) animFrame=requestAnimationFrame(step);
   }
-  animFrame=requestAnimationFrame(step);
 }
 
+function scheduleLayout(svgId,cId){
+  cancelAnimationFrame(animFrame);
+  if(!INDS.length){renderSVG(svgId);return;}
+  // If already computed for this group, just render — no reset
+  if(INDS.every(ind=>positions[ind.id])){
+    renderSVG(svgId);
+    if(svgId==='evt-svg'){updateRecPanel();updateRecNav();}
+    return;
+  }
+  // First time: compute synchronously then render once
+  initLayout(cId);
+  computePositions(cId);
+  renderSVG(svgId);
+  if(svgId==='evt-svg'){updateRecPanel();updateRecNav();}
+}
 // ═══════════════════════════════════════════
 //  RECORD NUMBERING
 //  groupId null = standalone, shared groupId = simultaneous
@@ -771,7 +814,7 @@ function renderSVG(svgId){
   const dispRecords=isEvt&&recNavIdx>=0&&events[recNavIdx]
     ?events[recNavIdx].records.map(r=>({...r,
         beh:{agg:{an1:new Set(r.beh.agg.an1),an2:new Set(r.beh.agg.an2)},sub:{an1:new Set(r.beh.sub.an1),an2:new Set(r.beh.sub.an2)},aff:{an1:new Set(r.beh.aff.an1),an2:new Set(r.beh.aff.an2)},tp:{an1:new Set(r.beh.tp.an1)}},
-        qualifiers:{agg:new Set(r.qualifiers.agg),sub:new Set(r.qualifiers.sub),aff:new Set(r.qualifiers.aff),ix:new Set(r.qualifiers.ix)},
+        qualifiers:{agg:{an1:new Set(r.qualifiers.agg?.an1||[]),an2:new Set(r.qualifiers.agg?.an2||[])},sub:{an1:new Set(r.qualifiers.sub?.an1||[]),an2:new Set(r.qualifiers.sub?.an2||[])},aff:{an1:new Set(r.qualifiers.aff?.an1||[]),an2:new Set(r.qualifiers.aff?.an2||[])},ix:new Set(r.qualifiers.ix instanceof Set?r.qualifiers.ix:(r.qualifiers.ix||[]))},
         affect:{an1:new Set(r.affect.an1),an2:new Set(r.affect.an2)},
       }))
     :records;
@@ -814,18 +857,6 @@ function renderSVG(svgId){
       html+=`<line x1="${mid.x}" y1="${mid.y}" x2="${t.x-(dx2/d2)*(NODE_R+9)}" y2="${t.y-(dy2/d2)*(NODE_R+9)}" stroke="${col}" stroke-width="2" stroke-opacity=".65" marker-end="url(#m-${dom})"/>`;
     });
 
-    // TP spokes — same color as primary domain for both An3 and An4
-    dispRecords.forEach((rec,i)=>{
-      if(!rec.an2Id) return;
-      const mid=recMids[i]; if(!mid) return;
-      const col=domainColor(primaryDomain(rec));
-      [...parseIds(rec.tpAn3),...parseIds(rec.tpAn4)].forEach(tpId=>{
-        const tp=positions[tpId]; if(!tp) return;
-        const dx=mid.x-tp.x,dy=mid.y-tp.y,dist=Math.max(Math.sqrt(dx*dx+dy*dy),.1);
-        html+=`<line x1="${tp.x+(dx/dist)*(NODE_R+2)}" y1="${tp.y+(dy/dist)*(NODE_R+2)}" x2="${mid.x-(dx/dist)*9}" y2="${mid.y-(dy/dist)*9}" stroke="${col}" stroke-width="1.5" stroke-dasharray="5,3" stroke-opacity=".85"/>`;
-      });
-    });
-
     // Diamonds
     dispRecords.forEach((rec,i)=>{
       if(!rec.an2Id) return;
@@ -860,9 +891,29 @@ function renderSVG(svgId){
     const click=`tapNode('${ind.id}',event)`;
     if(ind.sex==='m'){html+=`<rect x="${p.x-r}" y="${p.y-r}" width="${r*2}" height="${r*2}" rx="5" fill="${col}" stroke="${sc}" stroke-width="${sw}" style="cursor:pointer" onclick="${click}"/>`;}
     else{html+=`<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${col}" stroke="${sc}" stroke-width="${sw}" style="cursor:pointer" onclick="${click}"/>`;}
-    const label=ind.name||ind.dye||ind.id;const fs=Math.max(9,Math.round(r*0.42));
-    html+=`<text x="${p.x}" y="${p.y-2}" text-anchor="middle" dominant-baseline="middle" fill="#e8eaf0" font-size="${fs}" font-family="'Sora',sans-serif" font-weight="700" style="pointer-events:none;user-select:none">${label}</text>`;
-    if(ind.dye&&ind.name){html+=`<text x="${p.x}" y="${p.y+r*0.5}" text-anchor="middle" dominant-baseline="middle" fill="rgba(232,234,240,.55)" font-size="${Math.max(8,Math.round(r*0.33))}" font-family="'JetBrains Mono',monospace" style="pointer-events:none;user-select:none">${ind.dye}</text>`;}
+    const fs=Math.max(9,Math.round(r*0.42));
+    const fsSmall=Math.max(7,Math.round(r*0.33));
+    const name=ind.name||'';
+    const dye=ind.dye||'';
+    const idLast=ind.id?ind.id.slice(-3):'';
+    let line1='',line2='';
+    if(name){
+      // Has name: line1=name, line2=dye+id or just id
+      line1=name;
+      line2=dye?`${dye}·${idLast}`:idLast;
+    } else if(dye){
+      // No name, has dye: line1=dye, line2=id
+      line1=dye;
+      line2=idLast;
+    } else {
+      // Nothing: line1=id only
+      line1=idLast||ind.id;
+      line2='';
+    }
+    const hasLine2=!!line2&&line2!==line1;
+    const yLine1=hasLine2?p.y-r*0.18:p.y;
+    html+=`<text x="${p.x}" y="${yLine1}" text-anchor="middle" dominant-baseline="middle" fill="#e8eaf0" font-size="${fs}" font-family="'Sora',sans-serif" font-weight="700" style="pointer-events:none;user-select:none">${line1}</text>`;
+    if(hasLine2){html+=`<text x="${p.x}" y="${p.y+r*0.48}" text-anchor="middle" dominant-baseline="middle" fill="rgba(232,234,240,.75)" font-size="${fsSmall}" font-family="'JetBrains Mono',monospace" font-weight="900" style="pointer-events:none;user-select:none">${line2}</text>`;}
   });
 
   svg.innerHTML=html;
@@ -1023,13 +1074,20 @@ function editRecord(i){
   sheetEditIdx=i; sheetLinkedRef=null;
   sheetSolo=rec.solo; sheetAn1=rec.an1Id; sheetAn2=rec.an2Id||null;
   // Restore Sets
+  const toSetE=v=>v instanceof Set?v:new Set(Array.isArray(v)?v:[]);
+  const toSetPairE=o=>o&&(o.an1!==undefined)?{an1:toSetE(o.an1),an2:toSetE(o.an2)}:{an1:toSetE(o),an2:new Set()};
   sel={
-    agg:{an1:new Set(rec.beh.agg.an1),an2:new Set(rec.beh.agg.an2)},
-    sub:{an1:new Set(rec.beh.sub.an1),an2:new Set(rec.beh.sub.an2)},
-    aff:{an1:new Set(rec.beh.aff.an1),an2:new Set(rec.beh.aff.an2)},
-    tp: {an1:new Set(rec.beh.tp.an1)},
+    agg:{an1:toSetE(rec.beh.agg.an1),an2:toSetE(rec.beh.agg.an2)},
+    sub:{an1:toSetE(rec.beh.sub.an1),an2:toSetE(rec.beh.sub.an2)},
+    aff:{an1:toSetE(rec.beh.aff.an1),an2:toSetE(rec.beh.aff.an2)},
+    tp:{an1:toSetE(rec.beh.tp?.an1||[]),an2:toSetE(rec.beh.tp?.an2||[])},
   };
-  selQua={agg:new Set(rec.qualifiers.agg),sub:new Set(rec.qualifiers.sub),aff:new Set(rec.qualifiers.aff),ix:new Set(rec.qualifiers.ix)};
+  selQua={
+    agg:toSetPairE(rec.qualifiers.agg),
+    sub:toSetPairE(rec.qualifiers.sub),
+    aff:toSetPairE(rec.qualifiers.aff),
+    ix:toSetE(rec.qualifiers.ix),
+  };
   selAffect={an1:new Set(rec.affect.an1),an2:new Set(rec.affect.an2)};
   dur=rec.duration||'lt5';
   tpAn3=rec.tpAn3||''; tpAn4=rec.tpAn4||'';
@@ -1037,7 +1095,7 @@ function editRecord(i){
   activeTab='aggsub';
   const a1=INDS.find(x=>x.id===sheetAn1),a2=sheetAn2?INDS.find(x=>x.id===sheetAn2):null;
   const labels=computeLabels();
-  document.getElementById('sheet-pair').textContent=a1.name+(a2?' — '+a2.name:' (solo)');
+  document.getElementById('sheet-pair').textContent=(a1.name&&a1.dye?a1.name+'·'+a1.dye:a1.name||a1.dye||a1.id)+(a2?' — '+(a2.name&&a2.dye?a2.name+'·'+a2.dye:a2.name||a2.dye||a2.id):' (solo)');
   document.getElementById('sheet-meta').textContent=`Editing record #${labels[i]}`;
   document.getElementById('swap-btn').style.display=sheetSolo?'none':'inline-block';
   buildTabs(); buildContent();
@@ -1069,8 +1127,8 @@ function updateHint(){
 // ═══════════════════════════════════════════
 //  SHEET
 // ═══════════════════════════════════════════
-function freshSel(){return{agg:{an1:new Set(),an2:new Set()},sub:{an1:new Set(),an2:new Set()},aff:{an1:new Set(),an2:new Set()},tp:{an1:new Set()}};}
-function freshQua(){return{agg:new Set(),sub:new Set(),aff:new Set(),ix:new Set()};}
+function freshSel(){return{agg:{an1:new Set(),an2:new Set()},sub:{an1:new Set(),an2:new Set()},aff:{an1:new Set(),an2:new Set()},tp:{an1:new Set(),an2:new Set()}};}
+function freshQua(){return{agg:{an1:new Set(),an2:new Set()},sub:{an1:new Set(),an2:new Set()},aff:{an1:new Set(),an2:new Set()},ix:new Set()};}
 function freshAffect(){return{an1:new Set(),an2:new Set()};}
 
 function openSheet(solo){
@@ -1080,7 +1138,7 @@ function openSheet(solo){
   dur='lt5'; tpAn3=''; tpAn4=''; recNotes='';
   activeTab='aggsub';
   const a1=INDS.find(i=>i.id===sheetAn1),a2=sheetAn2?INDS.find(i=>i.id===sheetAn2):null;
-  document.getElementById('sheet-pair').textContent=a1.name+(a2?' — '+a2.name:' (solo)');
+  document.getElementById('sheet-pair').textContent=(a1.name&&a1.dye?a1.name+'·'+a1.dye:a1.name||a1.dye||a1.id)+(a2?' — '+(a2.name&&a2.dye?a2.name+'·'+a2.dye:a2.name||a2.dye||a2.id):' (solo)');
   document.getElementById('sheet-meta').textContent=solo?'Solo / undirected record':'Select behaviors, then save';
   document.getElementById('swap-btn').style.display=solo?'none':'inline-block';
   buildTabs(); buildContent();
@@ -1098,13 +1156,13 @@ function swapAnimals(){
   ['agg','sub','aff'].forEach(d=>{[sel[d].an1,sel[d].an2]=[sel[d].an2,sel[d].an1];});
   [selAffect.an1,selAffect.an2]=[selAffect.an2,selAffect.an1];
   const a1=INDS.find(i=>i.id===sheetAn1),a2=INDS.find(i=>i.id===sheetAn2);
-  document.getElementById('sheet-pair').textContent=a1.name+' — '+a2.name;
+  document.getElementById('sheet-pair').textContent=(a1.name&&a1.dye?a1.name+'·'+a1.dye:a1.name||a1.dye||a1.id)+' — '+(a2.name&&a2.dye?a2.name+'·'+a2.dye:a2.name||a2.dye||a2.id);
   buildContent();
 }
 
 function buildTabs(){
-  const domains=sheetSolo?['aggsub','qua','affect','meta']:['aggsub','aff','tp','qua','affect','meta'];
-  const labels={aggsub:'Agg + Sub',aff:'Affiliation',tp:'3rd Party',qua:'Qualifiers',affect:'Affect',meta:'Notes'};
+  const domains=sheetSolo?['aggsub','qua','affect','meta']:['aggsub','aff','qua','affect','meta'];
+  const labels={aggsub:'Agg + Sub',aff:'Affiliation',qua:'Interaction',affect:'Affect',meta:'Notes'};
   document.getElementById('tabs').innerHTML=domains.map(d=>`
     <div class="tab ${d} ${d===activeTab?'active':''}" onclick="switchTab('${d}')">${labels[d]}</div>`).join('');
 }
@@ -1114,57 +1172,105 @@ function buildContent(){
   const scr=document.getElementById('sheet-scroll');
   const a1=INDS.find(i=>i.id===sheetAn1);
   const a2=sheetAn2?INDS.find(i=>i.id===sheetAn2):null;
+  const n1=a1.name+(a1.dye?'·'+a1.dye:'');
+  const n2=a2?(a2.name+(a2.dye?'·'+a2.dye:'')):null;
   let h='';
 
   if(activeTab==='aggsub'){
     if(sheetSolo){
-      // Solo: only agg behaviors with solo:true
-      h+=`<div class="sec-lbl">Aggression — solo/undirected (${a1.name})</div><div class="beh-grid-3">`;
+      h+=`<div class="sec-lbl">Aggression — solo (${n1})</div><div class="beh-grid-3">`;
       BEHAVIORS.agg.filter(b=>b.solo).forEach(b=>{
         const on=sel.agg.an1.has(b.id);
         h+=`<button class="beh-btn ${on?'on-agg':''}" onclick="tog('agg','an1','${b.id}')">${b.label}</button>`;
       });
       h+=`</div>`;
     } else {
-      // 4-column layout: [An1 name spans 2] [An2 name spans 2]
-      //                   Agg | Sub           Agg | Sub
+      // ── Behaviors ──────────────────────────────────────────────────
       h+=`<div class="as-grid">`;
-      // Animal name headers
-      h+=`<div class="as-animal-hdr a1" style="grid-column:1/3">${a1.name}</div>`;
-      h+=`<div class="as-animal-hdr a2" style="grid-column:3/5">${a2.name}</div>`;
-      // Domain sub-headers
+      h+=`<div class="as-animal-hdr a1" style="grid-column:1/3">${n1}</div>`;
+      h+=`<div class="as-animal-hdr a2" style="grid-column:3/5">${n2}</div>`;
       h+=`<div class="as-domain-hdr agg">Aggression</div>`;
       h+=`<div class="as-domain-hdr sub">Submission</div>`;
       h+=`<div class="as-domain-hdr agg">Aggression</div>`;
       h+=`<div class="as-domain-hdr sub">Submission</div>`;
-      // Behavior rows — zip agg and sub, repeating for each animal
       const maxRows=Math.max(BEHAVIORS.agg.length,BEHAVIORS.sub.length);
       for(let r=0;r<maxRows;r++){
         const ag=BEHAVIORS.agg[r],sb=BEHAVIORS.sub[r];
-        // An1 agg
-        if(ag){const on=sel.agg.an1.has(ag.id);h+=`<button class="beh-btn ${on?'on-agg':''}" onclick="tog('agg','an1','${ag.id}')">${ag.label}</button>`;}
-        else h+=`<div></div>`;
-        // An1 sub
-        if(sb){const on=sel.sub.an1.has(sb.id);h+=`<button class="beh-btn ${on?'on-sub':''}" onclick="tog('sub','an1','${sb.id}')">${sb.label}</button>`;}
-        else h+=`<div></div>`;
-        // An2 agg
-        if(ag){const on=sel.agg.an2.has(ag.id);h+=`<button class="beh-btn ${on?'on-agg':''}" onclick="tog('agg','an2','${ag.id}')">${ag.label}</button>`;}
-        else h+=`<div></div>`;
-        // An2 sub
-        if(sb){const on=sel.sub.an2.has(sb.id);h+=`<button class="beh-btn ${on?'on-sub':''}" onclick="tog('sub','an2','${sb.id}')">${sb.label}</button>`;}
-        else h+=`<div></div>`;
+        if(ag){const on=sel.agg.an1.has(ag.id);h+=`<button class="beh-btn ${on?'on-agg':''}" onclick="tog('agg','an1','${ag.id}')">${ag.label}</button>`;}else h+=`<div></div>`;
+        if(sb){const on=sel.sub.an1.has(sb.id);h+=`<button class="beh-btn ${on?'on-sub':''}" onclick="tog('sub','an1','${sb.id}')">${sb.label}</button>`;}else h+=`<div></div>`;
+        if(ag){const on=sel.agg.an2.has(ag.id);h+=`<button class="beh-btn ${on?'on-agg':''}" onclick="tog('agg','an2','${ag.id}')">${ag.label}</button>`;}else h+=`<div></div>`;
+        if(sb){const on=sel.sub.an2.has(sb.id);h+=`<button class="beh-btn ${on?'on-sub':''}" onclick="tog('sub','an2','${sb.id}')">${sb.label}</button>`;}else h+=`<div></div>`;
+      }
+      h+=`</div>`;
+
+      // ── Agg Qualifiers (4-col: An1 cols 1+2, An2 cols 3+4) ────────
+      h+=`<div class="as-grid" style="margin-top:14px;">`;
+      h+=`<div class="as-animal-hdr a1" style="grid-column:1/3">Agg Qualifiers · ${n1}</div>`;
+      h+=`<div class="as-animal-hdr a2" style="grid-column:3/5">Agg Qualifiers · ${n2}</div>`;
+      // Pair up qualifiers into rows of 2 per animal
+      for(let i=0;i<QUALIFIERS.agg.length;i+=2){
+        const qa=QUALIFIERS.agg[i],qb=QUALIFIERS.agg[i+1];
+        // An1 pair
+        {const on=selQua.agg.an1.has(qa.id);h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('agg','an1','${qa.id}')">${qa.label}</button>`;}
+        if(qb){const on=selQua.agg.an1.has(qb.id);h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('agg','an1','${qb.id}')">${qb.label}</button>`;}else h+=`<div></div>`;
+        // An2 pair
+        {const on=selQua.agg.an2.has(qa.id);h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('agg','an2','${qa.id}')">${qa.label}</button>`;}
+        if(qb){const on=selQua.agg.an2.has(qb.id);h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('agg','an2','${qb.id}')">${qb.label}</button>`;}else h+=`<div></div>`;
+      }
+      h+=`</div>`;
+
+      // ── Sub Qualifiers (4-col: An1 cols 1+2, An2 cols 3+4) ────────
+      h+=`<div class="as-grid" style="margin-top:14px;">`;
+      h+=`<div class="as-animal-hdr a1" style="grid-column:1/3">Sub Qualifiers · ${n1}</div>`;
+      h+=`<div class="as-animal-hdr a2" style="grid-column:3/5">Sub Qualifiers · ${n2}</div>`;
+      for(let i=0;i<QUALIFIERS.sub.length;i+=2){
+        const qa=QUALIFIERS.sub[i],qb=QUALIFIERS.sub[i+1];
+        {const on=selQua.sub.an1.has(qa.id);h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('sub','an1','${qa.id}')">${qa.label}</button>`;}
+        if(qb){const on=selQua.sub.an1.has(qb.id);h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('sub','an1','${qb.id}')">${qb.label}</button>`;}else h+=`<div></div>`;
+        {const on=selQua.sub.an2.has(qa.id);h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('sub','an2','${qa.id}')">${qa.label}</button>`;}
+        if(qb){const on=selQua.sub.an2.has(qb.id);h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('sub','an2','${qb.id}')">${qb.label}</button>`;}else h+=`<div></div>`;
+      }
+      h+=`</div>`;
+
+      // ── 3rd Party Behaviors ─────────────────────────────────────────
+      h+=`<div class="as-grid" style="margin-top:14px;">`;
+      h+=`<div class="as-animal-hdr a1" style="grid-column:1/3">3rd Party — ${n1}</div>`;
+      h+=`<div class="as-animal-hdr a2" style="grid-column:3/5">3rd Party — ${n2}</div>`;
+      for(let i=0;i<BEHAVIORS.tp.length;i+=2){
+        const ba=BEHAVIORS.tp[i],bb=BEHAVIORS.tp[i+1];
+        {const on=sel.tp.an1.has(ba.id);h+=`<button class="beh-btn ${on?'on-tp':''}" onclick="tog('tp','an1','${ba.id}')">${ba.label}</button>`;}
+        if(bb){const on=sel.tp.an1.has(bb.id);h+=`<button class="beh-btn ${on?'on-tp':''}" onclick="tog('tp','an1','${bb.id}')">${bb.label}</button>`;}else h+=`<div></div>`;
+        {const on=sel.tp.an2.has(ba.id);h+=`<button class="beh-btn ${on?'on-tp':''}" onclick="tog('tp','an2','${ba.id}')">${ba.label}</button>`;}
+        if(bb){const on=sel.tp.an2.has(bb.id);h+=`<button class="beh-btn ${on?'on-tp':''}" onclick="tog('tp','an2','${bb.id}')">${bb.label}</button>`;}else h+=`<div></div>`;
       }
       h+=`</div>`;
     }
 
   } else if(activeTab==='aff'){
     if(a2){
-      h+=`<div class="col-hdrs"><div class="col-hdr a1">${a1.name}</div><div class="col-hdr a2">${a2.name}</div></div><div class="beh-grid-2">`;
-      BEHAVIORS.aff.forEach(b=>{
-        const o1=sel.aff.an1.has(b.id),o2=sel.aff.an2.has(b.id);
-        h+=`<button class="beh-btn ${o1?'on-aff':''}" onclick="tog('aff','an1','${b.id}')">${b.label}</button>`;
-        h+=`<button class="beh-btn ${o2?'on-aff':''}" onclick="tog('aff','an2','${b.id}')">${b.label}</button>`;
-      });
+      // ── Aff Behaviors (4-col) ──────────────────────────────────────
+      h+=`<div class="as-grid">`;
+      h+=`<div class="as-animal-hdr a1" style="grid-column:1/3">${n1}</div>`;
+      h+=`<div class="as-animal-hdr a2" style="grid-column:3/5">${n2}</div>`;
+      for(let i=0;i<BEHAVIORS.aff.length;i+=2){
+        const ba=BEHAVIORS.aff[i],bb=BEHAVIORS.aff[i+1];
+        {const on=sel.aff.an1.has(ba.id);h+=`<button class="beh-btn ${on?'on-aff':''}" onclick="tog('aff','an1','${ba.id}')">${ba.label}</button>`;}
+        if(bb){const on=sel.aff.an1.has(bb.id);h+=`<button class="beh-btn ${on?'on-aff':''}" onclick="tog('aff','an1','${bb.id}')">${bb.label}</button>`;}else h+=`<div></div>`;
+        {const on=sel.aff.an2.has(ba.id);h+=`<button class="beh-btn ${on?'on-aff':''}" onclick="tog('aff','an2','${ba.id}')">${ba.label}</button>`;}
+        if(bb){const on=sel.aff.an2.has(bb.id);h+=`<button class="beh-btn ${on?'on-aff':''}" onclick="tog('aff','an2','${bb.id}')">${bb.label}</button>`;}else h+=`<div></div>`;
+      }
+      h+=`</div>`;
+      // ── Aff Qualifiers (4-col) ─────────────────────────────────────
+      h+=`<div class="as-grid" style="margin-top:14px;">`;
+      h+=`<div class="as-animal-hdr a1" style="grid-column:1/3">Aff Qualifiers — ${n1}</div>`;
+      h+=`<div class="as-animal-hdr a2" style="grid-column:3/5">Aff Qualifiers — ${n2}</div>`;
+      for(let i=0;i<QUALIFIERS.aff.length;i+=2){
+        const qa=QUALIFIERS.aff[i],qb=QUALIFIERS.aff[i+1];
+        {const on=selQua.aff.an1.has(qa.id);h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('aff','an1','${qa.id}')">${qa.label}</button>`;}
+        if(qb){const on=selQua.aff.an1.has(qb.id);h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('aff','an1','${qb.id}')">${qb.label}</button>`;}else h+=`<div></div>`;
+        {const on=selQua.aff.an2.has(qa.id);h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('aff','an2','${qa.id}')">${qa.label}</button>`;}
+        if(qb){const on=selQua.aff.an2.has(qb.id);h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('aff','an2','${qb.id}')">${qb.label}</button>`;}else h+=`<div></div>`;
+      }
       h+=`</div>`;
     } else {
       h+=`<div class="sec-lbl">Affiliation — solo</div><div class="beh-grid-3">`;
@@ -1175,40 +1281,36 @@ function buildContent(){
       h+=`</div>`;
     }
 
-  } else if(activeTab==='tp'){
-    h+=`<div class="sec-lbl">An3 IDs (An1-associated 3rd parties)</div>
-    <input class="tp-in" id="tp-an3" value="${tpAn3}" oninput="tpAn3=this.value" placeholder="Space-separated IDs e.g. GA ON">
-    <div class="sec-lbl">An4 IDs (An2-associated 3rd parties)</div>
-    <input class="tp-in" id="tp-an4" value="${tpAn4}" oninput="tpAn4=this.value" placeholder="e.g. HE">
-    <div class="sec-lbl">3rd Party Behaviors (An1 toward 3rd parties)</div>
-    <div class="beh-grid-2">`;
-    BEHAVIORS.tp.forEach(b=>{
-      const on=sel.tp.an1.has(b.id);
-      h+=`<button class="beh-btn ${on?'on-tp':''}" onclick="tog('tp','an1','${b.id}')">${b.label}</button>`;
+  } else if(activeTab==='qua'){
+    // Interaction-level qualifiers only
+    h+=`<div class="sec-lbl">Interaction-level Qualifiers</div><div class="beh-grid-2">`;
+    QUALIFIERS.ix.forEach(q=>{
+      const on=selQua.ix.has(q.id);
+      h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('ix',null,'${q.id}')">${q.label}</button>`;
     });
     h+=`</div>`;
 
-  } else if(activeTab==='qua'){
-    ['agg','sub','aff','ix'].forEach(qd=>{
-      const nm=qd==='ix'?'Interaction-level':qd==='agg'?'Aggression':qd==='sub'?'Submission':'Affiliation';
-      h+=`<div class="sec-lbl">${nm} Qualifiers</div><div class="beh-grid-2">`;
-      QUALIFIERS[qd].forEach(q=>{
-        const on=selQua[qd].has(q.id);
-        h+=`<button class="beh-btn ${on?'on-qua':''}" onclick="togQua('${qd}','${q.id}')">${q.label}</button>`;
-      });
-      h+=`</div>`;
-    });
-
   } else if(activeTab==='affect'){
-    [['an1',a1],['an2',a2]].forEach(([side,ind])=>{
-      if(!ind) return;
-      h+=`<div class="sec-lbl">Affect — ${ind.name}</div><div class="beh-grid-3">`;
+    if(a2){
+      h+=`<div class="as-grid">`;
+      h+=`<div class="as-animal-hdr a1" style="grid-column:1/3">Affect — ${n1}</div>`;
+      h+=`<div class="as-animal-hdr a2" style="grid-column:3/5">Affect — ${n2}</div>`;
+      for(let i=0;i<AFFECT.length;i+=2){
+        const aa=AFFECT[i],ab=AFFECT[i+1];
+        {const on=selAffect.an1.has(aa);h+=`<button class="beh-btn ${on?'on-affect':''}" onclick="togAffect('an1','${aa}')">${aa}</button>`;}
+        if(ab){const on=selAffect.an1.has(ab);h+=`<button class="beh-btn ${on?'on-affect':''}" onclick="togAffect('an1','${ab}')">${ab}</button>`;}else h+=`<div></div>`;
+        {const on=selAffect.an2.has(aa);h+=`<button class="beh-btn ${on?'on-affect':''}" onclick="togAffect('an2','${aa}')">${aa}</button>`;}
+        if(ab){const on=selAffect.an2.has(ab);h+=`<button class="beh-btn ${on?'on-affect':''}" onclick="togAffect('an2','${ab}')">${ab}</button>`;}else h+=`<div></div>`;
+      }
+      h+=`</div>`;
+    } else {
+      h+=`<div class="sec-lbl">Affect — ${n1}</div><div class="beh-grid-3">`;
       AFFECT.forEach(af=>{
-        const on=selAffect[side].has(af);
-        h+=`<button class="beh-btn ${on?'on-affect':''}" onclick="togAffect('${side}','${af}')">${af}</button>`;
+        const on=selAffect.an1.has(af);
+        h+=`<button class="beh-btn ${on?'on-affect':''}" onclick="togAffect('an1','${af}')">${af}</button>`;
       });
       h+=`</div>`;
-    });
+    }
 
   } else if(activeTab==='meta'){
     h+=`<div class="sec-lbl">Record Notes</div>
@@ -1216,7 +1318,7 @@ function buildContent(){
   }
 
   // Duration on behavior tabs
-  if(['aggsub','aff','tp'].includes(activeTab)){
+  if(['aggsub','aff'].includes(activeTab)){
     h+=`<div class="sec-lbl">Duration</div><div class="dur-row">`;
     DURATIONS.forEach(d=>{
       h+=`<button class="dur-btn ${dur===d.id?'on':''}" onclick="setDur('${d.id}')">${d.label}</button>`;
@@ -1227,7 +1329,7 @@ function buildContent(){
 }
 
 function tog(domain,side,id){const s=sel[domain][side];s.has(id)?s.delete(id):s.add(id);buildContent();}
-function togQua(qd,id){selQua[qd].has(id)?selQua[qd].delete(id):selQua[qd].add(id);buildContent();}
+function togQua(qd,side,id){if(qd==='ix'){selQua.ix.has(id)?selQua.ix.delete(id):selQua.ix.add(id);}else{selQua[qd][side].has(id)?selQua[qd][side].delete(id):selQua[qd][side].add(id);}buildContent();}
 function togAffect(side,af){selAffect[side].has(af)?selAffect[side].delete(af):selAffect[side].add(af);buildContent();}
 function setDur(d){dur=d;buildContent();}
 
@@ -1235,19 +1337,24 @@ function setDur(d){dur=d;buildContent();}
 //  COMMIT / SAVE
 // ═══════════════════════════════════════════
 function commitRecord(){
-  const i3=document.getElementById('tp-an3'),i4=document.getElementById('tp-an4'),rn=document.getElementById('rec-notes-in');
-  if(i3) tpAn3=i3.value; if(i4) tpAn4=i4.value; if(rn) recNotes=rn.value;
+  const rn=document.getElementById('rec-notes-in');
+  if(rn) recNotes=rn.value;
 
   const recData={
     beh:{
       agg:{an1:new Set(sel.agg.an1),an2:new Set(sel.agg.an2)},
       sub:{an1:new Set(sel.sub.an1),an2:new Set(sel.sub.an2)},
       aff:{an1:new Set(sel.aff.an1),an2:new Set(sel.aff.an2)},
-      tp: {an1:new Set(sel.tp.an1)},
+      tp: {an1:new Set(sel.tp.an1),an2:new Set(sel.tp.an2)},
     },
-    qualifiers:{agg:new Set(selQua.agg),sub:new Set(selQua.sub),aff:new Set(selQua.aff),ix:new Set(selQua.ix)},
+    qualifiers:{
+      agg:{an1:new Set(selQua.agg.an1),an2:new Set(selQua.agg.an2)},
+      sub:{an1:new Set(selQua.sub.an1),an2:new Set(selQua.sub.an2)},
+      aff:{an1:new Set(selQua.aff.an1),an2:new Set(selQua.aff.an2)},
+      ix:new Set(selQua.ix),
+    },
     affect:{an1:new Set(selAffect.an1),an2:new Set(selAffect.an2)},
-    tpAn3:tpAn3.trim(),tpAn4:tpAn4.trim(),
+
     duration:dur,notes:recNotes.trim(),
     solo:sheetSolo,linkedRef:sheetLinkedRef,
     an1Id:sheetAn1,an2Id:sheetAn2||null,
@@ -1320,7 +1427,8 @@ function recRowHtml(i,labels,recs,readOnly){
   const {dots,lines}=behSummaryFull(rec);
   const durLbl=DURATIONS.find(d=>d.id===rec.duration)?.label||'';
   const time=new Date(rec.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  const quaAll=[...rec.qualifiers.agg,...rec.qualifiers.sub,...rec.qualifiers.aff,...rec.qualifiers.ix];
+  const flatQ=q=>q instanceof Set?[...q]:Array.isArray(q)?q:(q&&q.an1)?[...(q.an1||[]),...(q.an2||[])]:[];
+  const quaAll=[...flatQ(rec.qualifiers.agg),...flatQ(rec.qualifiers.sub),...flatQ(rec.qualifiers.aff),...flatQ(rec.qualifiers.ix)];
   const affAll=[...rec.affect.an1,...rec.affect.an2];
   const tags=[];
   if(rec.groupId) tags.push(`<span class="rec-tag" style="background:rgba(167,139,250,.2);color:var(--tp)">simultaneous</span>`);
@@ -1330,7 +1438,7 @@ function recRowHtml(i,labels,recs,readOnly){
   quaAll.forEach(qid=>{const q=ALL_QUALS.find(x=>x.id===qid);if(q)tags.push(`<span class="rec-tag" style="background:rgba(251,191,36,.15);color:#fbbf24">${q.label}</span>`);});
   affAll.forEach(af=>tags.push(`<span class="rec-tag" style="background:rgba(96,165,250,.12);color:#60a5fa">${af}</span>`));
   if(rec.notes) tags.push(`<span class="rec-tag" style="background:var(--hi);color:var(--dim)">📝</span>`);
-  const tpStr=[rec.tpAn3,rec.tpAn4].filter(Boolean).join(' / ');
+
 
   // Show ⊕ Group button on all rows except self, only while a drag is active
   const isDragging=dragSrc!==null;
@@ -1350,7 +1458,7 @@ function recRowHtml(i,labels,recs,readOnly){
         <div class="rec-pair">${dots}${pair}</div>
         <div class="rec-behs">${lines.join('<br>')}</div>
         ${tags.length?`<div class="rec-tags">${tags.join('')}</div>`:''}
-        ${tpStr?`<div class="rec-behs" style="color:var(--tp)">3P: ${tpStr}</div>`:''}
+  
       </div>
     </div>`;
   }
@@ -1365,7 +1473,7 @@ function recRowHtml(i,labels,recs,readOnly){
       <div class="rec-pair">${dots}${pair}</div>
       <div class="rec-behs">${lines.join('<br>')}</div>
       ${tags.length?`<div class="rec-tags">${tags.join('')}</div>`:''}
-      ${tpStr?`<div class="rec-behs" style="color:var(--tp)">3P: ${tpStr}</div>`:''}
+
     </div>
     <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end;flex-shrink:0;">
       ${groupBtn}${ungroupBtn}
@@ -1400,7 +1508,7 @@ function behSummaryFull(rec){
   // Normalize: saved records store arrays, live records store Sets
   const toSet=v=>v instanceof Set?v:new Set(Array.isArray(v)?v:[]);
   ['agg','sub','aff','tp'].forEach(d=>{
-    const a1s=toSet(rec.beh[d].an1),a2s=d==='tp'?new Set():toSet(rec.beh[d].an2);
+    const a1s=toSet(rec.beh[d].an1),a2s=toSet(rec.beh[d]?.an2||[]);
     if(!a1s.size&&!a2s.size) return;
     dots.push(`<span class="dot" style="background:${domColors[d]}"></span>`);
     const parts=[];
@@ -1507,6 +1615,8 @@ function buildRows(sess){
   const getName=id=>{const a=INDS.find(i=>i.id===id)||ROSTER.find(r=>r.id===id);return a?(a.name||a.dye||id):id;};
   const getL=(d,side,rec)=>[...(rec.beh[d][side]||[])].map(bid=>(BEHAVIORS[d].find(x=>x.id===bid)||{label:bid}).label).join('; ');
   const getQ=(qd,rec)=>[...(rec.qualifiers[qd]||[])].map(qid=>(ALL_QUALS.find(x=>x.id===qid)||{label:qid}).label).join('; ');
+  const getQSide=(qd,side,rec)=>{const v=rec.qualifiers[qd];const arr=v?[...(v[side]||v||[])]:[];return arr.map(qid=>(ALL_QUALS.find(x=>x.id===qid)||{label:qid}).label).join('; ');};
+  const getQIx=(rec)=>{const v=rec.qualifiers.ix;return[...(v instanceof Set?v:(Array.isArray(v)?v:[]))].map(qid=>(ALL_QUALS.find(x=>x.id===qid)||{label:qid}).label).join('; ');};
   const getA=(side,rec)=>[...(rec.affect[side]||[])].join('; ');
   const rows=[];
   (sess.events||[]).forEach(ev=>{
@@ -1540,13 +1650,15 @@ function buildRows(sess){
         An2_Aggression:   getL('agg','an2',rec),
         An2_Submission:   getL('sub','an2',rec),
         An2_Affiliation:  getL('aff','an2',rec),
-        ThirdParty_Behaviors: getL('tp','an1',rec),
-        An3_IDs:       rec.tpAn3||'',
-        An4_IDs:       rec.tpAn4||'',
-        Qualifiers_Agg:         getQ('agg',rec),
-        Qualifiers_Sub:         getQ('sub',rec),
-        Qualifiers_Aff:         getQ('aff',rec),
-        Qualifiers_Interaction: getQ('ix',rec),
+        An1_ThirdParty:   getL('tp','an1',rec),
+        An2_ThirdParty:   getL('tp','an2',rec),
+        An1_Qualifiers_Agg: getQSide('agg','an1',rec),
+        An2_Qualifiers_Agg: getQSide('agg','an2',rec),
+        An1_Qualifiers_Sub: getQSide('sub','an1',rec),
+        An2_Qualifiers_Sub: getQSide('sub','an2',rec),
+        An1_Qualifiers_Aff: getQSide('aff','an1',rec),
+        An2_Qualifiers_Aff: getQSide('aff','an2',rec),
+        Qualifiers_Interaction: getQIx(rec),
         Affect_An1:    getA('an1',rec),
         Affect_An2:    getA('an2',rec),
         Notes:         rec.notes||'',
@@ -1690,13 +1802,19 @@ function editSessionRecord(evIdx,recIdx){
   sheetLinkedRef=null;
   sheetSolo=rec.solo;sheetAn1=rec.an1Id;sheetAn2=rec.an2Id||null;
   const toSet=v=>v instanceof Set?v:new Set(Array.isArray(v)?v:[]);
+  const toSetPair=o=>o&&(o.an1!==undefined)?{an1:toSet(o.an1),an2:toSet(o.an2)}:{an1:toSet(o),an2:new Set()};
   sel={
     agg:{an1:toSet(rec.beh.agg.an1),an2:toSet(rec.beh.agg.an2)},
     sub:{an1:toSet(rec.beh.sub.an1),an2:toSet(rec.beh.sub.an2)},
     aff:{an1:toSet(rec.beh.aff.an1),an2:toSet(rec.beh.aff.an2)},
-    tp:{an1:toSet(rec.beh.tp.an1)},
+    tp:{an1:toSet(rec.beh.tp?.an1||[]),an2:toSet(rec.beh.tp?.an2||[])},
   };
-  selQua={agg:toSet(rec.qualifiers.agg),sub:toSet(rec.qualifiers.sub),aff:toSet(rec.qualifiers.aff),ix:toSet(rec.qualifiers.ix)};
+  selQua={
+    agg:toSetPair(rec.qualifiers.agg),
+    sub:toSetPair(rec.qualifiers.sub),
+    aff:toSetPair(rec.qualifiers.aff),
+    ix:toSet(rec.qualifiers.ix),
+  };
   selAffect={an1:toSet(rec.affect.an1),an2:toSet(rec.affect.an2)};
   dur=rec.duration||'lt5';tpAn3=rec.tpAn3||'';tpAn4=rec.tpAn4||'';recNotes=rec.notes||'';
   activeTab='aggsub';
@@ -1740,8 +1858,8 @@ function startEvent(){
 function endEvent(){
   if(activeEvent){
     const savedRecs=records.map(r=>({...r,
-      beh:{agg:{an1:[...r.beh.agg.an1],an2:[...r.beh.agg.an2]},sub:{an1:[...r.beh.sub.an1],an2:[...r.beh.sub.an2]},aff:{an1:[...r.beh.aff.an1],an2:[...r.beh.aff.an2]},tp:{an1:[...r.beh.tp.an1]}},
-      qualifiers:{agg:[...r.qualifiers.agg],sub:[...r.qualifiers.sub],aff:[...r.qualifiers.aff],ix:[...r.qualifiers.ix]},
+      beh:{agg:{an1:[...r.beh.agg.an1],an2:[...r.beh.agg.an2]},sub:{an1:[...r.beh.sub.an1],an2:[...r.beh.sub.an2]},aff:{an1:[...r.beh.aff.an1],an2:[...r.beh.aff.an2]},tp:{an1:[...(r.beh.tp?.an1||[])],an2:[...(r.beh.tp?.an2||[])]}},
+      qualifiers:{agg:{an1:[...(r.qualifiers.agg?.an1||[])],an2:[...(r.qualifiers.agg?.an2||[])]},sub:{an1:[...(r.qualifiers.sub?.an1||[])],an2:[...(r.qualifiers.sub?.an2||[])]},aff:{an1:[...(r.qualifiers.aff?.an1||[])],an2:[...(r.qualifiers.aff?.an2||[])]},ix:[...(r.qualifiers.ix instanceof Set?r.qualifiers.ix:(r.qualifiers.ix||[]))]},
       affect:{an1:[...r.affect.an1],an2:[...r.affect.an2]},
     }));
     events.push({...activeEvent,records:savedRecs});
@@ -1817,6 +1935,8 @@ function exportData(){
   const getName=id=>(INDS.find(i=>i.id===id)||{}).name||id;
   const getL=(d,side,rec)=>[...(rec.beh[d][side]||[])].map(bid=>(BEHAVIORS[d].find(x=>x.id===bid)||{label:bid}).label).join('; ');
   const getQ=(qd,rec)=>[...(rec.qualifiers[qd]||[])].map(qid=>(ALL_QUALS.find(x=>x.id===qid)||{label:qid}).label).join('; ');
+  const getQSide=(qd,side,rec)=>{const v=rec.qualifiers[qd];const arr=v?[...(v[side]||v||[])]:[];return arr.map(qid=>(ALL_QUALS.find(x=>x.id===qid)||{label:qid}).label).join('; ');};
+  const getQIx=(rec)=>{const v=rec.qualifiers.ix;return[...(v instanceof Set?v:(Array.isArray(v)?v:[]))].map(qid=>(ALL_QUALS.find(x=>x.id===qid)||{label:qid}).label).join('; ');};
   const getA=(side,rec)=>[...(rec.affect[side]||[])].join('; ');
   const rows=[['Event','Observer','Group','Enclosure','DataType','Conditions','ScanNum',
     'Record_Label','Timestamp','GroupID','An1_ID','An1_Name','An2_ID','An2_Name',

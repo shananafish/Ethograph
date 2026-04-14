@@ -193,6 +193,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
       <button class="btn btn-acc" onclick="showView('network')" id="network-btn" style="display:none">Network</button>
       <button class="btn btn-dim" id="sync-all-btn" onclick="syncAll()" style="display:none">↑ Sync All</button>
       <button class="btn btn-warn" id="export-btn" onclick="exportData()" style="display:none">Export CSV</button>
+      <button class="btn btn-dng" id="clear-btn" onclick="clearLocalStorage()" style="display:none">✕ Clear</button>
     </div>
   </div>
   <div class="stats-row">
@@ -1623,6 +1624,7 @@ function commitRecord(){
   if(sheetEditIdx===null){an1Id=null;an2Id=null;}
   sheetEditIdx=null;sheetLinkedRef=null;
   updateHint();updateRecPanel();renderSVG('evt-svg');doFlash();
+  saveToLocalStorage();
 }
 
 // ═══════════════════════════════════════════
@@ -1983,17 +1985,21 @@ function updateSessionView(){
       const pair=a2?`${a1.name} — ${a2.name}`:`${a1.name} (solo)`;
       const {dots}=behSummaryFull(rec);
       const time=new Date(rec.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-      return `<div class="rec-row" onclick="event.stopPropagation();editSessionRecord(${evIdx},${ri})" style="padding:5px 10px 5px 28px;">
-        <div class="rec-body">
+      return `<div class="rec-row" style="padding:5px 10px 5px 28px;display:flex;align-items:center;">
+        <div class="rec-body" onclick="event.stopPropagation();editSessionRecord(${evIdx},${ri})" style="cursor:pointer;flex:1;">
           <div class="rec-num">#${labels[ri]} · ${time}</div>
           <div class="rec-pair" style="font-size:10px;">${dots}${pair}</div>
         </div>
+        <button class="rec-del" onclick="event.stopPropagation();deleteSessionRecord(${evIdx},${ri})" style="flex-shrink:0;">✕</button>
       </div>`;
     }).join('');
     return `<div class="ev-item" style="padding:0;overflow:hidden;cursor:pointer;" onclick="jumpToEvent(${evIdx})">
       <div style="padding:11px 14px;display:flex;justify-content:space-between;align-items:center;">
         <div><div class="ev-name">${ev.label}</div><div class="ev-cnt">${ev.records.length} record${ev.records.length!==1?'s':''}</div></div>
-        ${isActive?`<button class="btn btn-dim" style="font-size:9px;padding:3px 8px;" onclick="event.stopPropagation();resumeEvent(${evIdx})">Resume</button>`:''}
+        <div style="display:flex;gap:5px;">
+          ${isActive?`<button class="btn btn-dim" style="font-size:9px;padding:3px 8px;" onclick="event.stopPropagation();resumeEvent(${evIdx})">Resume</button>`:''}
+          <button class="btn btn-dng" style="font-size:9px;padding:3px 8px;" onclick="event.stopPropagation();deleteEvent(${evIdx})">✕</button>
+        </div>
       </div>
       ${recRows?`<div style="border-top:1px solid var(--border);">${recRows}</div>`:''}
     </div>`;
@@ -2019,6 +2025,17 @@ function syncSession(){
   postSessionToSheet(sess);
 }
 
+function deleteEvent(evIdx){
+  const sess=reviewSession||activeSession;
+  const evs=reviewSession?reviewSession.events:events;
+  const ev=evs[evIdx];
+  if(!confirm(`Delete ${ev.label} and its ${ev.records.length} record${ev.records.length!==1?'s':''}?`)) return;
+  evs.splice(evIdx,1);
+  if(!reviewSession) events=[...evs];
+  saveToLocalStorage();
+  updateSessionView();
+}
+
 function jumpToEvent(evIdx){
   // Navigate to the recording view with this event focused in the nav
   recNavIdx=evIdx;
@@ -2032,6 +2049,15 @@ function editSavedRecord(recIdx){
   // Edit a record currently being displayed from a saved event (recNavIdx)
   if(recNavIdx<0||!events[recNavIdx]) return;
   editSessionRecord(recNavIdx, recIdx);
+}
+
+function deleteSessionRecord(evIdx,recIdx){
+  const evs=reviewSession?reviewSession.events:events;
+  const ev=evs[evIdx];
+  if(!confirm('Delete this record?')) return;
+  ev.records.splice(recIdx,1);
+  saveToLocalStorage();
+  updateSessionView();
 }
 
 function editSessionRecord(evIdx,recIdx){
@@ -2105,6 +2131,7 @@ function endEvent(){
     events.push({...activeEvent,records:savedRecs});
   }
   activeEvent=null;records=[];an1Id=null;an2Id=null;recNavIdx=-1;
+  saveToLocalStorage();
   // Stay on recording view — edges clear, ready for next node tap
   renderSVG('evt-svg');
   updateRecPanel();
@@ -2121,6 +2148,7 @@ function endSession(){
     activeSession=null;events=[];
     updateHomeStats();renderEvList();
   }
+  saveToLocalStorage();
   reviewSession=null;
   showView('home');
 }
@@ -2129,6 +2157,25 @@ function endSession(){
 // ═══════════════════════════════════════════
 //  HOME
 // ═══════════════════════════════════════════
+function deleteSession(sessId){
+  // Handle active session
+  if(activeSession&&activeSession.id===sessId){
+    const totalRecs=events.reduce((s,ev)=>s+ev.records.length,0);
+    if(!confirm(`Delete active session and its ${totalRecs} record${totalRecs!==1?'s':''}? This cannot be undone.`)) return;
+    activeSession=null;events=[];activeEvent=null;records=[];
+  } else {
+    const idx=sessions.findIndex(s=>s.id===sessId);
+    if(idx<0) return;
+    const sess=sessions[idx];
+    const totalRecs=sess.events.reduce((s,ev)=>s+ev.records.length,0);
+    if(!confirm(`Delete "${sess.label}" and its ${totalRecs} record${totalRecs!==1?'s':''}? This cannot be undone.`)) return;
+    sessions.splice(idx,1);
+  }
+  saveToLocalStorage();
+  updateHomeStats();
+  renderEvList();
+}
+
 function syncAll(){
   const allSess=[...sessions,...(activeSession?[{...activeSession,events:[...events]}]:[])];
   if(!allSess.length){showSyncStatus('⚠ No sessions to sync','var(--warn)');return;}
@@ -2145,6 +2192,7 @@ function updateHomeStats(){
   document.getElementById('s-rec').textContent=totalRecs;
   document.getElementById('export-btn').style.display=sessions.length>0?'block':'none';
   document.getElementById('sync-all-btn').style.display=(sessions.length>0||activeSession)?'block':'none';
+  document.getElementById('clear-btn').style.display=(sessions.length>0||activeSession)?'block':'none';
 }
 function renderEvList(){
   const lbl=document.getElementById('ev-lbl'),list=document.getElementById('ev-list');
@@ -2160,11 +2208,16 @@ function renderEvList(){
     const totalRecs=evs.reduce((s,ev)=>s+ev.records.length,0);
     const badge=sess._active?`<span style="font-size:9px;color:var(--aff);margin-left:6px;">● Live</span>`
       :(sess.endTime?'':`<span style="font-size:9px;color:var(--warn);margin-left:6px;">open</span>`);
-    return`<div class="ev-item" onclick="openPastSession('${sess.id}')" style="cursor:pointer;">
-      <div class="ev-name">${sess.label}${badge}</div>
-      <div class="ev-meta">${new Date(sess.startTime).toLocaleString()}</div>
-      ${meta?`<div class="ev-meta">${meta}</div>`:''}
-      <div class="ev-cnt">${evs.length} event${evs.length!==1?'s':''} · ${totalRecs} record${totalRecs!==1?'s':''}</div></div>`;
+    return`<div class="ev-item" style="cursor:pointer;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;" onclick="openPastSession('${sess.id}')">
+        <div>
+          <div class="ev-name">${sess.label}${badge}</div>
+          <div class="ev-meta">${new Date(sess.startTime).toLocaleString()}</div>
+          ${meta?`<div class="ev-meta">${meta}</div>`:''}
+          <div class="ev-cnt">${evs.length} event${evs.length!==1?'s':''} · ${totalRecs} record${totalRecs!==1?'s':''}</div>
+        </div>
+        <button class="btn btn-dng" style="font-size:9px;padding:3px 8px;flex-shrink:0;margin-left:8px;" onclick="event.stopPropagation();deleteSession('${sess.id}')">✕</button>
+      </div></div>`;
   }).join('');
 }
 
@@ -2222,9 +2275,85 @@ function computeLabelsFor(recs){
 function doFlash(){const f=document.getElementById('flash');f.classList.add('show');setTimeout(()=>f.classList.remove('show'),100);}
 
 // ═══════════════════════════════════════════
+//  LOCAL STORAGE PERSISTENCE
+// ═══════════════════════════════════════════
+const LS_KEY='ethograph_sessions';
+
+function saveToLocalStorage(){
+  try{
+    // Serialize sessions — convert Sets to arrays
+    const data=sessions.map(sess=>({...sess,
+      events:(sess.events||[]).map(ev=>({...ev,
+        records:ev.records.map(r=>serializeRec(r))
+      }))
+    }));
+    // Also save active session if any
+    const active=activeSession?{
+      ...activeSession,
+      events:events.map(ev=>({...ev,records:ev.records.map(r=>serializeRec(r))})),
+      _activeRecords: records.map(r=>serializeRec(r)),
+      _activeEvent: activeEvent?{...activeEvent}:null,
+    }:null;
+    localStorage.setItem(LS_KEY,JSON.stringify({sessions:data,active}));
+  } catch(e){console.warn('localStorage save failed:',e);}
+}
+
+function serializeRec(r){
+  const toArr=v=>v instanceof Set?[...v]:Array.isArray(v)?v:[];
+  const toArrPair=o=>o&&o.an1!==undefined?{an1:toArr(o.an1),an2:toArr(o.an2)}:{an1:toArr(o),an2:[]};
+  return {...r,
+    beh:{
+      agg:{an1:toArr(r.beh.agg.an1),an2:toArr(r.beh.agg.an2)},
+      sub:{an1:toArr(r.beh.sub.an1),an2:toArr(r.beh.sub.an2)},
+      aff:{an1:toArr(r.beh.aff.an1),an2:toArr(r.beh.aff.an2)},
+      tp:{an1:toArr(r.beh.tp?.an1||[]),an2:toArr(r.beh.tp?.an2||[])},
+    },
+    qualifiers:{
+      agg:toArrPair(r.qualifiers.agg),
+      sub:toArrPair(r.qualifiers.sub),
+      aff:toArrPair(r.qualifiers.aff),
+      ix:toArr(r.qualifiers.ix),
+    },
+    affect:{an1:toArr(r.affect.an1),an2:toArr(r.affect.an2)},
+  };
+}
+
+function loadFromLocalStorage(){
+  try{
+    const raw=localStorage.getItem(LS_KEY);
+    if(!raw) return;
+    const {sessions:savedSessions,active}=JSON.parse(raw);
+    if(savedSessions&&savedSessions.length){
+      sessions=savedSessions;
+    }
+    if(active){
+      activeSession={...active};
+      delete activeSession._activeRecords;
+      delete activeSession._activeEvent;
+      activeSession.events=active.events||[];
+      events=active.events||[];
+      // Restore in-progress records and event
+      records=active._activeRecords||[];
+      activeEvent=active._activeEvent||null;
+    }
+    updateHomeStats();
+    renderEvList();
+  } catch(e){console.warn('localStorage load failed:',e);}
+}
+
+function clearLocalStorage(){
+  if(!confirm('Clear all locally saved sessions? This cannot be undone. Make sure you have synced first.')) return;
+  localStorage.removeItem(LS_KEY);
+  sessions=[];activeSession=null;events=[];activeEvent=null;records=[];
+  updateHomeStats();renderEvList();
+  showView('home');
+}
+
+// ═══════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════
 updateHomeStats();
+loadFromLocalStorage();
 fetchRosterFromSheet();
 window.addEventListener('resize',()=>{
   if(currentView==='network') renderSVG('net-svg');

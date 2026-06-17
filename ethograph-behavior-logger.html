@@ -19,19 +19,19 @@
   --warn:#f7b731;--danger:#e74c3c;--text:#e8eaf0;--dim:#7a8199;
   --agg:#ef4444;--sub:#f97316;--aff:#22c55e;--tp:#a78bfa;
 }
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;overflow:hidden;}
-#app{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;overflow:hidden;-webkit-touch-callout:none;}
+#app{padding-top:env(safe-area-inset-top,0px);padding-bottom:0px;}
 .sheet-foot{padding-bottom:calc(24px + env(safe-area-inset-bottom));}
 #app{height:100vh;display:flex;flex-direction:column;}
 .view{display:none;flex-direction:column;height:100%;}.view.active{display:flex;}
 
 /* ── Header ── */
-.hdr{padding:11px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--surface);flex-shrink:0;}
-.hdr-title{font-family:'Sora',sans-serif;font-weight:800;font-size:19px;color:var(--accent);letter-spacing:-.5px;}
+.hdr{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--surface);flex-shrink:0;gap:6px;}
+.hdr-title{font-family:'Sora',sans-serif;font-weight:800;font-size:16px;color:var(--accent);letter-spacing:-.5px;}
 .hdr-sub{font-size:10px;color:var(--dim);margin-top:1px;}
 
 /* ── Buttons ── */
-.btn{border-radius:7px;padding:7px 13px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600;cursor:pointer;border:1px solid transparent;transition:opacity .1s;}.btn:active{opacity:.7;}
+.btn{border-radius:7px;padding:6px 11px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600;cursor:pointer;border:1px solid transparent;transition:opacity .1s;}.btn:active{opacity:.7;}
 .btn-acc{background:var(--hi);color:var(--accent);border-color:rgba(78,205,196,.3);}
 .btn-warn{background:var(--hi);color:var(--warn);border-color:rgba(247,183,49,.3);}
 .btn-dim{background:var(--hi);color:var(--dim);border-color:rgba(122,129,153,.3);}
@@ -59,8 +59,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
 .notes-in{width:100%;background:var(--hi);border:1px solid var(--border);border-radius:6px;padding:7px 9px;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text);outline:none;resize:vertical;min-height:50px;}.notes-in:focus{border-color:var(--accent);}
 
 /* ── Canvas ── */
-#net-c,#evt-c{flex:1;position:relative;overflow:hidden;touch-action:none;}
-#net-svg,#evt-svg{position:absolute;inset:0;width:100%;height:100%;transform-origin:0 0;}
+#net-c,#evt-c{flex:1;position:relative;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;}
+#net-svg,#evt-svg{position:absolute;inset:0;width:100%;height:100%;transform-origin:0 0;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;}
 
 /* ── Event header ── */
 .evt-hdr{padding:9px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--surface);flex-shrink:0;}
@@ -73,13 +73,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
 .hint-a2{background:#081808;color:#4ade80;}
 
 /* ── Record panel ── */
-.rec-panel{flex-shrink:0;background:var(--surface);border-top:1px solid var(--border);display:flex;flex-direction:column;max-height:250px;}
+.rec-panel{flex-shrink:0;background:var(--surface);border-top:1px solid var(--border);display:flex;flex-direction:column;max-height:min(250px,35vh);padding-bottom:env(safe-area-inset-bottom,0px);}
 .rec-panel-hdr{display:flex;justify-content:space-between;align-items:center;padding:4px 12px;border-bottom:1px solid var(--border);flex-shrink:0;}
 .rec-panel-title{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;}
 .rec-list{overflow-y:auto;flex:1;}
 
 /* record rows */
-.rec-row{display:flex;align-items:flex-start;gap:6px;padding:6px 10px;border-bottom:1px solid var(--border);user-select:none;cursor:pointer;transition:background .1s;}
+.rec-row{display:flex;align-items:flex-start;gap:6px;padding:6px 10px;border-bottom:1px solid var(--border);user-select:none;cursor:pointer;transition:background .1s;touch-action:manipulation;}
 .rec-row:hover{background:rgba(255,255,255,.03);}
 .rec-row.dragging{opacity:.35;}
 .rec-row.drag-over-merge{background:rgba(167,139,250,.12);border:1.5px dashed var(--tp);}
@@ -188,12 +188,14 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
 <div id="view-home" class="view active">
   <div class="hdr">
     <div><div class="hdr-title">ETHOGRAPH</div><div class="hdr-sub">Behavioral Network Recorder</div></div>
-    <div style="display:flex;gap:7px;">
-      <button class="btn btn-dim" onclick="showView('roster')">Roster</button>
-      <button class="btn btn-acc" onclick="showView('network')" id="network-btn" style="display:none">Network</button>
-      <button class="btn btn-dim" id="sync-all-btn" onclick="syncAll()" style="display:none">↑ Sync All</button>
-      <button class="btn btn-warn" id="export-btn" onclick="exportData()" style="display:none">Export CSV</button>
-      <button class="btn btn-dng" id="clear-btn" onclick="clearLocalStorage()" style="display:none">✕ Clear</button>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;">
+      <button class="btn btn-acc" id="observer-btn" onclick="openProfile()" title="Observer profile" style="padding:5px 9px;font-size:10px;">👤 Set observer</button>
+      <button class="btn btn-dim" onclick="showView('roster')" style="padding:5px 9px;font-size:10px;">Roster</button>
+      <button class="btn btn-dim" onclick="openPrefs()" title="Display preferences" style="padding:5px 9px;font-size:10px;">⚙</button>
+      <button class="btn btn-acc" onclick="showView('network')" id="network-btn" style="display:none;padding:5px 9px;font-size:10px;">Network</button>
+      <button class="btn btn-dim" id="sync-all-btn" onclick="syncAll()" style="display:none;padding:5px 9px;font-size:10px;">↑ Sync</button>
+      <button class="btn btn-warn" id="export-btn" onclick="exportData()" style="display:none;padding:5px 9px;font-size:10px;">CSV</button>
+      <button class="btn btn-dng" id="clear-btn" onclick="clearLocalStorage()" style="display:none;padding:5px 9px;font-size:10px;">✕</button>
     </div>
   </div>
   <div class="stats-row">
@@ -206,7 +208,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
     <div id="home-group-bar" style="display:none;margin-bottom:10px;">
       <span style="font-size:10px;color:var(--dim);">Group: </span>
       <span id="home-group-label" style="font-size:11px;font-weight:700;color:var(--accent);"></span>
-      <button class="btn btn-dim" onclick="showView('filter')" style="margin-left:8px;padding:3px 9px;font-size:10px;">Change</button>
+      <button class="btn btn-acc" onclick="showView('dashboard')" style="margin-left:8px;padding:3px 9px;font-size:10px;">Dashboard</button>
+      <button class="btn btn-dim" onclick="showView('filter')" style="margin-left:4px;padding:3px 9px;font-size:10px;">Change</button>
     </div>
     <button class="btn-big" onclick="showView('setup')" id="new-event-btn" style="display:none">+ NEW SESSION</button>
   </div>
@@ -240,10 +243,17 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
     <div></div>
   </div>
   <div style="overflow-y:auto;flex:1;padding:14px;">
+    <div class="field-lbl" style="margin-bottom:8px;">Group type</div>
+    <div id="filter-types" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;"></div>
     <div class="field-lbl" style="margin-bottom:8px;">Group</div>
     <div id="filter-groups" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;"></div>
-    <div class="field-lbl" style="margin-bottom:8px;">Demog category <span style="color:var(--dim);font-weight:400;">(leave all unselected = whole group)</span></div>
-    <div id="filter-demogs" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px;"></div>
+    <div class="field-lbl" style="margin-bottom:8px;">Quick-select by demographic <span style="color:var(--dim);font-weight:400;">(taps check/uncheck that category below)</span></div>
+    <div id="filter-demogs" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;"></div>
+    <div class="field-lbl" style="margin-bottom:8px;">Individuals <span style="color:var(--dim);font-weight:400;">(tap rows to include; none checked = whole group)</span>
+      <button class="chip" style="margin-left:6px;padding:2px 8px;" onclick="selectAllInds(true)">All</button>
+      <button class="chip" style="padding:2px 8px;" onclick="selectAllInds(false)">None</button>
+    </div>
+    <div id="filter-individuals" style="border:1px solid var(--border);border-radius:8px;max-height:52vh;overflow:auto;margin-bottom:12px;"></div>
     <div id="filter-count" style="font-size:11px;color:var(--dim);margin-bottom:16px;"></div>
     <button class="btn-big" onclick="applyRosterFilter()">✓ Apply</button>
   </div>
@@ -288,6 +298,35 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
   </div>
 </div>
 
+<!-- ════ GROUP DASHBOARD ════ -->
+<div id="view-dashboard" class="view">
+  <div class="hdr" style="padding:11px 14px;">
+    <button class="btn btn-dim" onclick="showView('home')">← Back</button>
+    <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:var(--accent);">Group Dashboard</div>
+    <div></div>
+  </div>
+  <div style="overflow-y:auto;flex:1;padding:14px;">
+    <div style="background:var(--hi);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11px;line-height:1.8;">
+      <div><span style="color:var(--dim);">Group:</span> <span id="dash-group" style="color:var(--accent);font-weight:700;"></span></div>
+      <div><span style="color:var(--dim);">Demog:</span> <span id="dash-demog" style="color:var(--text);"></span></div>
+      <div><span style="color:var(--dim);">Animals:</span> <span id="dash-count" style="color:var(--text);"></span></div>
+    </div>
+    <div id="dash-banner" style="font-size:10px;color:var(--dim);margin-bottom:12px;"></div>
+
+    <div style="margin-bottom:12px;"><div class="field-lbl">Group Notes</div>
+      <textarea class="notes-in" id="dash-group-notes" placeholder="Group-level notes…" oninput="setDashField('group',this.value)"></textarea></div>
+    <div style="margin-bottom:12px;"><div class="field-lbl">DOS — Daily Observation Sheet</div>
+      <textarea class="notes-in" id="dash-dos-notes" placeholder="Daily observation notes…" oninput="setDashField('dos',this.value)"></textarea></div>
+    <div style="margin-bottom:12px;"><div class="field-lbl">Births</div>
+      <textarea class="notes-in" id="dash-births" placeholder="New births, dam, date, notes…" oninput="setDashField('births',this.value)"></textarea></div>
+
+    <div class="field-lbl" style="margin-bottom:6px;">Individual Notes <span style="color:var(--dim);font-weight:400;text-transform:none;">— tap an animal to add a note</span></div>
+    <div id="dash-indiv-list" style="margin-bottom:16px;"></div>
+
+    <button class="btn-big" id="dash-begin-btn" onclick="beginSessionFromDashboard()">Begin Session →</button>
+  </div>
+</div>
+
 <!-- ════ SESSION VIEW ════ -->
 <div id="view-session" class="view">
   <div class="hdr" style="padding:11px 14px;">
@@ -322,7 +361,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
   <div class="hdr" style="padding:11px 14px;">
     <button class="btn btn-dim" onclick="showView('home')">← Back</button>
     <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:var(--accent);">Baseline Network</div>
-    <button class="btn btn-dim" onclick="resetPanZoom('net-svg')" title="Reset view">⊙</button>
+    <div style="display:flex;gap:6px;">
+      <button class="btn btn-dim" onclick="openPrefs()" title="Display preferences">⚙</button>
+      <button class="btn btn-dim" onclick="resetPanZoom('net-svg')" title="Reset view">⊙</button>
+    </div>
   </div>
   <div id="net-c" ondblclick="resetPanZoom('net-svg')"><svg id="net-svg"></svg></div>
 </div>
@@ -333,6 +375,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
     <div><div class="evt-name" id="evt-name">Event 1</div><div class="evt-sub" id="evt-sub">0 records</div></div>
     <div style="display:flex;gap:7px;align-items:center;">
       <div id="an1-badge" style="display:none;font-size:11px;color:var(--accent);padding:3px 8px;background:rgba(78,205,196,.1);border-radius:6px;border:1px solid rgba(78,205,196,.3);"></div>
+      <button class="btn btn-dim" onclick="openPrefs()" title="Display preferences">⚙</button>
       <button class="btn btn-dim" onclick="resetPanZoom('evt-svg')" title="Reset view">⊙</button>
       <button class="btn btn-dim" onclick="showView('session')">Session</button>
       <button class="btn btn-dng" onclick="endEvent()">End Event</button>
@@ -346,12 +389,14 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
   </div>
   <div class="hint hint-a1" id="hint-bar">
     <span id="hint-text">Tap a node to select <span style="color:var(--accent)">An1</span></span>
+    <button class="btn-solo" id="multi-btn" style="display:none" onclick="toggleMulti()">⊕ Multi</button>
+    <button class="btn-solo" id="unknown-btn" onclick="openGenPicker(event)">? Unknown</button>
     <button class="btn-solo" id="solo-btn" style="display:none" onclick="openSheet(true)">Solo Record</button>
   </div>
   <div id="evt-c" ondblclick="resetPanZoom('evt-svg')"><svg id="evt-svg"></svg></div>
   <div class="rec-panel" id="rec-panel" style="display:none;">
     <div class="rec-panel-hdr">
-      <span class="rec-panel-title">Records — drag ⠿ onto another to group simultaneous</span>
+      <span class="rec-panel-title">Records — tap ⊕ Group then ⊕ Here to link simultaneous</span>
       <span style="font-size:9px;color:var(--dim);">tap row to edit</span>
     </div>
     <div class="rec-list" id="rec-list"></div>
@@ -391,6 +436,57 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
   <div id="picker-items"></div>
 </div>
 
+<!-- Display preferences -->
+<div class="sheet-overlay" id="prefs-overlay" style="display:none;" onclick="if(event.target===this)closePrefs()">
+  <div class="sheet" style="max-height:82vh;">
+    <div class="sheet-hdr" style="display:flex;justify-content:space-between;align-items:center;padding:13px 16px;">
+      <div class="sheet-pair">Display Preferences</div>
+      <button class="sheet-swap" onclick="closePrefs()">Done</button>
+    </div>
+    <div class="sheet-scroll" id="prefs-content" style="padding-bottom:calc(24px + env(safe-area-inset-bottom));"></div>
+  </div>
+</div>
+
+<!-- Generic-node count popup -->
+<div class="picker" id="gen-counter" style="display:none;left:50%;top:42%;transform:translate(-50%,-50%);min-width:200px;text-align:center;">
+  <button class="d-tip-close" onclick="closeGenCounter()" style="float:right">✕</button>
+  <div class="picker-title" id="gen-counter-title">How many?</div>
+  <div style="display:flex;align-items:center;gap:14px;justify-content:center;margin:10px 0;">
+    <button onclick="genCounterStep(-1)" style="width:38px;height:38px;border-radius:8px;border:1px solid var(--border);background:var(--hi);color:var(--accent);font-size:20px;font-weight:700;cursor:pointer;">−</button>
+    <span id="gen-counter-val" style="font-size:22px;font-weight:800;min-width:32px;">1</span>
+    <button onclick="genCounterStep(1)" style="width:38px;height:38px;border-radius:8px;border:1px solid var(--border);background:var(--hi);color:var(--accent);font-size:20px;font-weight:700;cursor:pointer;">+</button>
+  </div>
+  <button onclick="genCounterOk()" style="width:100%;padding:9px;background:var(--accent);color:var(--bg);border:none;border-radius:8px;font-family:'Sora',sans-serif;font-weight:800;font-size:13px;cursor:pointer;">Add</button>
+</div>
+
+<!-- Add-generic category picker -->
+<div class="picker" id="gen-picker" style="display:none;max-height:60vh;overflow-y:auto;">
+  <div class="picker-title">Add unknown node</div>
+  <div id="gen-picker-items"></div>
+</div>
+
+<!-- Observer profile -->
+<div class="sheet-overlay" id="profile-overlay" style="display:none;" onclick="if(event.target===this)closeProfile()">
+  <div class="sheet" style="max-height:80vh;">
+    <div class="sheet-hdr" style="display:flex;justify-content:space-between;align-items:center;padding:13px 16px;">
+      <div class="sheet-pair">Observer Profile</div>
+      <button class="sheet-swap" onclick="closeProfile()">Done</button>
+    </div>
+    <div class="sheet-scroll" id="profile-content" style="padding-bottom:calc(24px + env(safe-area-inset-bottom));"></div>
+  </div>
+</div>
+
+<!-- Individual animal info -->
+<div class="sheet-overlay" id="info-overlay" style="display:none;" onclick="if(event.target===this)closeInfo()">
+  <div class="sheet" style="max-height:82vh;">
+    <div class="sheet-hdr" style="display:flex;justify-content:space-between;align-items:center;padding:13px 16px;">
+      <div class="sheet-pair" id="info-title">Animal</div>
+      <button class="sheet-swap" onclick="closeInfo()">Close</button>
+    </div>
+    <div class="sheet-scroll" id="info-content" style="padding-bottom:calc(24px + env(safe-area-inset-bottom));"></div>
+  </div>
+</div>
+
 <!-- Flash -->
 <div class="flash" id="flash"><div class="flash-badge">Saved ✓</div></div>
 
@@ -402,15 +498,222 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
 // ── Roster ──────────────────────────────────────────────────────────
 let ROSTER=[], INDS=[], DAM_EDGES=[], MATRILINE_COLORS={};
 let activeGroup='', activeDemogs=new Set();
+let activeGroupType=''; // '' = all types; otherwise the leading-letter group code (Feature #7)
+let selectedInds=new Set(); // chosen individual ids for the session (empty = whole group)
+function groupType(g){const m=(g||'').match(/^([A-Za-z]+)/);return m?m[1].toUpperCase():'(other)';}
 const DEMOG_TIERS={'infant with dam':1,'weanling':1,'juvenile':2,'juvenile m/f':2,'subadult':3,'subadult f':3,'subadult m':3,'adult':4,'adult f':4,'adult m':4};
-function nodeRadius(ind){return [0,18,22,27,32][DEMOG_TIERS[(ind.demog_cat||'').toLowerCase()]||4];}
+
+// ── Display preferences (Feature #2 + redesign). Stored per observer profile. ──
+const PREFS_KEY='ethograph_prefs';            // legacy single-prefs key (migrated into a profile)
+const PROFILES_KEY='ethograph_profiles';      // { observer: prefsObject }
+const CUR_OBS_KEY='ethograph_observer';       // currently selected observer initials
+const DEFAULT_PREFS={
+  cluster:'force',            // force | matriline | demog | idfull | idabbr
+  color:'matriline',          // matriline | random | sex | demog | uniform
+  palette:'spectrum',         // preset scheme for sex/demog coloring (default for "Auto" categories)
+  catPalettes:{},             // optional per-category palette family, keyed "sex:f" / "demog:adult f" ("auto" = scheme)
+  sizeBy:'demog',             // demog | age | uniform
+  sizeScale:1,                // 0.8 | 1 | 1.25
+  labelRows:['name','dye','abbrId'], // ordered label components, one per row
+  abbrId:'last3',             // last2 | last3 | auto (shortest unique-in-group)
+  labelBoldRow1:true,         // row 1 bold
+  labelBigRow1:true,          // row 1 larger
+  font:'med',                 // small | med | large (overall)
+};
+let prefs=JSON.parse(JSON.stringify(DEFAULT_PREFS));
+let currentObserver='';
+function loadProfiles(){try{return JSON.parse(localStorage.getItem(PROFILES_KEY)||'{}');}catch(e){return {};}}
+function saveProfiles(p){try{localStorage.setItem(PROFILES_KEY,JSON.stringify(p));}catch(e){}}
+function normalizePrefs(){ if(!Array.isArray(prefs.labelRows)||!prefs.labelRows.length) prefs.labelRows=['name','dye','abbrId']; }
+function loadPrefs(){
+  currentObserver=localStorage.getItem(CUR_OBS_KEY)||'';
+  const profiles=loadProfiles();
+  let src=profiles[currentObserver];
+  if(!src){ try{const r=localStorage.getItem(PREFS_KEY);if(r)src=JSON.parse(r);}catch(e){} } // migrate legacy
+  prefs={...JSON.parse(JSON.stringify(DEFAULT_PREFS)),...(src||{})};
+  normalizePrefs();
+}
+function savePrefs(){
+  const profiles=loadProfiles();
+  profiles[currentObserver]=prefs;
+  saveProfiles(profiles);
+  try{localStorage.setItem(CUR_OBS_KEY,currentObserver);}catch(e){}
+}
+function setObserver(obs){
+  obs=(obs||'').trim();
+  const profiles=loadProfiles();
+  const fromUnset=(currentObserver===''); // first observer set → carry existing setup into their profile
+  if(profiles[obs]){ prefs={...JSON.parse(JSON.stringify(DEFAULT_PREFS)),...profiles[obs]}; normalizePrefs(); }
+  else if(!fromUnset){ prefs=JSON.parse(JSON.stringify(DEFAULT_PREFS)); } // brand-new observer starts fresh
+  currentObserver=obs;
+  try{localStorage.setItem(CUR_OBS_KEY,obs);}catch(e){}
+  savePrefs(); // persist under the (possibly new) observer
+  updateObserverBtn();
+  buildProfilePanel();
+  // re-render current network view with this profile's prefs
+  const map={network:['net-svg','net-c'],recording:['evt-svg','evt-c']}[currentView];
+  if(map){ renderSVG(map[0]); fitToContent(map[0]); }
+}
+function updateObserverBtn(){
+  const b=document.getElementById('observer-btn');
+  if(b) b.textContent='👤 '+(currentObserver||'Set observer');
+}
+
+// Age range + stable per-animal color ordering, recomputed when INDS changes
+let ageMin=null,ageMax=null;
+let colorMeta={order:{},n:0,sexIdx:{},sexCount:{}};
+function parseAge(r){
+  if(r.age!=null&&String(r.age).trim()!==''){const n=parseFloat(r.age);if(!isNaN(n))return n;}
+  const d=r.birth||r.dob||r.birthdate||r.birth_date||r.birthday;
+  if(d){const t=Date.parse(d);if(!isNaN(t))return (Date.now()-t)/(365.25*24*3600*1000);}
+  return null;
+}
+function recomputeDisplayMeta(){
+  const ages=INDS.map(i=>i.age).filter(a=>a!=null);
+  ageMin=ages.length?Math.min(...ages):null; ageMax=ages.length?Math.max(...ages):null;
+  const sorted=[...INDS].sort((a,b)=>(Number(a.id)||0)-(Number(b.id)||0));
+  const dcats=[...new Set(INDS.map(i=>i.demog_cat||'?'))].sort();
+  colorMeta={order:{},n:sorted.length,sexIdx:{},sexCount:{},demogCats:dcats,demogCatIdx:{},demogWithin:{},demogCount:{}};
+  const sexC={},demC={};
+  sorted.forEach((ind,i)=>{
+    colorMeta.order[ind.id]=i;
+    const s=ind.sex==='m'?'m':'f';
+    sexC[s]=(sexC[s]||0); colorMeta.sexIdx[ind.id]=sexC[s]; sexC[s]++;
+    const dc=ind.demog_cat||'?';
+    colorMeta.demogCatIdx[ind.id]=dcats.indexOf(dc);
+    demC[dc]=(demC[dc]||0); colorMeta.demogWithin[ind.id]=demC[dc]; demC[dc]++;
+  });
+  colorMeta.sexCount=sexC; colorMeta.demogCount=demC;
+}
+// Preset palette schemes (Feature: choosable palettes). hue wraps via start+t*span.
+const COLOR_SCHEMES={
+  spectrum:{label:'Spectrum',start:0,  span:330,sat:68},
+  warm:    {label:'Warm',    start:340,span:130,sat:72}, // magenta→red→orange→yellow
+  cool:    {label:'Cool',    start:120,span:180,sat:60}, // green→teal→blue→purple
+  earth:   {label:'Earth',   start:25, span:120,sat:42}, // muted warm-greens
+};
+function schemeColor(catIdx,catCount,withinIdx,withinCount){
+  const sc=COLOR_SCHEMES[prefs.palette]||COLOR_SCHEMES.spectrum;
+  const tCat=catCount>1?catIdx/catCount:0;
+  const hue=Math.round((sc.start+tCat*sc.span)%360+360)%360;
+  const tW=withinCount>1?withinIdx/(withinCount-1):0.5;
+  const L=Math.round(44+tW*24); // shades: 44%..68% lightness within a category
+  return `hsl(${hue},${sc.sat}%,${L}%)`;
+}
+// Named palette families a category can be assigned to (individuals spread across the range)
+const PALETTES={
+  reds:    {label:'Red → Purple',   start:355, span:-95, sat:62},
+  oranges: {label:'Red → Yellow',   start:2,   span:55,  sat:72},
+  yellows: {label:'Yellow → Green', start:60,  span:75,  sat:62},
+  greens:  {label:'Green → Teal',   start:120, span:60,  sat:55},
+  blues:   {label:'Cyan → Blue',    start:185, span:60,  sat:62},
+  purples: {label:'Blue → Purple',  start:235, span:70,  sat:55},
+  rainbow: {label:'Rainbow',        start:0,   span:330, sat:65},
+  greys:   {label:'Greys',          start:0,   span:0,   sat:0},
+};
+// Resolve a node's color for a categorical driver. If a palette is assigned to this
+// category, spread its individuals across that palette's range; else use the scheme.
+function categoryColor(driver,catKey,catIdx,catCount,withinIdx,withinCount){
+  const pal=(prefs.catPalettes||{})[driver+':'+catKey];
+  if(!pal||pal==='auto'||!PALETTES[pal]) return schemeColor(catIdx,catCount,withinIdx,withinCount);
+  const P=PALETTES[pal];
+  const t=withinCount>1?withinIdx/(withinCount-1):0.5;
+  if((P.sat||0)===0) return `hsl(0,0%,${Math.round(35+t*40)}%)`;
+  const hue=(((P.start+t*P.span)%360)+360)%360;
+  return `hsl(${hue},${P.sat}%,55%)`;
+}
+
+function nodeRadius(ind){
+  let base;
+  if(prefs.sizeBy==='uniform') base=19;
+  else if(prefs.sizeBy==='age'){
+    const a=ind.age;
+    if(a==null||ageMin==null||ageMax==null||ageMax===ageMin)
+      base=[0,14,17,21,25][DEMOG_TIERS[(ind.demog_cat||'').toLowerCase()]||4]; // fallback to demog
+    else base=13+((a-ageMin)/(ageMax-ageMin))*16; // 13..29
+  } else {
+    base=[0,14,17,21,25][DEMOG_TIERS[(ind.demog_cat||'').toLowerCase()]||4];
+  }
+  return Math.round(base*(prefs.sizeScale||1));
+}
+function nodeColor(ind){
+  switch(prefs.color){
+    case 'random':{const i=colorMeta.order[ind.id]||0;return `hsl(${Math.round((i/Math.max(colorMeta.n,1))*360)},65%,56%)`;}
+    case 'sex':{
+      const s=ind.sex==='m'?'m':'f';
+      return categoryColor('sex', s, s==='f'?0:1, 2, colorMeta.sexIdx[ind.id]||0, colorMeta.sexCount[s]||1);
+    }
+    case 'demog':{
+      const dc=ind.demog_cat||'?';
+      return categoryColor('demog', dc, colorMeta.demogCatIdx[ind.id]||0, Math.max((colorMeta.demogCats||[]).length,1), colorMeta.demogWithin[ind.id]||0, colorMeta.demogCount[dc]||1);
+    }
+    case 'uniform': return '#5a7da0';
+    default:        return matrilineColor(ind.matriline);
+  }
+}
+// Abbreviated id per the chosen rule (last2 | last3 | auto = shortest unique-in-group)
+function abbrId(ind){
+  const id=ind.id||'';
+  if(prefs.abbrId==='last2') return id.slice(-2);
+  if(prefs.abbrId==='last3') return id.slice(-3);
+  for(let len=2;len<=id.length;len++){
+    const suf=id.slice(-len);
+    if(INDS.filter(o=>(o.id||'').slice(-len)===suf).length<=1) return suf;
+  }
+  return id;
+}
+function labelComponentText(ind,key){
+  if(ind.generic) return key==='name'?(ind.name||''):''; // generics show only their category
+  if(key==='name')   return ind.name||'';
+  if(key==='dye')    return ind.dye||'';
+  if(key==='abbrId') return abbrId(ind);
+  if(key==='fullId') return ind.id||'';
+  return '';
+}
+const LABEL_COMPONENTS=[['name','Name'],['dye','Dye'],['abbrId','Abbr ID'],['fullId','Full ID']];
+const FONT_MUL={small:0.85,med:1,large:1.2};
+
+// ── Generic "unknown" nodes ──────────────────────────────────────────
+function makeGenericNode(cat){
+  const lc=String(cat).toLowerCase();
+  const hasF=/(^|[^a-z])f([^a-z]|$)|female/.test(lc), hasM=/(^|[^a-z])m([^a-z]|$)|male/.test(lc);
+  const sex=(hasF&&!hasM)?'f':(hasM&&!hasF)?'m':'u';
+  return {id:'?'+cat,name:(cat==='unknown'?'Unknown':cat),dye:'',sex,matriline:'',demog_cat:(cat==='unknown'?'':cat),dam:'',age:null,generic:true};
+}
+function loadGenericCats(group){
+  try{const m=JSON.parse(localStorage.getItem(GENERICS_KEY)||'{}');return (m[group]||[]);}catch(e){return [];}
+}
+function saveGenericCats(group){
+  try{const m=JSON.parse(localStorage.getItem(GENERICS_KEY)||'{}');m[group]=GENERICS.map(g=>g.id.slice(1));localStorage.setItem(GENERICS_KEY,JSON.stringify(m));}catch(e){}
+}
+function addGeneric(cat){
+  const id='?'+cat;
+  if(INDS.find(i=>i.id===id)) return; // already present
+  const node=makeGenericNode(cat);
+  GENERICS.push(node); INDS.push(node);
+  // place in a free spot near the top so it's easy to find/drag
+  const c=document.getElementById('evt-c')||document.getElementById('net-c');
+  const w=c?c.clientWidth:600;
+  const col=(GENERICS.length-1)%Math.max(1,Math.floor(w/90));
+  const row=Math.floor((GENERICS.length-1)/Math.max(1,Math.floor(w/90)));
+  positions[id]={x:50+col*90,y:46+row*64}; velocities[id]={x:0,y:0};
+  recomputeDisplayMeta(); saveGenericCats(activeGroup);
+  renderSVG('evt-svg');
+}
+function removeGeneric(id){
+  GENERICS=GENERICS.filter(g=>g.id!==id);
+  INDS=INDS.filter(i=>i.id!==id);
+  delete positions[id]; delete pendingGenCounts[id];
+  recomputeDisplayMeta(); saveGenericCats(activeGroup);
+  renderSVG('evt-svg');
+}
 const MATRILINE_PALETTE=['#4e8fd4','#d4754e','#4ec483','#c44e8f','#c4c14e','#4ec4c1','#8f4ed4','#d4a74e','#4e6dd4','#d44e4e','#74d44e','#d44ec1','#4eabd4','#d4874e','#6a4ed4','#4ed4a7','#d4514e','#4ed46a','#c14ed4','#d4c44e'];
 function matrilineColor(mat){
   if(!mat||mat==='N/A') return '#666';
   if(!MATRILINE_COLORS[mat]){const idx=Object.keys(MATRILINE_COLORS).length;MATRILINE_COLORS[mat]=MATRILINE_PALETTE[idx%MATRILINE_PALETTE.length];}
   return MATRILINE_COLORS[mat];
 }
-const NODE_R=32;
+const NODE_R=25;
 const SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/1-Zw3zA7_QJmv_OzWRB0xD5DzcHGQJobpcwRwoq8tCdc/export?format=csv&gid=0';
 async function fetchRosterFromSheet(){
   setRosterStatus('⏳ Fetching…','var(--dim)');
@@ -455,40 +758,94 @@ function loadRosterPaste(){
   parseRoster(txt);
 }
 function buildFilterUI(){
-  const groups=[...new Set(ROSTER.map(r=>r.current_group))].filter(Boolean).sort();
+  const allGroups=[...new Set(ROSTER.map(r=>r.current_group))].filter(Boolean).sort();
+  // Group-type chip row (All + derived letter-prefix types)
+  const types=[...new Set(allGroups.map(groupType))].sort();
+  const tel=document.getElementById('filter-types');
+  if(tel){
+    tel.innerHTML=`<button class="chip${!activeGroupType?' active':''}" data-gtype="">All</button>`+
+      types.map(t=>`<button class="chip${activeGroupType===t?' active':''}" data-gtype="${t}">${t}</button>`).join('');
+    tel.onclick=e=>{const b=e.target.closest('button[data-gtype]');if(!b)return;activeGroupType=b.dataset.gtype;buildFilterUI();};
+  }
+  const groups=allGroups.filter(g=>!activeGroupType||groupType(g)===activeGroupType);
   const gel=document.getElementById('filter-groups');if(!gel)return;
   gel.innerHTML=groups.map(g=>`<button class="chip${activeGroup===g?' active':''}" data-group="${g}">${g}</button>`).join('');
-  gel.onclick=e=>{const btn=e.target.closest('button[data-group]');if(!btn)return;activeGroup=btn.dataset.group;activeDemogs=new Set();buildFilterUI();};
+  gel.onclick=e=>{const btn=e.target.closest('button[data-group]');if(!btn)return;activeGroup=btn.dataset.group;activeDemogs=new Set();selectedInds=new Set();buildFilterUI();};
   buildDemogUI();
+  buildIndividualUI();
 }
-function selectGroup(g){activeGroup=g;activeDemogs=new Set();buildFilterUI();}
+function selectGroup(g){activeGroup=g;activeDemogs=new Set();selectedInds=new Set();buildFilterUI();}
+// Demographic chips quick-select: tapping toggles all members of that category in selectedInds
 function buildDemogUI(){
   const del=document.getElementById('filter-demogs');if(!del)return;
   if(!activeGroup){del.innerHTML='<span style="color:var(--dim);font-size:11px;">Select a group first</span>';return;}
   const demogs=[...new Set(ROSTER.filter(r=>r.current_group===activeGroup).map(r=>r.demog_cat))].filter(Boolean).sort();
-  del.innerHTML=demogs.map(d=>`<button class="chip${activeDemogs.has(d)?' active':''}" data-demog="${d}">${d}</button>`).join('');
-  del.onclick=e=>{const btn=e.target.closest('button[data-demog]');if(!btn)return;const d=btn.dataset.demog;activeDemogs.has(d)?activeDemogs.delete(d):activeDemogs.add(d);buildDemogUI();};
+  const membersOf=d=>ROSTER.filter(r=>r.current_group===activeGroup&&r.demog_cat===d).map(r=>String(r.id));
+  del.innerHTML=demogs.map(d=>{
+    const m=membersOf(d);const allSel=m.length>0&&m.every(id=>selectedInds.has(id));
+    return `<button class="chip${allSel?' active':''}" data-demog="${d}">${d}</button>`;
+  }).join('');
+  del.onclick=e=>{const btn=e.target.closest('button[data-demog]');if(!btn)return;
+    const m=membersOf(btn.dataset.demog);const allSel=m.length>0&&m.every(id=>selectedInds.has(id));
+    if(allSel) m.forEach(id=>selectedInds.delete(id)); else m.forEach(id=>selectedInds.add(id));
+    buildDemogUI(); buildIndividualUI();};
+}
+function buildIndividualUI(){
+  const el=document.getElementById('filter-individuals');if(!el)return;
+  if(!activeGroup){el.innerHTML='<div style="color:var(--dim);font-size:11px;padding:10px;">Select a group first</div>';return;}
+  const animals=ROSTER.filter(r=>r.current_group===activeGroup).sort((a,b)=>(Number(a.id)||0)-(Number(b.id)||0));
+  if(!animals.length){el.innerHTML='<div style="color:var(--dim);font-size:11px;padding:10px;">No animals.</div>';return;}
+  // Spreadsheet-style table: one row per animal, columns in the roster sheet's order
+  // (drop current_group — it's the same for the whole picker)
+  const cols=Object.keys(animals[0]).filter(c=>c!=='current_group');
+  const cell=(c,v)=>{ if(v==null||v==='') return ''; if(c==='age'){const n=parseFloat(v);return isNaN(n)?String(v):n.toFixed(1);} return String(v); };
+  const th='padding:5px 8px;text-align:left;border-bottom:1px solid var(--border);color:var(--dim);font-weight:700;background:var(--surface);position:sticky;top:0;text-transform:capitalize;';
+  let h=`<table style="border-collapse:collapse;font-size:10px;white-space:nowrap;font-family:'JetBrains Mono',monospace;">`;
+  h+=`<thead><tr><th style="${th}">✓</th>`+cols.map(c=>`<th style="${th}">${infoLabel(c)}</th>`).join('')+`</tr></thead><tbody>`;
+  animals.forEach(r=>{
+    const id=String(r.id), sel=selectedInds.has(id);
+    const td=`padding:5px 8px;border-bottom:1px solid var(--border);color:${sel?'var(--accent)':'var(--text)'};`;
+    h+=`<tr data-ind="${id}" style="cursor:pointer;background:${sel?'rgba(78,205,196,.12)':'transparent'};">`;
+    h+=`<td style="${td}text-align:center;color:${sel?'var(--accent)':'var(--dim)'};">${sel?'☑':'☐'}</td>`;
+    h+=cols.map(c=>`<td style="${td}">${cell(c,r[c])}</td>`).join('');
+    h+=`</tr>`;
+  });
+  h+=`</tbody></table>`;
+  el.innerHTML=h;
+  el.onclick=e=>{const row=e.target.closest('[data-ind]');if(!row)return;const id=row.dataset.ind;selectedInds.has(id)?selectedInds.delete(id):selectedInds.add(id);buildIndividualUI();buildDemogUI();};
   updateFilterCount();
 }
-function toggleDemog(d){activeDemogs.has(d)?activeDemogs.delete(d):activeDemogs.add(d);buildDemogUI();}
+function selectAllInds(all){
+  if(!activeGroup)return;
+  selectedInds=new Set();
+  if(all) ROSTER.filter(r=>r.current_group===activeGroup).forEach(r=>selectedInds.add(String(r.id)));
+  buildIndividualUI();buildDemogUI();
+}
 function updateFilterCount(){
-  const da=[...activeDemogs];
-  const n=ROSTER.filter(r=>r.current_group===activeGroup&&(da.length===0||da.includes(r.demog_cat))).length;
-  const el=document.getElementById('filter-count');if(el)el.textContent=activeGroup?(n+' animal'+(n!==1?'s':'')+' selected'):'';
+  if(!activeGroup){const el0=document.getElementById('filter-count');if(el0)el0.textContent='';return;}
+  const total=ROSTER.filter(r=>r.current_group===activeGroup).length;
+  const n=selectedInds.size;
+  const el=document.getElementById('filter-count');
+  if(el)el.textContent=n?(n+' of '+total+' selected'):('Whole group ('+total+' animals)');
 }
 function applyRosterFilter(){
   if(!activeGroup){alert('Select a group first.');return;}
-  const da=[...activeDemogs];
-  const filtered=ROSTER.filter(r=>r.current_group===activeGroup&&(da.length===0||da.includes(r.demog_cat)));
+  // selectedInds empty = whole group; otherwise exactly the checked individuals
+  const filtered=ROSTER.filter(r=>r.current_group===activeGroup&&(selectedInds.size===0||selectedInds.has(String(r.id))));
   const idSet=new Set(filtered.map(r=>String(r.id)));
   MATRILINE_COLORS={};
-  INDS=filtered.map(r=>({id:String(r.id),name:r.name||'',dye:r.dye||'',sex:r.sex||'f',matriline:r.matriline||'',demog_cat:r.demog_cat||'',dam:String(r.dam||'')}));
+  INDS=filtered.map(r=>({id:String(r.id),name:r.name||'',dye:r.dye||'',sex:r.sex||'f',matriline:r.matriline||'',demog_cat:r.demog_cat||'',dam:String(r.dam||''),age:parseAge(r)}));
   DAM_EDGES=INDS.filter(i=>i.dam&&idSet.has(i.dam)).map(i=>({src:i.dam,tgt:i.id}));
+  // Restore generic "unknown" nodes for this group and append to INDS
+  GENERICS=loadGenericCats(activeGroup).map(makeGenericNode);
+  INDS=INDS.concat(GENERICS);
+  recomputeDisplayMeta();
   [...new Set(INDS.map(i=>i.matriline))].sort().forEach(m=>matrilineColor(m));
   positions={}; velocities={}; // Fresh layout for new group
+  resetDashNotes(); // new group → fresh per-session dashboard notes
   ['evt-svg','net-svg'].forEach(id=>{const p=panZoom[id];p.x=0;p.y=0;p.scale=1;});
   const lbl=document.getElementById('home-group-label');
-  if(lbl)lbl.textContent=activeGroup+(da.length?' · '+da.join(', '):'');
+  if(lbl)lbl.textContent=activeGroup+(selectedInds.size?' · '+filtered.length+' selected':'');
   updateHomeStats();showView('home');
 }
 
@@ -627,11 +984,20 @@ let reviewEventIdx=0;   // which event is focused in session view
 let recNavIdx=-1;        // -1 = live active event; 0..n-1 = browsing a saved event
 let events=[], activeEvent=null, records=[];
 let an1Id=null, an2Id=null;
+// Multi-select (Feature #5): when multiMode is on, taps accumulate into multiA1/multiA2
+let multiMode=false, multiA1=[], multiA2=[], multiSide='an1';
+// Generic "unknown" nodes (per group): category placeholders added to the network
+let GENERICS=[];            // node objects appended to INDS
+let pendingGenCounts={};    // {genericId: count} for the record currently being built/edited
+const GENERICS_KEY='ethograph_generics'; // { [group]: [category,...] }
 let sessObserver='',sessDatatype='opportunistic',sessConditions='unprovisioned';
 let sessScan='',sessNotes='';
+// Group dashboard — per-session notes staged before a session starts (see Feature #1)
+let dashNotes={group:'',dos:'',births:'',individual:{}};
 
 // Sheet
 let sheetSolo=false,sheetAn1=null,sheetAn2=null,activeTab='aggsub';
+let sheetA1Ids=[],sheetA2Ids=[]; // full participant lists for the open sheet (Feature #5)
 let sheetEditIdx=null; // null = new record, number = editing existing
 let sheetLinkedRef=null;
 let sel={},selQua={},selAffect={},dur='lt5',recNotes='';
@@ -642,6 +1008,8 @@ let recMids={};
 
 // Node drag
 let nodeDragId=null, nodeDragSvg=null;
+// Redirection: when set, the next node tap picks the redirect target {recIdx, redirectorId}
+let pendingRedirect=null;
 
 // Pan/zoom per SVG
 const panZoom={
@@ -651,6 +1019,8 @@ const panZoom={
 
 // Drag
 let dragSrc=null,dragOver=null,touchDragIdx=null,touchClone=null;
+// Grouping (tap-to-link): index of the record chosen as the "group from" source
+let groupSrc=null;
 
 // ═══════════════════════════════════════════
 //  VIEW
@@ -663,6 +1033,7 @@ function showView(name){
   if(name==='network'){scheduleLayout('net-svg','net-c');initPanZoom('net-c','net-svg');}
   if(name==='recording'){scheduleLayout('evt-svg','evt-c');initPanZoom('evt-c','evt-svg');updateRecPanel();updateRecNav();}
   if(name==='filter')  buildFilterUI();
+  if(name==='dashboard') populateDashboard();
   if(name==='setup')   populateSetupForm();
   if(name==='session') updateSessionView();
   if(name==='home'){
@@ -679,11 +1050,33 @@ function showView(name){
 // ═══════════════════════════════════════════
 //  FORCE LAYOUT
 // ═══════════════════════════════════════════
+// Cluster anchors for "group by matriline / demog" layout (Feature #2)
+function clusterInfo(w,h){
+  if(!prefs.cluster||prefs.cluster==='force'||prefs.cluster==='id'||prefs.cluster==='idfull'||prefs.cluster==='idabbr') return null;
+  const keyOf=ind=>prefs.cluster==='matriline'?(ind.matriline||'N/A'):(ind.demog_cat||'?');
+  const keys=[...new Set(INDS.map(keyOf))].sort();
+  const cx=w/2,cy=h/2,R=Math.min(w,h)*0.34,nK=keys.length;
+  const anchors={};
+  keys.forEach((k,i)=>{const a=(2*Math.PI*i/nK)-Math.PI/2;anchors[k]=nK<=1?{x:cx,y:cy}:{x:cx+R*Math.cos(a),y:cy+R*Math.sin(a)};});
+  return {keyOf,anchors};
+}
 function initLayout(cId){
   const c=document.getElementById(cId);
   const w=c.clientWidth,h=c.clientHeight,n=INDS.length;
   const cx=w/2,cy=h/2,r=Math.min(w,h)*.36;
   positions={}; velocities={};
+  // Clustered seeding: drop each node near its cluster anchor
+  const cl=clusterInfo(w,h);
+  if(cl){
+    const counts={};
+    INDS.forEach(ind=>{
+      const k=cl.keyOf(ind);const idx=(counts[k]=(counts[k]||0)+1);
+      const anc=cl.anchors[k],ang=idx*2.4,rad=8+idx*5;
+      positions[ind.id]={x:anc.x+Math.cos(ang)*rad,y:anc.y+Math.sin(ang)*rad};
+      velocities[ind.id]={x:0,y:0};
+    });
+    return {w,h,cx,cy};
+  }
   // Seed dams first, then offspring directly below their dam
   // Count offspring per dam for horizontal spreading
   const offspringOf={};
@@ -722,6 +1115,23 @@ function computePositions(cId){
   const c=document.getElementById(cId);
   if(!c) return;
   const w=c.clientWidth,h=c.clientHeight,cx=w/2,cy=h/2;
+  // Grid arrangement by ID (numeric, low→high, left→right then top→bottom)
+  if(prefs.cluster==='id'||prefs.cluster==='idfull'||prefs.cluster==='idabbr'){
+    const keyOf=ind=>prefs.cluster==='idabbr'?(Number(abbrId(ind))||0):(Number(ind.id)||0);
+    const sorted=[...INDS].sort((a,b)=>keyOf(a)-keyOf(b));
+    const n=sorted.length||1;
+    const cols=Math.max(1,Math.round(Math.sqrt(n*(w/Math.max(h,1)))));
+    const rows=Math.ceil(n/cols);
+    const cellW=w/cols, cellH=h/rows;
+    sorted.forEach((ind,i)=>{
+      const cc=i%cols, rr=Math.floor(i/cols);
+      positions[ind.id]={x:cellW*(cc+0.5), y:cellH*(rr+0.5)};
+      velocities[ind.id]={x:0,y:0};
+    });
+    return;
+  }
+  const cl=clusterInfo(w,h);
+  const damWeight=(cl&&prefs.cluster==='demog')?0.08:0.45; // dam nesting fights demog clusters
   const damOf={};
   INDS.forEach(ind=>{if(ind.dam&&INDS.find(x=>x.id===ind.dam))damOf[ind.id]=ind.dam;});
   const offspringOf={};
@@ -746,7 +1156,8 @@ function computePositions(cId){
         const f=(minSep*minSep*strength)/(dist*dist*dist);
         fx+=(dx/dist)*f;fy+=(dy/dist)*f;
       });
-      fx+=(cx-positions[a.id].x)*.025;fy+=(cy-positions[a.id].y)*.025;
+      if(cl){const anc=cl.anchors[cl.keyOf(a)];fx+=(anc.x-positions[a.id].x)*.05;fy+=(anc.y-positions[a.id].y)*.05;}
+      else{fx+=(cx-positions[a.id].x)*.025;fy+=(cy-positions[a.id].y)*.025;}
       // Strong dam spring to establish nesting
       if(damOf[a.id]){
         const dp=positions[damOf[a.id]];
@@ -758,8 +1169,8 @@ function computePositions(cId){
           const spacing=nodeRadius(a)*2+12;
           const targetX=dp.x+(sibIdx-(total-1)/2)*spacing;
           const targetY=dp.y+nodeRadius(a)+nodeRadius(damInd)+8;
-          fx+=(targetX-positions[a.id].x)*0.45;
-          fy+=(targetY-positions[a.id].y)*0.45;
+          fx+=(targetX-positions[a.id].x)*damWeight;
+          fy+=(targetY-positions[a.id].y)*damWeight;
         }
       }
       velocities[a.id].x=(velocities[a.id].x+fx*0.016)*damp;
@@ -810,10 +1221,9 @@ function scheduleLayout(svgId,cId){
   // First time: compute synchronously then render once
   initLayout(cId);
   computePositions(cId);
-  // Reset pan/zoom for new layout
-  const _pz=panZoom[svgId];_pz.x=0;_pz.y=0;_pz.scale=1;
   renderSVG(svgId);
-  applyPanZoom(svgId);
+  // Auto-fit so every node is visible within the current canvas
+  fitToContent(svgId);
   if(svgId==='evt-svg'){updateRecPanel();updateRecNav();}
 }
 // ═══════════════════════════════════════════
@@ -867,6 +1277,21 @@ function edgeMidpoint(s,t,offsetIdx,total){
 function domainColor(dom){
   return dom==='agg'?'#ef4444':dom==='sub'?'#f97316':dom==='aff'?'#22c55e':'#a78bfa';
 }
+// Multi-animal helpers (Feature #5): records carry an1Ids/an2Ids; fall back to the
+// legacy single an1Id/an2Id so old records and the diamond flows keep working.
+function a1List(rec){return (rec.an1Ids&&rec.an1Ids.length)?rec.an1Ids:(rec.an1Id?[rec.an1Id]:[]);}
+function a2List(rec){return (rec.an2Ids&&rec.an2Ids.length)?rec.an2Ids:(rec.an2Id?[rec.an2Id]:[]);}
+function centroidOf(ids){const ps=ids.map(id=>positions[id]).filter(Boolean);if(!ps.length)return null;return {x:ps.reduce((s,p)=>s+p.x,0)/ps.length,y:ps.reduce((s,p)=>s+p.y,0)/ps.length};}
+// Generic "unknown" placeholders: ids are '?'+category (e.g. '?adult f', '?unknown')
+function isGeneric(id){return typeof id==='string'&&id.charAt(0)==='?';}
+function genericLabel(id){return id==='?unknown'?'Unknown':id.slice(1);}
+function nameOf(id){if(isGeneric(id))return genericLabel(id);const a=INDS.find(i=>i.id===id);return a?(a.name||a.dye||a.id):id;}
+// Participant display name, with ×N count for generics (rec.genCounts, else the in-progress pendingGenCounts)
+function partName(id,rec){
+  if(isGeneric(id)){const c=(rec&&rec.genCounts&&rec.genCounts[id])||pendingGenCounts[id]||1;return genericLabel(id)+(c>1?' ×'+c:'');}
+  return nameOf(id);
+}
+function sideNames(ids,rec){return (ids||[]).map(id=>partName(id,rec)).join(', ');}
 function primaryDomain(rec){
   const sz=v=>v instanceof Set?v.size:(Array.isArray(v)?v.length:0);
   if(sz(rec.beh.agg.an1)+sz(rec.beh.agg.an2)>0) return 'agg';
@@ -898,11 +1323,11 @@ function renderSVG(svgId){
     <marker id="m-dam" markerWidth="6" markerHeight="6" refX="5" refY="2.5" orient="auto"><path d="M0,0 L0,5 L6,2.5z" fill="rgba(255,255,255,.4)"/></marker>
   </defs>`;
   if(isEvt && dispRecords.length>0){
-    // bucket by sorted pair for midpoint offsets
+    // bucket by sorted participant set so parallel records get offset hubs
     const pairBuckets={};
     dispRecords.forEach((rec,i)=>{
-      if(!rec.an2Id) return;
-      const key=[rec.an1Id,rec.an2Id].sort().join('|');
+      if(!a2List(rec).length) return;
+      const key=[...a1List(rec),...a2List(rec)].sort().join('|');
       if(!pairBuckets[key]) pairBuckets[key]=[];
       pairBuckets[key].push(i);
     });
@@ -910,26 +1335,31 @@ function renderSVG(svgId){
     Object.values(pairBuckets).forEach(idxArr=>{
       idxArr.forEach((ri,offset)=>{
         const rec=dispRecords[ri];
-        const s=positions[rec.an1Id],t=positions[rec.an2Id];
-        if(s&&t) recMids[ri]=edgeMidpoint(s,t,offset,idxArr.length);
+        const c1=centroidOf(a1List(rec)),c2=centroidOf(a2List(rec));
+        if(c1&&c2) recMids[ri]=edgeMidpoint(c1,c2,offset,idxArr.length);
       });
     });
 
-    // Primary edges
+    // Primary edges: each initiator → hub, hub → each recipient
     dispRecords.forEach((rec,i)=>{
-      if(!rec.an2Id) return;
-      const s=positions[rec.an1Id],t=positions[rec.an2Id],mid=recMids[i];
-      if(!s||!t||!mid) return;
+      if(!a2List(rec).length) return;
+      const mid=recMids[i]; if(!mid) return;
       const dom=primaryDomain(rec),col=domainColor(dom);
-      const dx1=mid.x-s.x,dy1=mid.y-s.y,d1=Math.max(Math.sqrt(dx1*dx1+dy1*dy1),.1);
-      html+=`<line x1="${s.x+(dx1/d1)*(NODE_R+2)}" y1="${s.y+(dy1/d1)*(NODE_R+2)}" x2="${mid.x}" y2="${mid.y}" stroke="${col}" stroke-width="2" stroke-opacity=".65"/>`;
-      const dx2=t.x-mid.x,dy2=t.y-mid.y,d2=Math.max(Math.sqrt(dx2*dx2+dy2*dy2),.1);
-      html+=`<line x1="${mid.x}" y1="${mid.y}" x2="${t.x-(dx2/d2)*(NODE_R+9)}" y2="${t.y-(dy2/d2)*(NODE_R+9)}" stroke="${col}" stroke-width="2" stroke-opacity=".65" marker-end="url(#m-${dom})"/>`;
+      a1List(rec).forEach(id=>{
+        const s=positions[id]; if(!s) return;
+        const dx=mid.x-s.x,dy=mid.y-s.y,d=Math.max(Math.sqrt(dx*dx+dy*dy),.1);
+        html+=`<line x1="${s.x+(dx/d)*(NODE_R+2)}" y1="${s.y+(dy/d)*(NODE_R+2)}" x2="${mid.x}" y2="${mid.y}" stroke="${col}" stroke-width="2" stroke-opacity=".65"/>`;
+      });
+      a2List(rec).forEach(id=>{
+        const t=positions[id]; if(!t) return;
+        const dx=t.x-mid.x,dy=t.y-mid.y,d=Math.max(Math.sqrt(dx*dx+dy*dy),.1);
+        html+=`<line x1="${mid.x}" y1="${mid.y}" x2="${t.x-(dx/d)*(NODE_R+9)}" y2="${t.y-(dy/d)*(NODE_R+9)}" stroke="${col}" stroke-width="2" stroke-opacity=".65" marker-end="url(#m-${dom})"/>`;
+      });
     });
 
-    // Diamonds
+    // Diamonds at the hub
     dispRecords.forEach((rec,i)=>{
-      if(!rec.an2Id) return;
+      if(!a2List(rec).length) return;
       const mid=recMids[i]; if(!mid) return;
       const dom=primaryDomain(rec),col=domainColor(dom);
       const hasTp=!!(rec.tpAn3||rec.tpAn4),ds=8;
@@ -951,41 +1381,38 @@ function renderSVG(svgId){
     html+=`<line x1="${s.x+nx*rs}" y1="${s.y+ny*rs}" x2="${t.x-nx*rt}" y2="${t.y-ny*rt}" stroke="rgba(255,255,255,.28)" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#m-dam)"/>`;
   });
   // Nodes
+  const selA1=multiMode?multiA1:(an1Id?[an1Id]:[]);
+  const selA2=multiMode?multiA2:(an2Id?[an2Id]:[]);
   INDS.forEach(ind=>{
     const p=positions[ind.id];if(!p)return;
-    const r=nodeRadius(ind);const col=matrilineColor(ind.matriline);
-    const isA1=an1Id===ind.id,isA2=an2Id===ind.id;
+    const r=nodeRadius(ind);const col=nodeColor(ind);
+    const isA1=selA1.includes(ind.id),isA2=selA2.includes(ind.id);
     const sc=isA1?'#4ecdc4':isA2?'#f7b731':'rgba(255,255,255,.18)',sw=isA1||isA2?3:1.5;
     if(isA1) html+=`<circle cx="${p.x}" cy="${p.y}" r="${r+10}" fill="none" stroke="#4ecdc4" stroke-width="2.5" opacity=".8"/>`;
     if(isA2) html+=`<circle cx="${p.x}" cy="${p.y}" r="${r+10}" fill="none" stroke="#f7b731" stroke-width="2.5" opacity=".8"/>`;
     const svgId=isEvt?'evt-svg':'net-svg';
     const click=`tapNode('${ind.id}',event)`;
     const dragStart=`startNodeDrag('${ind.id}','${svgId}',event)`;
-    if(ind.sex==='m'){html+=`<rect x="${p.x-r}" y="${p.y-r}" width="${r*2}" height="${r*2}" rx="5" fill="${col}" stroke="${sc}" stroke-width="${sw}" style="cursor:grab" onmousedown="${dragStart}" ontouchstart="${dragStart}" onclick="${click}"/>`;}
-    else{html+=`<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${col}" stroke="${sc}" stroke-width="${sw}" style="cursor:grab" onmousedown="${dragStart}" ontouchstart="${dragStart}" onclick="${click}"/>`;}
-    const fs=Math.max(9,Math.round(r*0.42));
-    const fsSmall=Math.max(7,Math.round(r*0.33));
-    const name=ind.name||'';
-    const dye=ind.dye||'';
-    const idLast=ind.id?ind.id.slice(-3):'';
-    let line1='',line2='';
-    if(name){
-      // Has name: line1=name, line2=dye+id or just id
-      line1=name;
-      line2=dye?`${dye}·${idLast}`:idLast;
-    } else if(dye){
-      // No name, has dye: line1=dye, line2=id
-      line1=dye;
-      line2=idLast;
-    } else {
-      // Nothing: line1=id only
-      line1=idLast||ind.id;
-      line2='';
-    }
-    const hasLine2=!!line2&&line2!==line1;
-    const yLine1=hasLine2?p.y-r*0.18:p.y;
-    html+=`<text x="${p.x}" y="${yLine1}" text-anchor="middle" dominant-baseline="middle" fill="#e8eaf0" font-size="${fs}" font-family="'Sora',sans-serif" font-weight="700" style="pointer-events:none;user-select:none">${line1}</text>`;
-    if(hasLine2){html+=`<text x="${p.x}" y="${p.y+r*0.48}" text-anchor="middle" dominant-baseline="middle" fill="rgba(232,234,240,.75)" font-size="${fsSmall}" font-family="'JetBrains Mono',monospace" font-weight="900" style="pointer-events:none;user-select:none">${line2}</text>`;}
+    const gx=ind.generic?` stroke-dasharray="5,3" fill-opacity="0.5"`:''; // generic = dashed, dimmer
+    if(ind.sex==='m'){html+=`<rect x="${p.x-r}" y="${p.y-r}" width="${r*2}" height="${r*2}" rx="5" fill="${col}" stroke="${sc}" stroke-width="${sw}"${gx} style="cursor:grab" onmousedown="${dragStart}" ontouchstart="${dragStart}" onclick="${click}"/>`;}
+    else{html+=`<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${col}" stroke="${sc}" stroke-width="${sw}"${gx} style="cursor:grab" onmousedown="${dragStart}" ontouchstart="${dragStart}" onclick="${click}"/>`;}
+    const fMul=FONT_MUL[prefs.font]||1;
+    const baseFs=Math.max(8,Math.round(r*0.36*fMul));
+    // Build label rows from the ordered components, skipping empties
+    const texts=(prefs.labelRows||[]).map(k=>labelComponentText(ind,k)).filter(t=>t&&t.length);
+    const sizes=texts.map((t,i)=>i===0&&prefs.labelBigRow1?Math.round(baseFs*1.3):baseFs);
+    const gap=Math.max(1,Math.round(baseFs*0.18));
+    const totalH=sizes.reduce((s,fs)=>s+fs,0)+gap*Math.max(0,sizes.length-1);
+    let cursor=p.y-totalH/2;
+    texts.forEach((t,i)=>{
+      const fs=sizes[i],cy=cursor+fs/2;
+      const isR1=i===0;
+      const weight=isR1?(prefs.labelBoldRow1?900:700):600;
+      const fill=isR1?'#e8eaf0':'rgba(232,234,240,.8)';
+      const fam=isR1?"'Sora',sans-serif":"'JetBrains Mono',monospace";
+      html+=`<text x="${p.x}" y="${cy}" text-anchor="middle" dominant-baseline="middle" fill="${fill}" font-size="${fs}" font-family="${fam}" font-weight="${weight}" style="pointer-events:none;user-select:none">${t}</text>`;
+      cursor+=fs+gap;
+    });
   });
 
   svg.innerHTML=html;
@@ -994,48 +1421,83 @@ function renderSVG(svgId){
 // ═══════════════════════════════════════════
 //  DIAMOND TAP
 // ═══════════════════════════════════════════
+function dMenuBtn(enabled,onclick,icon,label,sub){
+  return `<button onclick="${enabled?onclick:''}" ${enabled?'':'disabled'}
+    style="display:flex;align-items:center;gap:9px;text-align:left;padding:9px 10px;background:var(--hi);
+    border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:11px;
+    font-family:'JetBrains Mono',monospace;font-weight:600;cursor:${enabled?'pointer':'default'};
+    width:100%;opacity:${enabled?1:.45};">
+    <span style="font-size:15px;flex-shrink:0;">${icon}</span>
+    <span>${label}${sub?`<br><span style="font-size:9px;color:var(--dim);font-weight:400">${sub}</span>`:''}</span></button>`;
+}
 function tapDiamond(evt,recIdx){
   evt.stopPropagation();
   closeAllPopovers();
+  pendingRedirect=null;
   const rec=records[recIdx]; if(!rec) return;
-
-  if(an1Id){
-    // An1 selected → show picker: choose which animal from this edge to record toward
-    const edgeA1=INDS.find(i=>i.id===rec.an1Id);
-    const edgeA2=INDS.find(i=>i.id===rec.an2Id);
-    const picker=document.getElementById('node-picker');
-    document.getElementById('picker-items').innerHTML=`
-      <div class="picker-title">Record behavior toward:</div>
-      <div class="picker-item" onclick="openSheetLinked(${recIdx},'${edgeA1.id}');closePicker()">
-        ${edgeA1.name} <span style="color:var(--dim);font-size:9px">An1 of rec #${computeLabels()[recIdx]}</span>
-      </div>
-      <div class="picker-item" onclick="openSheetLinked(${recIdx},'${edgeA2.id}');closePicker()">
-        ${edgeA2.name} <span style="color:var(--dim);font-size:9px">An2 of rec #${computeLabels()[recIdx]}</span>
-      </div>
-      <div class="picker-item" style="color:var(--dim);border-top:1px solid var(--border);margin-top:4px;padding-top:8px"
-        onclick="openSheetLinked(${recIdx},null);closePicker()">No specific target (intervention)</div>`;
-    picker.style.display='block';
-    picker.style.left=Math.min(evt.clientX+6,window.innerWidth-200)+'px';
-    picker.style.top=Math.max(evt.clientY-10,10)+'px';
-    return;
-  }
-
-  // No An1 → show info tooltip
-  const a1=INDS.find(i=>i.id===rec.an1Id),a2=INDS.find(i=>i.id===rec.an2Id);
+  const a1=INDS.find(i=>i.id===rec.an1Id),a2=rec.an2Id?INDS.find(i=>i.id===rec.an2Id):null;
   const labels=computeLabels();
   const {lines}=behSummaryFull(rec);
   const durLbl=DURATIONS.find(d=>d.id===rec.duration)?.label||'';
-  document.getElementById('d-tip-pair').textContent=`#${labels[recIdx]} ${a1.name} — ${a2.name}`;
-  document.getElementById('d-tip-body').innerHTML=
-    lines.join('<br>')+(durLbl?`<br><span style="color:var(--accent)">${durLbl}</span>`:'')
-    +(rec.tpAn3?`<br>An3: ${rec.tpAn3}`:'')+(rec.tpAn4?`<br>An4: ${rec.tpAn4}`:'');
-  document.getElementById('d-tip-edit-btn').onclick=()=>{closeTip();editRecord(recIdx);};
+  const intervener=an1Id?INDS.find(i=>i.id===an1Id):null;
+  document.getElementById('d-tip-pair').textContent=`#${labels[recIdx]} ${sideNames(a1List(rec),rec)||'?'}${a2List(rec).length?' — '+sideNames(a2List(rec),rec):''}`;
+  document.getElementById('d-tip-body').innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
+      ${dMenuBtn(true,`closeTip();editRecord(${recIdx})`,'✎','Edit record','')}
+      ${dMenuBtn(!!intervener,`closeTip();startIntervention(${recIdx})`,'⚡','Intervention',intervener?`${intervener.name} steps in`:'tap an An1 node first')}
+      ${dMenuBtn(!!a2,`closeTip();startRedirection(${recIdx})`,'↗','Redirection',a2?`${a2.name} redirects to…`:'needs a recipient')}
+      ${dMenuBtn(true,`toggleDiamondDetails()`,'ℹ','View details','')}
+      <div id="d-tip-details" style="display:none;font-size:10px;color:var(--dim);line-height:1.6;border-top:1px solid var(--border);margin-top:2px;padding-top:7px;">
+        ${lines.join('<br>')}${durLbl?`<br><span style="color:var(--accent)">${durLbl}</span>`:''}
+      </div>
+    </div>`;
+  document.getElementById('d-tip-edit-btn').style.display='none';
   const tip=document.getElementById('d-tip');
   tip.style.display='block';
-  tip.style.left=Math.min(evt.clientX+10,window.innerWidth-300)+'px';
-  tip.style.top=Math.max(evt.clientY-80,10)+'px';
+  tip.style.left=Math.min(evt.clientX+10,window.innerWidth-250)+'px';
+  tip.style.top=Math.max(Math.min(evt.clientY-30,window.innerHeight-300),10)+'px';
+}
+function toggleDiamondDetails(){
+  const d=document.getElementById('d-tip-details');
+  if(d) d.style.display=d.style.display==='none'?'block':'none';
 }
 function closeTip(){document.getElementById('d-tip').style.display='none';}
+
+// Intervention: the currently selected An1 steps into this interaction.
+function startIntervention(recIdx){
+  if(!an1Id) return;
+  const rec=records[recIdx];
+  // Default target = the original aggressor (An1), or the recipient if the
+  // intervener IS the aggressor. Editable in the sheet via Swap.
+  const target=(an1Id===rec.an1Id)?rec.an2Id:rec.an1Id;
+  openSheetLinked(recIdx, target);
+  selQua.agg.an1.add('interv_general');
+  activeTab='aggsub'; buildTabs(); buildContent();
+  document.getElementById('sheet-meta').textContent=`Intervention by ${INDS.find(i=>i.id===an1Id)?.name} · linked to #${computeLabels()[recIdx]}`;
+}
+// Redirection: the recipient (An2) redirects toward a new target you tap.
+function startRedirection(recIdx){
+  const rec=records[recIdx];
+  if(!rec.an2Id) return;
+  pendingRedirect={recIdx, redirectorId:rec.an2Id};
+  closeTip();
+  const r=INDS.find(i=>i.id===rec.an2Id);
+  const hb=document.getElementById('hint-bar'),ht=document.getElementById('hint-text');
+  if(hb&&ht){
+    hb.className='hint hint-a2';
+    ht.innerHTML=`<b style="color:var(--warn)">${r?r.name:'recipient'}</b> redirects — tap the target animal
+      <button class="btn-solo" style="margin-left:8px" onclick="event.stopPropagation();cancelRedirect()">Cancel</button>`;
+  }
+}
+function cancelRedirect(){pendingRedirect=null; updateHint();}
+function openRedirectionSheet(recIdx, redirectorId, targetId){
+  an1Id=redirectorId; an2Id=targetId;
+  openSheetLinked(recIdx, targetId);
+  selQua.agg.an1.add('redirected');
+  sel.tp.an1.add('redirect_to');
+  activeTab='aggsub'; buildTabs(); buildContent();
+  document.getElementById('sheet-meta').textContent=`Redirection by ${INDS.find(i=>i.id===redirectorId)?.name} · linked to #${computeLabels()[recIdx]}`;
+}
 
 // an2Override: specific animal from the edge chosen as An2, or null for no An2
 function openSheetLinked(refRecIdx, an2Override){
@@ -1045,6 +1507,7 @@ function openSheetLinked(refRecIdx, an2Override){
   sheetSolo=an2Override===null&&an2Override!==undefined?false:!an2Override;
   sheetAn1=an1Id;
   sheetAn2=an2Override||null;
+  sheetA1Ids=[]; sheetA2Ids=[]; // linked records are single-pair
   sel=freshSel(); selQua=freshQua(); selAffect=freshAffect();
   dur='lt5'; tpAn3=''; tpAn4=''; recNotes='';
   activeTab='aggsub';
@@ -1107,6 +1570,40 @@ function applyPanZoom(svgId){
   el.style.transform=`translate(${pz.x}px,${pz.y}px) scale(${pz.scale})`;
 }
 
+// Auto-fit all nodes within the currently-visible canvas (so the record panel
+// can never hide bottom nodes). Only shrinks to fit — never zooms past 1:1.
+function fitToContent(svgId){
+  const el=document.getElementById(svgId);
+  if(!el||!INDS.length) return;
+  const c=el.parentElement;
+  const w=c.clientWidth,h=c.clientHeight;
+  if(!w||!h) return;
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  INDS.forEach(ind=>{
+    const p=positions[ind.id]; if(!p) return;
+    const r=nodeRadius(ind)+20; // include node radius + label padding
+    minX=Math.min(minX,p.x-r); maxX=Math.max(maxX,p.x+r);
+    minY=Math.min(minY,p.y-r); maxY=Math.max(maxY,p.y+r);
+  });
+  if(minX===Infinity) return;
+  const bw=Math.max(maxX-minX,1),bh=Math.max(maxY-minY,1);
+  const pz=panZoom[svgId]; // mutate in place — never replace
+  pz.scale=Math.min(1,w/bw,h/bh);
+  pz.x=(w-bw*pz.scale)/2 - minX*pz.scale;
+  pz.y=(h-bh*pz.scale)/2 - minY*pz.scale;
+  applyPanZoom(svgId);
+  lastFitDims[svgId]={w,h};
+}
+// Re-fit only when the canvas size changed (panel grew/hid, viewport resized).
+// Manual pan/zoom never changes canvas size, so it's left untouched.
+const lastFitDims={};
+function maybeFit(svgId){
+  const el=document.getElementById(svgId); if(!el) return;
+  const c=el.parentElement; const w=c.clientWidth,h=c.clientHeight;
+  const last=lastFitDims[svgId];
+  if(!last||Math.abs(last.w-w)>2||Math.abs(last.h-h)>2) fitToContent(svgId);
+}
+
 function screenToSVG(svgId,sx,sy){
   // Convert screen coords to SVG canvas coords accounting for pan/zoom
   const pz=panZoom[svgId];
@@ -1167,7 +1664,7 @@ function initPanZoom(containerId,svgId){
     pz.x+=e.clientX-lastX;pz.y+=e.clientY-lastY;
     lastX=e.clientX;lastY=e.clientY;
     applyPanZoom(svgId);
-  });
+  },sig);
   window.addEventListener('mouseup',()=>{
     if(nodeDragId&&nodeDragMoved){
       const sv=nodeDragSvg;
@@ -1259,6 +1756,181 @@ function initPanZoom(containerId,svgId){
   },{passive:true,signal:ac.signal});
 }
 
+// ═══════════════════════════════════════════
+//  DISPLAY PREFERENCES (Feature #2)
+// ═══════════════════════════════════════════
+const PREF_GROUPS=[
+  {key:'cluster', label:'Layout',     opts:[['force','Force'],['matriline','By matriline'],['demog','By demog'],['idfull','By full ID'],['idabbr','By abbr ID']]},
+  {key:'color',   label:'Color by',   opts:[['matriline','Matriline'],['random','Random'],['sex','Sex (shades)'],['demog','Demog'],['uniform','Uniform']]},
+  {key:'sizeBy',  label:'Size by',    opts:[['demog','Demog'],['age','Age'],['uniform','Uniform']]},
+  {key:'sizeScale',label:'Node scale',opts:[[0.8,'Small'],[1,'Medium'],[1.25,'Large']]},
+  {key:'abbrId',  label:'Abbreviated ID', opts:[['last2','Last 2'],['last3','Last 3'],['auto','Auto-unique']]},
+  {key:'font',    label:'Font size',  opts:[['small','Small'],['med','Medium'],['large','Large']]},
+];
+// ═══════════════════════════════════════════
+//  INDIVIDUAL ANIMAL INFO (Feature #6)
+// ═══════════════════════════════════════════
+const INFO_LABELS={id:'ID',name:'Name',dye:'Dye',sex:'Sex',demog_cat:'Demographic',current_group:'Current group',matriline:'Matriline',dam:'Dam'};
+function infoLabel(k){return INFO_LABELS[k]||k.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());}
+function sessionRecordCount(id){
+  let n=0; const all=[];
+  (events||[]).forEach(ev=>ev.records.forEach(r=>all.push(r)));
+  (records||[]).forEach(r=>all.push(r));
+  all.forEach(r=>{if(a1List(r).includes(id)||a2List(r).includes(id))n++;});
+  return n;
+}
+function showAnimalInfo(id){
+  closeAllPopovers();
+  id=String(id);
+  if(isGeneric(id)){
+    document.getElementById('info-title').textContent=genericLabel(id)+' (unknown)';
+    const n=sessionRecordCount(id);
+    document.getElementById('info-content').innerHTML=
+      `<div style="font-size:11px;color:var(--dim);line-height:1.7;">Generic placeholder for unidentified <b style="color:var(--text)">${genericLabel(id)}</b>. Use it in records to represent one or more unknown individuals of this category (a counter sets how many).</div>`+
+      `<div style="margin-top:10px;font-size:11px;color:var(--accent);">This session: ${n} record${n!==1?'s':''} involving this placeholder</div>`+
+      `<button onclick="removeGeneric('${id.replace(/'/g,"\\'")}');closeInfo()" style="margin-top:14px;width:100%;padding:9px;background:var(--hi);border:1px solid var(--danger);border-radius:8px;color:var(--danger);font-family:'JetBrains Mono',monospace;font-weight:600;font-size:11px;cursor:pointer;">Remove this placeholder</button>`;
+    document.getElementById('info-overlay').style.display='flex';
+    return;
+  }
+  const row=ROSTER.find(r=>String(r.id)===id);
+  const ind=INDS.find(i=>i.id===id);
+  const src=row||(ind?{id:ind.id,name:ind.name,dye:ind.dye,sex:ind.sex,demog_cat:ind.demog_cat,matriline:ind.matriline,dam:ind.dam}:null);
+  document.getElementById('info-title').textContent=(src&&src.name)||(ind&&ind.name)||id;
+  const body=document.getElementById('info-content');
+  if(!src){
+    body.innerHTML='<div style="color:var(--dim);font-size:11px">No roster record found for this animal.</div>';
+  } else {
+    let rows='';
+    // Render every roster column dynamically so the card adapts if columns change
+    Object.keys(src).forEach(k=>{
+      let v=src[k];
+      if(v==null||String(v).trim()==='') return;
+      if(k==='dam'){const d=ROSTER.find(r=>String(r.id)===String(v));if(d&&d.name)v=`${d.name} (${v})`;}
+      rows+=`<div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;">
+        <div style="flex-shrink:0;width:120px;color:var(--dim);">${infoLabel(k)}</div>
+        <div style="flex:1;color:var(--text);word-break:break-word;">${String(v)}</div></div>`;
+    });
+    const n=sessionRecordCount(id);
+    if(activeSession||events.length||records.length){
+      rows+=`<div style="margin-top:12px;font-size:11px;color:var(--accent);">This session: ${n} record${n!==1?'s':''} involving this animal</div>`;
+    }
+    body.innerHTML=rows;
+  }
+  document.getElementById('info-overlay').style.display='flex';
+}
+function closeInfo(){document.getElementById('info-overlay').style.display='none';}
+
+// ── Observer profiles ────────────────────────────────────────────────
+function openProfile(){buildProfilePanel();document.getElementById('profile-overlay').style.display='flex';}
+function closeProfile(){document.getElementById('profile-overlay').style.display='none';}
+function buildProfilePanel(){
+  const profiles=loadProfiles();
+  const names=Object.keys(profiles).filter(n=>n!=='');
+  let h=`<div style="font-size:10px;color:var(--dim);line-height:1.6;margin-bottom:12px;">Pick who's recording. Each observer's display preferences are saved separately on this device, so you don't re-set them each time.</div>`;
+  h+=`<div class="sec-lbl">Current observer</div>
+    <div style="font-size:14px;font-weight:700;color:var(--accent);margin-bottom:12px;">${currentObserver||'(none set)'}</div>`;
+  if(names.length){
+    h+=`<div class="sec-lbl">Switch observer</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">`;
+    names.forEach(n=>{h+=`<button class="chip${n===currentObserver?' active':''}" onclick="setObserver('${n.replace(/'/g,"\\'")}')">${n}</button>`;});
+    h+=`</div>`;
+  }
+  h+=`<div class="sec-lbl">Add / switch to observer</div>
+    <div style="display:flex;gap:7px;">
+      <input class="field-in" id="profile-new" placeholder="Initials, e.g. SS" style="flex:1;text-transform:uppercase;">
+      <button class="btn btn-acc" style="padding:7px 12px;" onclick="addObserverFromInput()">Set</button>
+    </div>`;
+  document.getElementById('profile-content').innerHTML=h;
+}
+function addObserverFromInput(){
+  const el=document.getElementById('profile-new');
+  const v=(el&&el.value||'').trim().toUpperCase();
+  if(!v) return;
+  setObserver(v);
+}
+function openPrefs(){buildPrefsPanel();document.getElementById('prefs-overlay').style.display='flex';}
+function closePrefs(){document.getElementById('prefs-overlay').style.display='none';}
+function buildPrefsPanel(){
+  let h=PREF_GROUPS.map(g=>`
+    <div class="sec-lbl">${g.label}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+      ${g.opts.map(([v,lbl])=>`<button class="chip${String(prefs[g.key])===String(v)?' active':''}" onclick="setPref('${g.key}',${typeof v==='number'?v:`'${v}'`})">${lbl}</button>`).join('')}
+    </div>`).join('');
+  // ── Palette (only when coloring by sex or demog) ──
+  if(prefs.color==='sex'||prefs.color==='demog'){
+    h+=`<div class="sec-lbl">Palette · color by ${prefs.color}</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">`+
+      Object.entries(COLOR_SCHEMES).map(([k,sc])=>`<button class="chip${prefs.palette===k?' active':''}" onclick="setPref('palette','${k}')">${sc.label}</button>`).join('')+`</div>`;
+    h+=`<div style="font-size:9px;color:var(--dim);margin-bottom:5px;">Optional: assign a palette per category — individuals spread across its range (Auto = use scheme above)</div>`;
+    const cats=prefs.color==='sex'?[['f','Female'],['m','Male']]:(colorMeta.demogCats||[]).map(c=>[c,c]);
+    cats.forEach(([k,lbl])=>{h+=paletteSelect(prefs.color,k,lbl);});
+    h+=`<div style="margin-bottom:8px;"></div>`;
+  }
+  // ── Label rows (ordered, one component per row) ──
+  h+=`<div class="sec-lbl">Label rows (top → bottom)</div><div style="margin-bottom:10px;">`;
+  const enabled=prefs.labelRows||[];
+  enabled.forEach((k,i)=>{
+    const lbl=(LABEL_COMPONENTS.find(c=>c[0]===k)||[k,k])[1];
+    h+=`<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+      <span style="flex:1;font-size:11px;font-weight:600;color:var(--accent);">${i+1}. ${lbl}</span>
+      <button class="chip" onclick="moveLabelComp('${k}',-1)"${i===0?' disabled style="opacity:.3"':''}>↑</button>
+      <button class="chip" onclick="moveLabelComp('${k}',1)"${i===enabled.length-1?' disabled style="opacity:.3"':''}>↓</button>
+      <button class="chip" onclick="toggleLabelComp('${k}')" style="color:var(--danger)">✕</button>
+    </div>`;
+  });
+  const avail=LABEL_COMPONENTS.filter(c=>!enabled.includes(c[0]));
+  if(avail.length){
+    h+=`<div style="font-size:9px;color:var(--dim);margin:6px 0 4px;">Add a row:</div><div style="display:flex;flex-wrap:wrap;gap:6px;">`;
+    avail.forEach(([k,lbl])=>{h+=`<button class="chip" onclick="toggleLabelComp('${k}')">+ ${lbl}</button>`;});
+    h+=`</div>`;
+  }
+  h+=`</div>`;
+  // ── Row 1 style ──
+  h+=`<div class="sec-lbl">Row 1 style</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+    <button class="chip${prefs.labelBoldRow1?' active':''}" onclick="toggleFontFlag('labelBoldRow1')">Bold</button>
+    <button class="chip${prefs.labelBigRow1?' active':''}" onclick="toggleFontFlag('labelBigRow1')">Larger</button>
+  </div>`;
+  document.getElementById('prefs-content').innerHTML=h;
+}
+function setPref(key,val){
+  const relayout=(key==='cluster');
+  prefs[key]=val; savePrefs(); buildPrefsPanel();
+  applyPrefs(relayout);
+}
+function toggleLabelComp(k){
+  const rows=prefs.labelRows||[]; const i=rows.indexOf(k);
+  if(i>=0) rows.splice(i,1); else rows.push(k);
+  prefs.labelRows=rows; savePrefs(); buildPrefsPanel(); applyPrefs(false);
+}
+function moveLabelComp(k,dir){
+  const rows=prefs.labelRows||[]; const i=rows.indexOf(k); if(i<0) return;
+  const j=i+dir; if(j<0||j>=rows.length) return;
+  [rows[i],rows[j]]=[rows[j],rows[i]];
+  prefs.labelRows=rows; savePrefs(); buildPrefsPanel(); applyPrefs(false);
+}
+function toggleFontFlag(k){ prefs[k]=!prefs[k]; savePrefs(); buildPrefsPanel(); applyPrefs(false); }
+function paletteSelect(driver,catKey,label){
+  const cur=(prefs.catPalettes||{})[driver+':'+catKey]||'auto';
+  const esc=String(catKey).replace(/'/g,"\\'");
+  let opts=`<option value="auto"${cur==='auto'?' selected':''}>Auto (scheme)</option>`;
+  Object.entries(PALETTES).forEach(([k,p])=>{opts+=`<option value="${k}"${cur===k?' selected':''}>${p.label}</option>`;});
+  return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+    <span style="flex:1;font-size:11px;">${label}</span>
+    <select class="field-sel" style="width:auto;max-width:60%;font-size:10px;padding:4px 6px;" onchange="setCatPalette('${driver}','${esc}',this.value)">${opts}</select></div>`;
+}
+function setCatPalette(driver,catKey,val){
+  if(!prefs.catPalettes) prefs.catPalettes={};
+  if(val==='auto') delete prefs.catPalettes[driver+':'+catKey]; else prefs.catPalettes[driver+':'+catKey]=val;
+  savePrefs(); applyPrefs(false);
+}
+function applyPrefs(relayout){
+  if(relayout){positions={};velocities={};} // force a fresh layout
+  const map={network:['net-svg','net-c'],recording:['evt-svg','evt-c']};
+  const t=map[currentView];
+  if(t){
+    if(relayout) scheduleLayout(t[0],t[1]);
+    else {renderSVG(t[0]); fitToContent(t[0]);}
+  }
+}
+
 // Double-tap/click to reset pan+zoom
 function resetPanZoom(svgId){
   const pz=panZoom[svgId];
@@ -1267,13 +1939,43 @@ function resetPanZoom(svgId){
 }
 
 function tapNode(id,evt){
+  if(currentView==='network'){evt.stopPropagation();showAnimalInfo(id);return;}
   if(currentView!=='recording') return;
   closeTip();
   evt.stopPropagation();
+  // Completing a pending redirection: this tap is the redirect target
+  if(pendingRedirect){
+    const {recIdx,redirectorId}=pendingRedirect;
+    pendingRedirect=null;
+    if(id===redirectorId){updateHint();return;} // can't redirect to self
+    openRedirectionSheet(recIdx, redirectorId, id);
+    return;
+  }
+  // Generic "unknown" node: pop a counter (how many) before including it
+  if(isGeneric(id)){
+    const removing=(multiMode&&(multiA1.includes(id)||multiA2.includes(id)))||(!multiMode&&an1Id===id);
+    if(removing){ selectParticipant(id,evt); return; }
+    openGenCounter(id,()=>selectParticipant(id,evt));
+    return;
+  }
+  selectParticipant(id,evt);
+}
+function selectParticipant(id,evt){
+  // Multi-select mode: accumulate initiators / recipients
+  if(multiMode){
+    if(!activeEvent) startEvent();
+    const arr=multiSide==='an1'?multiA1:multiA2;
+    const other=multiSide==='an1'?multiA2:multiA1;
+    if(other.includes(id)) return; // an animal can't be on both sides
+    const idx=arr.indexOf(id);
+    if(idx>=0) arr.splice(idx,1); else arr.push(id);
+    updateHint(); renderSVG('evt-svg');
+    return;
+  }
   // Auto-start a new event on first tap if none active
   if(!activeEvent) startEvent();
   if(!an1Id){
-    const involved=records.map((r,i)=>({r,i})).filter(({r})=>r.an1Id===id||r.an2Id===id||parseIds(r.tpAn3).includes(id)||parseIds(r.tpAn4).includes(id));
+    const involved=records.map((r,i)=>({r,i})).filter(({r})=>a1List(r).includes(id)||a2List(r).includes(id)||parseIds(r.tpAn3).includes(id)||parseIds(r.tpAn4).includes(id));
     if(involved.length>0){
       showNodePicker(id,involved,evt);
     } else {
@@ -1286,6 +1988,32 @@ function tapNode(id,evt){
     openSheet(false);
   }
 }
+// Counter popup for generic-node participation
+let genCounterId=null,genCounterVal=1,genCounterCb=null;
+function openGenCounter(id,cb){
+  closeAllPopovers();
+  genCounterId=id; genCounterCb=cb; genCounterVal=pendingGenCounts[id]||1;
+  document.getElementById('gen-counter-title').textContent='How many '+genericLabel(id)+'?';
+  document.getElementById('gen-counter-val').textContent=genCounterVal;
+  document.getElementById('gen-counter').style.display='block';
+}
+function genCounterStep(d){ genCounterVal=Math.max(1,genCounterVal+d); document.getElementById('gen-counter-val').textContent=genCounterVal; }
+function genCounterOk(){
+  if(genCounterId) pendingGenCounts[genCounterId]=genCounterVal;
+  document.getElementById('gen-counter').style.display='none';
+  const cb=genCounterCb; genCounterCb=null; if(cb) cb();
+}
+function closeGenCounter(){document.getElementById('gen-counter').style.display='none';genCounterCb=null;}
+function genCountRec(rec,id){return (rec&&rec.genCounts&&rec.genCounts[id])||1;}
+// Sheet header label: name·dye for real animals, "category ×N" for generics (uses pendingGenCounts)
+function sheetPartLabel(id){
+  if(isGeneric(id)){const c=pendingGenCounts[id]||1;return genericLabel(id)+(c>1?' ×'+c:'');}
+  const a=INDS.find(i=>i.id===id); if(!a) return id||'';
+  return (a.name&&a.dye)?a.name+'·'+a.dye:(a.name||a.dye||a.id);
+}
+// Sheet/CSV tokens for participants (generic = "UNK:cat×N" / "cat (unknown)×N")
+function syncPartId(rec,id){if(isGeneric(id)){const c=genCountRec(rec,id);return 'UNK:'+genericLabel(id)+(c>1?'×'+c:'');}return id;}
+function syncPartName(rec,id,nameFn){if(isGeneric(id)){const c=genCountRec(rec,id);return genericLabel(id)+' (unknown)'+(c>1?'×'+c:'');}return nameFn?nameFn(id):nameOf(id);}
 
 function showNodePicker(nodeId,involved,evt){
   const labels=computeLabels();
@@ -1293,9 +2021,9 @@ function showNodePicker(nodeId,involved,evt){
   const items=document.getElementById('picker-items');
   // Build option list
   let html=`<div class="picker-item" style="color:var(--accent)" onclick="selectAn1FromPicker('${nodeId}')">Select as An1 for new record</div>`;
+  html+=`<div class="picker-item" onclick="closePicker();showAnimalInfo('${nodeId}')">ℹ Animal info</div>`;
   involved.forEach(({r,i})=>{
-    const a1=INDS.find(x=>x.id===r.an1Id),a2=r.an2Id?INDS.find(x=>x.id===r.an2Id):null;
-    const pair=a2?`${a1.name}–${a2.name}`:`${a1.name} (solo)`;
+    const pair=a2List(r).length?`${sideNames(a1List(r),r)}–${sideNames(a2List(r),r)}`:`${sideNames(a1List(r),r)} (solo)`;
     html+=`<div class="picker-item" onclick="editRecord(${i});closePicker()">Edit #${labels[i]}: ${pair}</div>`;
   });
   items.innerHTML=html;
@@ -1305,7 +2033,26 @@ function showNodePicker(nodeId,involved,evt){
 }
 function selectAn1FromPicker(id){an1Id=id; updateHint(); renderSVG('evt-svg'); closePicker();}
 function closePicker(){document.getElementById('node-picker').style.display='none';}
-function closeAllPopovers(){closeTip(); closePicker();}
+function closeAllPopovers(){closeTip(); closePicker(); closeGenCounter(); closeGenPicker();}
+// Add-generic category picker (Both: all roster demog categories + Unknown)
+function buildGenPickerItems(){
+  const cats=[...new Set(ROSTER.filter(r=>r.current_group===activeGroup).map(r=>r.demog_cat))].filter(Boolean).sort();
+  cats.push('unknown');
+  document.getElementById('gen-picker-items').innerHTML=cats.map(c=>{
+    const present=!!INDS.find(i=>i.id==='?'+c);
+    const esc=String(c).replace(/'/g,"\\'");
+    return `<div class="picker-item" onclick="toggleGeneric('${esc}')">${present?'✓ ':''}${c==='unknown'?'Unknown':c}</div>`;
+  }).join('');
+}
+function openGenPicker(evt){
+  closeAllPopovers(); buildGenPickerItems();
+  const picker=document.getElementById('gen-picker'); picker.style.display='block';
+  const x=evt?evt.clientX:120,y=evt?evt.clientY:120;
+  picker.style.left=Math.min(x,window.innerWidth-210)+'px';
+  picker.style.top=Math.max(Math.min(y,window.innerHeight-300),10)+'px';
+}
+function closeGenPicker(){const el=document.getElementById('gen-picker');if(el)el.style.display='none';}
+function toggleGeneric(cat){ const id='?'+cat; if(INDS.find(i=>i.id===id)) removeGeneric(id); else addGeneric(cat); buildGenPickerItems(); }
 
 // ═══════════════════════════════════════════
 //  EDIT EXISTING RECORD
@@ -1314,6 +2061,8 @@ function editRecord(i){
   const rec=records[i];
   sheetEditIdx=i; sheetLinkedRef=null;
   sheetSolo=rec.solo; sheetAn1=rec.an1Id; sheetAn2=rec.an2Id||null;
+  sheetA1Ids=a1List(rec).slice(); sheetA2Ids=a2List(rec).slice(); // preserve membership
+  pendingGenCounts={...(rec.genCounts||{})}; // preserve generic counts
   // Restore Sets
   const toSetE=v=>v instanceof Set?v:new Set(Array.isArray(v)?v:[]);
   const toSetPairE=o=>o&&(o.an1!==undefined)?{an1:toSetE(o.an1),an2:toSetE(o.an2)}:{an1:toSetE(o),an2:new Set()};
@@ -1336,8 +2085,10 @@ function editRecord(i){
   activeTab='aggsub';
   const a1=INDS.find(x=>x.id===sheetAn1),a2=sheetAn2?INDS.find(x=>x.id===sheetAn2):null;
   const labels=computeLabels();
-  document.getElementById('sheet-pair').textContent=(a1.name&&a1.dye?a1.name+'·'+a1.dye:a1.name||a1.dye||a1.id)+(a2?' — '+(a2.name&&a2.dye?a2.name+'·'+a2.dye:a2.name||a2.dye||a2.id):' (solo)');
-  document.getElementById('sheet-meta').textContent=`Editing record #${labels[i]}`;
+  const em1=(sheetA1Ids.length>1)?sideNames(sheetA1Ids):sheetPartLabel(sheetAn1);
+  const em2=a2?((sheetA2Ids.length>1)?sideNames(sheetA2Ids):sheetPartLabel(sheetAn2)):null;
+  document.getElementById('sheet-pair').textContent=em1+(em2?' — '+em2:' (solo)');
+  document.getElementById('sheet-meta').textContent=`Editing record #${labels[i]}`+(sheetA1Ids.length>1||sheetA2Ids.length>1?' · multi (membership fixed)':'');
   document.getElementById('swap-btn').style.display=sheetSolo?'none':'inline-block';
   buildTabs(); buildContent();
   document.getElementById('sheet-overlay').style.display='flex';
@@ -1347,20 +2098,38 @@ function updateHint(){
   const hintBar=document.getElementById('hint-bar');
   const hintTxt=document.getElementById('hint-text');
   const soloBtn=document.getElementById('solo-btn');
+  const multiBtn=document.getElementById('multi-btn');
   const badge=document.getElementById('an1-badge');
+  badge.style.display='none';
+  if(multiMode){
+    soloBtn.style.display='none';
+    multiBtn.style.display='inline-block'; multiBtn.textContent='✕ Multi';
+    const n1=sideNames(multiA1)||'—', n2=sideNames(multiA2)||'—';
+    if(multiSide==='an1'){
+      hintBar.className='hint hint-a1';
+      hintTxt.innerHTML=`Initiators: <b style="color:var(--accent)">${n1}</b> — tap nodes
+        <button class="btn-solo" style="margin-left:6px" onclick="event.stopPropagation();multiNext()">Recipients →</button>`;
+    } else {
+      hintBar.className='hint hint-a2';
+      hintTxt.innerHTML=`<span style="color:var(--accent)">${n1}</span> → <b style="color:var(--warn)">${n2}</b> — tap nodes
+        <button class="btn-solo" style="margin-left:6px" onclick="event.stopPropagation();multiBack()">← Init</button>
+        <button class="btn-solo" onclick="event.stopPropagation();multiOpenSheet()">Record →</button>`;
+    }
+    return;
+  }
   if(!activeEvent){
     hintBar.className='hint hint-a1';
     hintTxt.innerHTML='Tap a node to start a new event';
-    soloBtn.style.display='none'; badge.style.display='none';
+    soloBtn.style.display='none'; multiBtn.style.display='none';
   } else if(!an1Id){
     hintBar.className='hint hint-a1';
     hintTxt.innerHTML='Tap a node to select <span style="color:var(--accent)">An1</span>';
-    soloBtn.style.display='none'; badge.style.display='none';
+    soloBtn.style.display='none'; multiBtn.style.display='inline-block'; multiBtn.textContent='⊕ Multi';
   } else {
     const ind=INDS.find(i=>i.id===an1Id);
     hintBar.className='hint hint-a2';
     hintTxt.innerHTML=`<b style="color:var(--accent)">${ind.name}</b> — tap <span style="color:var(--warn)">An2</span> or diamond:`;
-    soloBtn.style.display='inline-block';
+    soloBtn.style.display='inline-block'; multiBtn.style.display='none';
     badge.textContent=ind.name; badge.style.display='block';
   }
 }
@@ -1372,14 +2141,40 @@ function freshSel(){return{agg:{an1:new Set(),an2:new Set()},sub:{an1:new Set(),
 function freshQua(){return{agg:{an1:new Set(),an2:new Set()},sub:{an1:new Set(),an2:new Set()},aff:{an1:new Set(),an2:new Set()},ix:new Set()};}
 function freshAffect(){return{an1:new Set(),an2:new Set()};}
 
+// ── Multi-select mode (Feature #5) ──────────────────────────────────
+function toggleMulti(){
+  if(multiMode){
+    multiMode=false; multiA1=[]; multiA2=[]; multiSide='an1';
+  } else {
+    multiMode=true; multiSide='an1'; multiA1=[]; multiA2=[]; an1Id=null; an2Id=null;
+    if(!activeEvent) startEvent();
+  }
+  updateHint(); renderSVG('evt-svg');
+}
+function multiNext(){ if(!multiA1.length) return; multiSide='an2'; updateHint(); renderSVG('evt-svg'); }
+function multiBack(){ multiSide='an1'; updateHint(); renderSVG('evt-svg'); }
+function multiOpenSheet(){
+  if(!multiA1.length||!multiA2.length) return;
+  sheetSolo=false; sheetEditIdx=null; sheetLinkedRef=null;
+  sheetA1Ids=multiA1.slice(); sheetA2Ids=multiA2.slice();
+  sheetAn1=multiA1[0]; sheetAn2=multiA2[0];
+  sel=freshSel(); selQua=freshQua(); selAffect=freshAffect();
+  dur='lt5'; tpAn3=''; tpAn4=''; recNotes=''; activeTab='aggsub';
+  document.getElementById('sheet-pair').textContent=`${sideNames(sheetA1Ids)} — ${sideNames(sheetA2Ids)}`;
+  document.getElementById('sheet-meta').textContent=`${sheetA1Ids.length} initiator${sheetA1Ids.length>1?'s':''} · ${sheetA2Ids.length} recipient${sheetA2Ids.length>1?'s':''} (behaviors shared per side)`;
+  document.getElementById('swap-btn').style.display='inline-block';
+  buildTabs(); buildContent();
+  document.getElementById('sheet-overlay').style.display='flex';
+}
+
 function openSheet(solo){
   sheetSolo=solo; sheetAn1=an1Id; sheetAn2=solo?null:an2Id;
+  sheetA1Ids=[]; sheetA2Ids=[];
   sheetEditIdx=null; sheetLinkedRef=null;
   sel=freshSel(); selQua=freshQua(); selAffect=freshAffect();
   dur='lt5'; tpAn3=''; tpAn4=''; recNotes='';
   activeTab='aggsub';
-  const a1=INDS.find(i=>i.id===sheetAn1),a2=sheetAn2?INDS.find(i=>i.id===sheetAn2):null;
-  document.getElementById('sheet-pair').textContent=(a1.name&&a1.dye?a1.name+'·'+a1.dye:a1.name||a1.dye||a1.id)+(a2?' — '+(a2.name&&a2.dye?a2.name+'·'+a2.dye:a2.name||a2.dye||a2.id):' (solo)');
+  document.getElementById('sheet-pair').textContent=sheetPartLabel(sheetAn1)+(sheetAn2?' — '+sheetPartLabel(sheetAn2):' (solo)');
   document.getElementById('sheet-meta').textContent=solo?'Solo / undirected record':'Select behaviors, then save';
   document.getElementById('swap-btn').style.display=solo?'none':'inline-block';
   buildTabs(); buildContent();
@@ -1388,16 +2183,19 @@ function openSheet(solo){
 
 function closeSheet(){
   document.getElementById('sheet-overlay').style.display='none';
-  if(sheetEditIdx===null){an1Id=null; an2Id=null; updateHint(); renderSVG('evt-svg');}
-  sheetEditIdx=null; sheetLinkedRef=null;
+  if(sheetEditIdx===null && !multiMode){an1Id=null; an2Id=null; updateHint(); renderSVG('evt-svg');}
+  sheetEditIdx=null; sheetLinkedRef=null; sheetA1Ids=[]; sheetA2Ids=[];
 }
 
 function swapAnimals(){
   [sheetAn1,sheetAn2]=[sheetAn2,sheetAn1];
+  [sheetA1Ids,sheetA2Ids]=[sheetA2Ids,sheetA1Ids];
   ['agg','sub','aff'].forEach(d=>{[sel[d].an1,sel[d].an2]=[sel[d].an2,sel[d].an1];});
   [selAffect.an1,selAffect.an2]=[selAffect.an2,selAffect.an1];
   const a1=INDS.find(i=>i.id===sheetAn1),a2=INDS.find(i=>i.id===sheetAn2);
-  document.getElementById('sheet-pair').textContent=(a1.name&&a1.dye?a1.name+'·'+a1.dye:a1.name||a1.dye||a1.id)+' — '+(a2.name&&a2.dye?a2.name+'·'+a2.dye:a2.name||a2.dye||a2.id);
+  const nm1=(sheetA1Ids&&sheetA1Ids.length>1)?sideNames(sheetA1Ids):(a1.name&&a1.dye?a1.name+'·'+a1.dye:a1.name||a1.dye||a1.id);
+  const nm2=(sheetA2Ids&&sheetA2Ids.length>1)?sideNames(sheetA2Ids):(a2.name&&a2.dye?a2.name+'·'+a2.dye:a2.name||a2.dye||a2.id);
+  document.getElementById('sheet-pair').textContent=nm1+' — '+nm2;
   buildContent();
 }
 
@@ -1413,8 +2211,9 @@ function buildContent(){
   const scr=document.getElementById('sheet-scroll');
   const a1=INDS.find(i=>i.id===sheetAn1);
   const a2=sheetAn2?INDS.find(i=>i.id===sheetAn2):null;
-  const n1=a1.name+(a1.dye?'·'+a1.dye:'');
-  const n2=a2?(a2.name+(a2.dye?'·'+a2.dye:'')):null;
+  // With multiple animals per side, show the joined list; otherwise name·dye
+  const n1=(sheetA1Ids&&sheetA1Ids.length>1)?sideNames(sheetA1Ids):(a1.name+(a1.dye?'·'+a1.dye:''));
+  const n2=a2?((sheetA2Ids&&sheetA2Ids.length>1)?sideNames(sheetA2Ids):(a2.name+(a2.dye?'·'+a2.dye:''))):null;
   let h='';
 
   if(activeTab==='aggsub'){
@@ -1600,6 +2399,13 @@ function commitRecord(){
     solo:sheetSolo,linkedRef:sheetLinkedRef,
     an1Id:sheetAn1,an2Id:sheetAn2||null,
   };
+  // Multi-animal lists (Feature #5). Fall back to the single ids when not multi.
+  recData.an1Ids=(sheetA1Ids&&sheetA1Ids.length)?sheetA1Ids.slice():(sheetAn1?[sheetAn1]:[]);
+  recData.an2Ids=(sheetA2Ids&&sheetA2Ids.length)?sheetA2Ids.slice():(sheetAn2?[sheetAn2]:[]);
+  // Generic counts: keep only counts for generic participants in this record
+  const gc={};
+  [...recData.an1Ids,...recData.an2Ids].forEach(id=>{if(isGeneric(id)&&pendingGenCounts[id])gc[id]=pendingGenCounts[id];});
+  recData.genCounts=gc;
 
   if(sheetEditIdx!==null){
     // Update existing record, preserve id/ts/groupId
@@ -1621,8 +2427,12 @@ function commitRecord(){
     return;
   }
 
-  if(sheetEditIdx===null){an1Id=null;an2Id=null;}
-  sheetEditIdx=null;sheetLinkedRef=null;
+  if(sheetEditIdx===null){
+    an1Id=null;an2Id=null;
+    // a fresh commit ends multi-select mode
+    multiMode=false;multiA1=[];multiA2=[];multiSide='an1';
+  }
+  sheetEditIdx=null;sheetLinkedRef=null;sheetA1Ids=[];sheetA2Ids=[];pendingGenCounts={};
   updateHint();updateRecPanel();renderSVG('evt-svg');doFlash();
   saveToLocalStorage();
 }
@@ -1634,30 +2444,36 @@ function updateRecPanel(){
   const panel=document.getElementById('rec-panel');
   const panelRecs=recNavIdx>=0&&events[recNavIdx]?events[recNavIdx].records:records;
   const isBrowsing=recNavIdx>=0;
-  if(!panelRecs.length){panel.style.display='none';return;}
+  if(!panelRecs.length){
+    panel.style.display='none';
+    if(currentView==='recording') maybeFit('evt-svg'); // canvas grew back
+    return;
+  }
   panel.style.display='flex';
   const labels=computeLabelsFor(panelRecs);
 
-  // Build visual list — group simultaneous records together
+  // Build visual list — group simultaneous records together.
+  // Robust to non-contiguous group members (can happen after ungroup):
+  // render a group's members as a block at the first member's position.
   let html='';
-  let i=0;
-  while(i<panelRecs.length){
-    const rec=panelRecs[i];
+  const rendered=new Set();
+  panelRecs.forEach((rec,i)=>{
+    if(rendered.has(i)) return;
     const gid=rec.groupId;
     const groupIdxs=gid?panelRecs.map((r,ri)=>ri).filter(ri=>panelRecs[ri].groupId===gid):[i];
-    const isGroup=gid&&groupIdxs.length>1&&groupIdxs[0]===i;
-
-    if(isGroup){
+    if(gid&&groupIdxs.length>1){
       html+=`<div style="border-left:3px solid var(--tp);margin-left:6px;">`;
-      groupIdxs.forEach(ri=>{ html+=recRowHtml(ri,labels,panelRecs,isBrowsing); });
+      groupIdxs.forEach(ri=>{ rendered.add(ri); html+=recRowHtml(ri,labels,panelRecs,isBrowsing); });
       html+=`</div>`;
-      i+=groupIdxs.length;
     } else {
+      rendered.add(i);
       html+=recRowHtml(i,labels,panelRecs,isBrowsing);
-      i++;
     }
-  }
+  });
   document.getElementById('rec-list').innerHTML=html;
+  // Re-fit after the panel's final height is known, but only if the canvas size
+  // actually changed (panel grew/shrank) — leaves manual pan/zoom untouched.
+  if(currentView==='recording') maybeFit('evt-svg');
 }
 
 function recRowHtml(i,labels,recs,readOnly){
@@ -1665,7 +2481,7 @@ function recRowHtml(i,labels,recs,readOnly){
   const rec=recs[i];
   const a1=INDS.find(x=>x.id===rec.an1Id);
   const a2=rec.an2Id?INDS.find(x=>x.id===rec.an2Id):null;
-  const pair=a2?`${a1.name} — ${a2.name}`:`${a1.name} (solo)`;
+  const pair=a2List(rec).length?`${sideNames(a1List(rec),rec)} — ${sideNames(a2List(rec),rec)}`:`${sideNames(a1List(rec),rec)} (solo)`;
   const {dots,lines}=behSummaryFull(rec);
   const durLbl=DURATIONS.find(d=>d.id===rec.duration)?.label||'';
   const time=new Date(rec.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -1682,12 +2498,17 @@ function recRowHtml(i,labels,recs,readOnly){
   if(rec.notes) tags.push(`<span class="rec-tag" style="background:var(--hi);color:var(--dim)">📝</span>`);
 
 
-  // Show ⊕ Group button on all rows except self, only while a drag is active
-  const isDragging=dragSrc!==null;
   const isMe=dragSrc===i;
-  const groupBtn=(isDragging&&!isMe)
-    ?`<button class="group-with-btn" onclick="event.stopPropagation();mergeRecords(${dragSrc},${i})">⊕ Group</button>`
-    :'';
+  // Tap-to-group: pick a source row (⊕ Group), then tap ⊕ Here on another row.
+  // Works on both mouse and touch (no native-drag dependency).
+  let groupBtn;
+  if(groupSrc===null){
+    groupBtn=`<button class="group-with-btn" onclick="event.stopPropagation();startGroup(${i})">⊕ Group</button>`;
+  } else if(groupSrc===i){
+    groupBtn=`<button class="group-with-btn" style="background:rgba(247,183,49,.18);border-color:var(--warn);color:var(--warn)" onclick="event.stopPropagation();cancelGroup()">✕ Cancel</button>`;
+  } else {
+    groupBtn=`<button class="group-with-btn" style="background:rgba(78,205,196,.18);border-color:var(--accent);color:var(--accent)" onclick="event.stopPropagation();mergeRecords(${groupSrc},${i})">⊕ Here</button>`;
+  }
   const ungroupBtn=rec.groupId
     ?`<button class="group-with-btn" style="color:var(--dim);border-color:var(--border);margin-top:2px" onclick="event.stopPropagation();ungroup(${i})">Ungroup</button>`
     :'';
@@ -1704,11 +2525,11 @@ function recRowHtml(i,labels,recs,readOnly){
       </div>
     </div>`;
   }
-  return `<div class="rec-row${isMe?' dragging':''}"
-    draggable="true"
+  return `<div class="rec-row${isMe?' dragging':''}"${groupSrc===i?' style="background:rgba(247,183,49,.08)"':''}
+    data-idx="${i}" draggable="true"
     ondragstart="dStart(${i})" ondragover="dOver(event,${i})" ondragend="dEnd()" ondrop="dDrop(event,${i})"
-    ontouchstart="tStart(event,${i})" ontouchmove="tMove(event)" ontouchend="tEnd(${i})"
-    onclick="editRecord(${i})">
+    ontouchstart="rowTouchStart(event,${i})" ontouchmove="rowTouchMove(event)" ontouchend="rowTouchEnd(event,${i})"
+    onclick="rowClick(${i})">
     <span class="drag-handle" onclick="event.stopPropagation()">⠿</span>
     <div class="rec-body">
       <div class="rec-num">#${labels[i]} · ${time}</div>
@@ -1724,13 +2545,32 @@ function recRowHtml(i,labels,recs,readOnly){
   </div>`;
 }
 
+function startGroup(i){groupSrc=i; updateRecPanel();}
+function cancelGroup(){groupSrc=null; updateRecPanel();}
+
 function mergeRecords(srcIdx,tgtIdx){
   const srcRec=records[srcIdx],tgtRec=records[tgtIdx];
-  if(tgtRec.groupId) srcRec.groupId=tgtRec.groupId;
-  else if(srcRec.groupId) tgtRec.groupId=srcRec.groupId;
-  else{const gid='G-'+Date.now();srcRec.groupId=gid;tgtRec.groupId=gid;}
-  dragSrc=null;
-  updateRecPanel(); renderSVG('evt-svg');
+  if(!srcRec||!tgtRec||srcIdx===tgtIdx){groupSrc=null;updateRecPanel();return;}
+  // Determine the shared groupId (merge two existing groups if needed)
+  let gid;
+  if(srcRec.groupId&&tgtRec.groupId&&srcRec.groupId!==tgtRec.groupId){
+    gid=tgtRec.groupId;
+    const old=srcRec.groupId;
+    records.forEach(r=>{if(r.groupId===old)r.groupId=gid;});
+  } else {
+    gid=tgtRec.groupId||srcRec.groupId||('G-'+Date.now());
+  }
+  srcRec.groupId=gid; tgtRec.groupId=gid;
+  // Keep all members of this group contiguous (block placed at first member's slot)
+  const members=records.filter(r=>r.groupId===gid);
+  const out=[]; let inserted=false;
+  records.forEach(r=>{
+    if(r.groupId===gid){ if(!inserted){out.push(...members); inserted=true;} }
+    else out.push(r);
+  });
+  records.length=0; records.push(...out);
+  groupSrc=null; dragSrc=null;
+  updateRecPanel(); renderSVG('evt-svg'); saveToLocalStorage();
 }
 
 function ungroup(i){
@@ -1740,7 +2580,8 @@ function ungroup(i){
     const remaining=records.filter(r=>r.groupId===gid);
     if(remaining.length===1) remaining[0].groupId=null;
   }
-  updateRecPanel(); renderSVG('evt-svg');
+  groupSrc=null;
+  updateRecPanel(); renderSVG('evt-svg'); saveToLocalStorage();
 }
 
 function behSummaryFull(rec){
@@ -1755,14 +2596,14 @@ function behSummaryFull(rec){
     dots.push(`<span class="dot" style="background:${domColors[d]}"></span>`);
     const parts=[];
     if(a1s.size){
-      const an1=INDS.find(i=>i.id===rec.an1Id);
+      const lbl=sideNames(a1List(rec),rec)||'An1';
       const names=[...a1s].map(bid=>(BEHAVIORS[d].find(x=>x.id===bid)||{label:bid}).label).join(', ');
-      parts.push(`<span style="color:${domColors[d]}">${an1?an1.name:'An1'}</span>: ${names}`);
+      parts.push(`<span style="color:${domColors[d]}">${lbl}</span>: ${names}`);
     }
     if(a2s.size){
-      const an2=INDS.find(i=>i.id===rec.an2Id);
+      const lbl=sideNames(a2List(rec),rec)||'An2';
       const names=[...a2s].map(bid=>(BEHAVIORS[d].find(x=>x.id===bid)||{label:bid}).label).join(', ');
-      parts.push(`<span style="color:var(--warn)">${an2?an2.name:'An2'}</span>: ${names}`);
+      parts.push(`<span style="color:var(--warn)">${lbl}</span>: ${names}`);
     }
     if(parts.length) lines.push(parts.join(' · '));
   });
@@ -1780,23 +2621,63 @@ function delRec(i){
     const remaining=records.filter(r=>r.groupId===gid);
     if(remaining.length===1) remaining[0].groupId=null;
   }
-  updateRecPanel();renderSVG('evt-svg');
+  groupSrc=null;
+  updateRecPanel();renderSVG('evt-svg');saveToLocalStorage();
 }
 
 // ═══════════════════════════════════════════
 //  DRAG REORDER (merge via ⊕ Group button)
 // ═══════════════════════════════════════════
+// Move records[from] so it lands at the drop target `to`:
+// dragging down → after the target row; dragging up → before it. Symmetric both ways.
+function moveRecord(from,to){
+  if(from==null||to==null||from===to) return false;
+  if(from<0||to<0||from>=records.length||to>=records.length) return false;
+  const moved=records.splice(from,1)[0];
+  records.splice(to,0,moved); // `to` is interpreted in the post-splice array
+  return true;
+}
 function dStart(i){dragSrc=i; updateRecPanel();}
 function dOver(e,i){e.preventDefault(); dragOver=i;}
 function dEnd(){dragSrc=null; dragOver=null; updateRecPanel();}
 function dDrop(e,i){
   e.preventDefault();
   if(dragSrc===null||dragSrc===i){dEnd();return;}
-  const moved=records.splice(dragSrc,1)[0];
-  const insertAt=dragSrc<i?i-1:i;
-  records.splice(insertAt,0,moved);
+  const ok=moveRecord(dragSrc,i);
   dEnd();
-  updateRecPanel(); renderSVG('evt-svg');
+  if(ok){renderSVG('evt-svg'); saveToLocalStorage();}
+}
+
+// ── Row touch dispatch: reliable tap-to-edit + drag-to-reorder ──────────
+// A record row is a tap target inside a scrollable list AND a drag source.
+// On touch, route by what was touched and by movement so a tap deterministically
+// opens the editor instead of being eaten by the scroll/gesture heuristics.
+let rowTapIdx=null, rowTapX=0, rowTapY=0, rowTapMoved=false, rowIsDrag=false, lastTouchEditT=0;
+function rowTouchStart(e,i){
+  const t=e.touches[0];
+  rowTapX=t.clientX; rowTapY=t.clientY; rowTapMoved=false; rowTapIdx=null;
+  if(e.target.classList.contains('drag-handle')){ rowIsDrag=true; tStart(e,i); return; }
+  rowIsDrag=false;
+  if(e.target.closest('button')) return; // let the button's own handler run
+  rowTapIdx=i;
+}
+function rowTouchMove(e){
+  if(rowIsDrag){ tMove(e); return; }
+  const t=e.touches[0];
+  if(Math.abs(t.clientX-rowTapX)>10||Math.abs(t.clientY-rowTapY)>10) rowTapMoved=true; // it's a scroll, not a tap
+}
+function rowTouchEnd(e,i){
+  if(rowIsDrag){ rowIsDrag=false; tEnd(); return; }
+  if(rowTapIdx===i && !rowTapMoved){
+    lastTouchEditT=Date.now();
+    e.preventDefault();      // suppress the synthetic click so we don't open twice
+    editRecord(i);
+  }
+  rowTapIdx=null;
+}
+function rowClick(i){
+  if(Date.now()-lastTouchEditT<700) return; // already handled by touchend
+  editRecord(i);
 }
 
 // Touch drag (reorder only)
@@ -1816,21 +2697,24 @@ function tMove(e){
   e.preventDefault();
   const t=e.touches[0];
   touchClone.style.top=(t.clientY-18)+'px';
+  // Map the hovered DOM row back to its records[] index (DOM order != array
+  // order once groups are rendered as blocks), so the drop lands correctly.
   let over=null;
-  document.querySelectorAll('.rec-row').forEach((el,ri)=>{
+  document.querySelectorAll('#rec-list .rec-row').forEach(el=>{
     const r=el.getBoundingClientRect();
-    if(t.clientY>=r.top&&t.clientY<=r.bottom) over=ri;
+    if(t.clientY>=r.top&&t.clientY<=r.bottom){const v=parseInt(el.dataset.idx,10);if(!isNaN(v))over=v;}
   });
-  dragOver=over; updateRecPanel();
+  dragOver=over;
 }
 function tEnd(){
   if(touchClone){touchClone.remove();touchClone=null;}
+  let moved=false;
   if(touchDragIdx!==null&&dragOver!==null&&touchDragIdx!==dragOver){
-    const m=records.splice(touchDragIdx,1)[0];
-    records.splice(dragOver,0,m);
+    moved=moveRecord(touchDragIdx,dragOver);
   }
   touchDragIdx=null; dragSrc=null; dragOver=null;
   updateRecPanel();
+  if(moved){renderSVG('evt-svg'); saveToLocalStorage();}
 }
 
 // ═══════════════════════════════════════════
@@ -1875,14 +2759,19 @@ function buildRows(sess){
         ScanNum:       sess.scanNum||'',
         Session_Start: sess.startTime||'',
         Session_End:   sess.endTime||'',
+        Group_Notes:   sess.groupNotes||'',
+        DOS_Notes:     sess.dosNotes||'',
+        Births:        sess.births||'',
+        Individual_Notes: individualNotesStr(sess.individualNotes),
+        Session_Notes: sess.notes||'',
         Event:         ev.label,
         Record_Label:  labels[i],
         Timestamp:     rec.timestamp,
         GroupID:       rec.groupId||'',
-        An1_ID:        rec.an1Id,
-        An1_Name:      getName(rec.an1Id),
-        An2_ID:        rec.an2Id||'',
-        An2_Name:      rec.an2Id?getName(rec.an2Id):'',
+        An1_ID:        a1List(rec).map(id=>syncPartId(rec,id)).join(','),
+        An1_Name:      a1List(rec).map(id=>syncPartName(rec,id,getName)).join(','),
+        An2_ID:        a2List(rec).map(id=>syncPartId(rec,id)).join(','),
+        An2_Name:      a2List(rec).map(id=>syncPartName(rec,id,getName)).join(','),
         Solo:          rec.solo?'yes':'no',
         Duration:      DURATIONS.find(d=>d.id===rec.duration)?.label||'',
         LinkedToRecord:rec.linkedRef!=null?labels[rec.linkedRef]:'',
@@ -1909,13 +2798,82 @@ function buildRows(sess){
   });
   return rows;
 }
+// ═══ GROUP DASHBOARD (per-session notes) ═════════════════════════════
+const DASH_KEY='ethograph_dash_draft';
+const DASH_FIELD_MAP={group:'groupNotes',dos:'dosNotes',births:'births'};
+// When a session is active the dashboard edits ITS notes live; otherwise it
+// stages notes (a draft) that attach to the next session you begin.
+function dashRead(){
+  if(activeSession) return {group:activeSession.groupNotes||'',dos:activeSession.dosNotes||'',births:activeSession.births||'',individual:activeSession.individualNotes||{}};
+  return dashNotes;
+}
+function setDashField(key,val){
+  if(activeSession){ activeSession[DASH_FIELD_MAP[key]]=val; saveToLocalStorage(); }
+  else { dashNotes[key]=val; saveDashDraft(); }
+}
+function setDashIndiv(id,val){
+  const target=activeSession?(activeSession.individualNotes||(activeSession.individualNotes={})):dashNotes.individual;
+  if(val) target[id]=val; else delete target[id];
+  if(activeSession) saveToLocalStorage(); else saveDashDraft();
+}
+function populateDashboard(){
+  document.getElementById('dash-group').textContent=activeGroup||'(no group selected)';
+  document.getElementById('dash-demog').textContent=selectedInds.size?(selectedInds.size+' selected'):'Whole group';
+  document.getElementById('dash-count').textContent=INDS.filter(i=>!i.generic).length;
+  const d=dashRead();
+  document.getElementById('dash-group-notes').value=d.group||'';
+  document.getElementById('dash-dos-notes').value=d.dos||'';
+  document.getElementById('dash-births').value=d.births||'';
+  const banner=document.getElementById('dash-banner');
+  const beginBtn=document.getElementById('dash-begin-btn');
+  if(activeSession){
+    banner.innerHTML=`Editing notes for the live <b style="color:var(--aff)">${activeSession.label}</b> — changes save immediately.`;
+    beginBtn.textContent='Open Session →';
+  } else {
+    banner.textContent='Notes below attach to the next session you begin and sync with its data.';
+    beginBtn.textContent='Begin Session →';
+  }
+  buildDashIndivList();
+}
+function buildDashIndivList(){
+  const el=document.getElementById('dash-indiv-list'); if(!el) return;
+  if(!INDS.length){el.innerHTML='<span style="color:var(--dim);font-size:11px;">Select a group first.</span>';return;}
+  const map=dashRead().individual||{};
+  el.innerHTML=INDS.map(ind=>{
+    const label=ind.name?ind.name+(ind.dye?' · '+ind.dye:''):(ind.dye||ind.id);
+    const val=(map[ind.id]||'').replace(/"/g,'&quot;');
+    const has=(map[ind.id]||'').length>0;
+    return `<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">
+      <div onclick="showAnimalInfo('${ind.id}')" title="View roster info" style="flex-shrink:0;width:96px;font-size:11px;font-weight:600;color:${has?'var(--accent)':'var(--text)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;text-decoration:underline dotted var(--dim);">${label}</div>
+      <input class="field-in" value="${val}" oninput="setDashIndiv('${ind.id}',this.value)" placeholder="note…" style="flex:1;font-size:11px;">
+    </div>`;
+  }).join('');
+}
+function saveDashDraft(){ try{localStorage.setItem(DASH_KEY,JSON.stringify(dashNotes));}catch(e){} }
+function resetDashNotes(){
+  dashNotes={group:'',dos:'',births:'',individual:{}};
+  try{localStorage.removeItem(DASH_KEY);}catch(e){}
+}
+function beginSessionFromDashboard(){
+  if(!INDS.length){alert('Select a group first.');return;}
+  showView(activeSession?'session':'setup');
+}
+// Serialize per-animal notes as "Name: note; Name: note" for the sheet/CSV
+function individualNotesStr(map){
+  if(!map) return '';
+  return Object.keys(map).map(id=>{
+    const a=INDS.find(i=>i.id===id)||ROSTER.find(r=>r.id===id);
+    const name=a?(a.name||a.dye||id):id;
+    return `${name}: ${map[id]}`;
+  }).join('; ');
+}
+
 // ═══ SESSION & EVENT MANAGEMENT ══════════════════════════════════════
 function populateSetupForm(){
-  const da=[...activeDemogs];
   document.getElementById('setup-group').textContent=activeGroup||'(no group selected)';
-  document.getElementById('setup-demog').textContent=da.length?da.join(', '):'All';
+  document.getElementById('setup-demog').textContent=selectedInds.size?(selectedInds.size+' selected'):'Whole group';
   document.getElementById('setup-datetime').textContent=new Date().toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-  document.getElementById('sess-observer').value=sessObserver;
+  document.getElementById('sess-observer').value=sessObserver||currentObserver;
   document.getElementById('sess-datatype').value=sessDatatype;
   document.getElementById('sess-conditions').value=sessConditions;
   document.getElementById('sess-scan').value=sessScan;
@@ -1923,15 +2881,23 @@ function populateSetupForm(){
 }
 function startSession(){
   if(!INDS.length){alert('Load a roster and select a group first.');return;}
+  // Full reset of any prior recording/review state so a new session starts clean
+  // (guards against stale state after reviewing a past session — see Bug #6).
+  reviewSession=null; reviewEventIdx=0;
+  activeEvent=null; records=[]; events=[];
+  an1Id=null; an2Id=null; recNavIdx=-1;
+  sheetEditIdx=null; sheetLinkedRef=null; groupSrc=null; window._sessionEdit=null;
   sessObserver=document.getElementById('sess-observer').value.trim();
   sessDatatype=document.getElementById('sess-datatype').value;
   sessConditions=document.getElementById('sess-conditions').value;
   sessScan=document.getElementById('sess-scan').value.trim();
   sessNotes=document.getElementById('sess-notes').value.trim();
-  const da=[...activeDemogs];
   activeSession={id:'SESS-'+Date.now(),label:'Session '+(sessions.length+1),startTime:new Date().toISOString(),
-    observer:sessObserver,group:activeGroup,demog:da.length?da.join(', '):'All',
-    datatype:sessDatatype,conditions:sessConditions,scanNum:sessScan,notes:sessNotes,events:[]};
+    observer:sessObserver,group:activeGroup,demog:selectedInds.size?(selectedInds.size+' selected'):'Whole group',
+    datatype:sessDatatype,conditions:sessConditions,scanNum:sessScan,notes:sessNotes,
+    groupNotes:dashNotes.group||'',dosNotes:dashNotes.dos||'',births:dashNotes.births||'',
+    individualNotes:{...dashNotes.individual},events:[]};
+  resetDashNotes(); // notes are per-session — clear the staging draft
   events=[];
   showView('session');
   updateSessionView();
@@ -1972,17 +2938,18 @@ function updateSessionView(){
   document.getElementById('sess-end-time').value=fmtTime(sess2.endTime)||'';
 
   const lbl=document.getElementById('sess-ev-lbl'),list=document.getElementById('sess-ev-list');
-  if(!evs.length){lbl.style.display='none';list.innerHTML='';return;}
+  const hasLive=isActive&&!!activeEvent;
+  if(!evs.length&&!hasLive){lbl.style.display='none';list.innerHTML='';return;}
   lbl.style.display='block';
 
   // Show all events as a list; tapping an event jumps to it in the network view
-  list.innerHTML=evs.map((ev,evIdx)=>{
+  const savedHtml=evs.map((ev,evIdx)=>{
     const labels=computeLabelsFor(ev.records);
     const recRows=ev.records.map((rec,ri)=>{
       const a1=INDS.find(x=>x.id===rec.an1Id);
       const a2=rec.an2Id?INDS.find(x=>x.id===rec.an2Id):null;
       if(!a1) return '';
-      const pair=a2?`${a1.name} — ${a2.name}`:`${a1.name} (solo)`;
+      const pair=a2List(rec).length?`${sideNames(a1List(rec),rec)} — ${sideNames(a2List(rec),rec)}`:`${sideNames(a1List(rec),rec)} (solo)`;
       const {dots}=behSummaryFull(rec);
       const time=new Date(rec.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
       return `<div class="rec-row" style="padding:5px 10px 5px 28px;display:flex;align-items:center;">
@@ -2004,6 +2971,36 @@ function updateSessionView(){
       ${recRows?`<div style="border-top:1px solid var(--border);">${recRows}</div>`:''}
     </div>`;
   }).join('');
+
+  // In-progress (live) event isn't in the saved list yet — surface it so it can
+  // be resumed or deleted (e.g. a quick solo observation). See Bug #7.
+  let liveHtml='';
+  if(hasLive){
+    const n=records.length;
+    liveHtml=`<div class="ev-item" style="padding:0;overflow:hidden;cursor:pointer;border:1px solid rgba(78,205,196,.4);" onclick="resumeToRecording()">
+      <div style="padding:11px 14px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div class="ev-name">${activeEvent.label} <span style="font-size:9px;color:var(--aff);margin-left:4px;">● Live</span></div>
+          <div class="ev-cnt">${n} record${n!==1?'s':''} · in progress</div>
+        </div>
+        <div style="display:flex;gap:5px;">
+          <button class="btn btn-acc" style="font-size:9px;padding:3px 8px;" onclick="event.stopPropagation();resumeToRecording()">Open</button>
+          <button class="btn btn-dng" style="font-size:9px;padding:3px 8px;" onclick="event.stopPropagation();deleteLiveEvent()">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  list.innerHTML=savedHtml+liveHtml;
+}
+
+// Discard the current in-progress event (and its unsaved records)
+function deleteLiveEvent(){
+  if(!activeEvent) return;
+  const n=records.length;
+  if(!confirm(`Delete the in-progress ${activeEvent.label} and its ${n} record${n!==1?'s':''}? This cannot be undone.`)) return;
+  activeEvent=null; records=[]; an1Id=null; an2Id=null; recNavIdx=-1; groupSrc=null;
+  saveToLocalStorage();
+  updateSessionView();
 }
 
 function saveSessionTimes(){
@@ -2067,6 +3064,7 @@ function editSessionRecord(evIdx,recIdx){
   sheetEditIdx=recIdx;
   sheetLinkedRef=null;
   sheetSolo=rec.solo;sheetAn1=rec.an1Id;sheetAn2=rec.an2Id||null;
+  sheetA1Ids=a1List(rec).slice();sheetA2Ids=a2List(rec).slice();
   const toSet=v=>v instanceof Set?v:new Set(Array.isArray(v)?v:[]);
   const toSetPair=o=>o&&(o.an1!==undefined)?{an1:toSet(o.an1),an2:toSet(o.an2)}:{an1:toSet(o),an2:new Set()};
   sel={
@@ -2086,7 +3084,7 @@ function editSessionRecord(evIdx,recIdx){
   activeTab='aggsub';
   const a1=INDS.find(x=>x.id===sheetAn1),a2=sheetAn2?INDS.find(x=>x.id===sheetAn2):null;
   const labels=computeLabelsFor(ev.records);
-  document.getElementById('sheet-pair').textContent=a1.name+(a2?' — '+a2.name:' (solo)');
+  document.getElementById('sheet-pair').textContent=sideNames(sheetA1Ids)+(a2?' — '+sideNames(sheetA2Ids):' (solo)');
   document.getElementById('sheet-meta').textContent=`Editing ${ev.label} record #${labels[recIdx]}`;
   document.getElementById('swap-btn').style.display=sheetSolo?'none':'inline-block';
   // When saved, write back to the session event (not the live records array)
@@ -2115,7 +3113,7 @@ function startEvent(){
     observer:activeSession?.observer||sessObserver,group:activeSession?.group||activeGroup,
     demog:activeSession?.demog||'',datatype:activeSession?.datatype||sessDatatype,
     conditions:activeSession?.conditions||sessConditions,scanNum:activeSession?.scanNum||sessScan};
-  records=[];an1Id=null;an2Id=null;recNavIdx=-1;
+  records=[];an1Id=null;an2Id=null;recNavIdx=-1;pendingRedirect=null;multiMode=false;multiA1=[];multiA2=[];multiSide='an1';pendingGenCounts={};
   showView('recording');updateHint();updateRecPanel();updateRecNav();
   document.getElementById('evt-name').textContent=activeEvent.label;
   document.getElementById('evt-sub').textContent='0 records';
@@ -2130,7 +3128,7 @@ function endEvent(){
     }));
     events.push({...activeEvent,records:savedRecs});
   }
-  activeEvent=null;records=[];an1Id=null;an2Id=null;recNavIdx=-1;
+  activeEvent=null;records=[];an1Id=null;an2Id=null;recNavIdx=-1;pendingRedirect=null;multiMode=false;multiA1=[];multiA2=[];multiSide='an1';pendingGenCounts={};
   saveToLocalStorage();
   // Stay on recording view — edges clear, ready for next node tap
   renderSVG('evt-svg');
@@ -2148,8 +3146,10 @@ function endSession(){
     activeSession=null;events=[];
     updateHomeStats();renderEvList();
   }
+  // Clear in-progress recording state so the next session starts clean
+  activeEvent=null; records=[]; an1Id=null; an2Id=null; recNavIdx=-1;
+  reviewSession=null; reviewEventIdx=0; groupSrc=null;
   saveToLocalStorage();
-  reviewSession=null;
   showView('home');
 }
 
@@ -2238,20 +3238,22 @@ function exportData(){
     'An2_Aggression','An2_Submission','An2_Affiliation',
     'ThirdParty_Behaviors','An3_IDs','An4_IDs',
     'Qualifiers_Agg','Qualifiers_Sub','Qualifiers_Aff','Qualifiers_Interaction',
-    'Affect_An1','Affect_An2','Notes']];
+    'Affect_An1','Affect_An2','Notes',
+    'Group_Notes','DOS_Notes','Births','Individual_Notes','Session_Notes']];
   sessions.forEach(sess=>{sess.events.forEach(ev=>{
     const labels=computeLabelsFor(ev.records);
     ev.records.forEach((rec,i)=>{
-      rows.push([sess.label+'/'+ev.label,sess.observer||'',ev.group||'',ev.enclosure||'',ev.datatype||'',ev.conditions||'',ev.scanNum||'',
+      rows.push([sess.label+'/'+ev.label,sess.observer||'',sess.group||ev.group||'',ev.enclosure||'',ev.datatype||'',ev.conditions||'',ev.scanNum||'',
         labels[i],rec.timestamp,rec.groupId||'',
-        rec.an1Id,getName(rec.an1Id),rec.an2Id||'',rec.an2Id?getName(rec.an2Id):'',
+        a1List(rec).map(id=>syncPartId(rec,id)).join(','),a1List(rec).map(id=>syncPartName(rec,id,getName)).join(','),a2List(rec).map(id=>syncPartId(rec,id)).join(','),a2List(rec).map(id=>syncPartName(rec,id,getName)).join(','),
         rec.solo?'yes':'no',DURATIONS.find(d=>d.id===rec.duration)?.label||'',
         rec.linkedRef!=null?labels[rec.linkedRef]:'',
         getL('agg','an1',rec),getL('sub','an1',rec),getL('aff','an1',rec),
         getL('agg','an2',rec),getL('sub','an2',rec),getL('aff','an2',rec),
         getL('tp','an1',rec),rec.tpAn3||'',rec.tpAn4||'',
         getQ('agg',rec),getQ('sub',rec),getQ('aff',rec),getQ('ix',rec),
-        getA('an1',rec),getA('an2',rec),rec.notes||'']);
+        getA('an1',rec),getA('an2',rec),rec.notes||'',
+        sess.groupNotes||'',sess.dosNotes||'',sess.births||'',individualNotesStr(sess.individualNotes),sess.notes||'']);
     });
   });});
   const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
@@ -2319,6 +3321,8 @@ function serializeRec(r){
 }
 
 function loadFromLocalStorage(){
+  // Restore any staged (un-started) dashboard notes
+  try{const d=localStorage.getItem(DASH_KEY);if(d){const p=JSON.parse(d);dashNotes={group:p.group||'',dos:p.dos||'',births:p.births||'',individual:p.individual||{}};}}catch(e){}
   try{
     const raw=localStorage.getItem(LS_KEY);
     if(!raw) return;
@@ -2352,12 +3356,14 @@ function clearLocalStorage(){
 // ═══════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════
+loadPrefs();
+updateObserverBtn();
 updateHomeStats();
 loadFromLocalStorage();
 fetchRosterFromSheet();
 window.addEventListener('resize',()=>{
-  if(currentView==='network') renderSVG('net-svg');
-  if(currentView==='recording') renderSVG('evt-svg');
+  if(currentView==='network'){renderSVG('net-svg'); fitToContent('net-svg');}
+  if(currentView==='recording'){renderSVG('evt-svg'); fitToContent('evt-svg');}
 });
 document.addEventListener('click',e=>{
   if(!document.getElementById('d-tip').contains(e.target)) closeTip();

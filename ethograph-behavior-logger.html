@@ -22,7 +22,9 @@
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;overflow:hidden;-webkit-touch-callout:none;}
 #app{padding-top:env(safe-area-inset-top,0px);padding-bottom:0px;}
 .sheet-foot{padding-bottom:calc(24px + env(safe-area-inset-bottom));}
-#app{height:100vh;display:flex;flex-direction:column;}
+/* 100dvh (with vh fallback) so iOS Safari's toolbar/home-indicator can't push the
+   record panel off the bottom of the screen */
+#app{height:100vh;height:100dvh;display:flex;flex-direction:column;}
 .view{display:none;flex-direction:column;height:100%;}.view.active{display:flex;}
 
 /* ── Header ── */
@@ -460,9 +462,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
 </div>
 
 <!-- Add-generic category picker -->
-<div class="picker" id="gen-picker" style="display:none;max-height:60vh;overflow-y:auto;">
-  <div class="picker-title">Add unknown node</div>
+<div class="picker" id="gen-picker" style="display:none;max-height:70vh;overflow-y:auto;">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;">
+    <div class="picker-title" style="margin:0;">Add unknown node</div>
+    <button onclick="closeGenPicker()" style="background:var(--accent);color:var(--bg);border:none;border-radius:6px;font-weight:800;font-size:11px;padding:4px 12px;cursor:pointer;">Done</button>
+  </div>
   <div id="gen-picker-items"></div>
+  <div style="font-size:9px;color:var(--dim);margin-top:8px;">Tap a category to add/remove (✓). Then Done — tap nodes to record.</div>
 </div>
 
 <!-- Observer profile -->
@@ -691,14 +697,32 @@ function addGeneric(cat){
   if(INDS.find(i=>i.id===id)) return; // already present
   const node=makeGenericNode(cat);
   GENERICS.push(node); INDS.push(node);
-  // place in a free spot near the top so it's easy to find/drag
+  // seed near top, then nudge to a free spot so it doesn't overlap existing nodes
   const c=document.getElementById('evt-c')||document.getElementById('net-c');
   const w=c?c.clientWidth:600;
   const col=(GENERICS.length-1)%Math.max(1,Math.floor(w/90));
-  const row=Math.floor((GENERICS.length-1)/Math.max(1,Math.floor(w/90)));
-  positions[id]={x:50+col*90,y:46+row*64}; velocities[id]={x:0,y:0};
+  positions[id]={x:50+col*90,y:46}; velocities[id]={x:0,y:0};
+  placeGeneric(id);
   recomputeDisplayMeta(); saveGenericCats(activeGroup);
-  renderSVG('evt-svg');
+  renderSVG('evt-svg'); fitToContent('evt-svg');
+}
+// Push a single node out of any overlaps with existing nodes (others stay put)
+function placeGeneric(id){
+  const c=document.getElementById('evt-c')||document.getElementById('net-c');
+  const w=c?c.clientWidth:600,h=c?c.clientHeight:600;
+  const p=positions[id]; if(!p) return;
+  const rA=nodeRadius(INDS.find(i=>i.id===id)||{});
+  for(let iter=0;iter<80;iter++){
+    let moved=false;
+    INDS.forEach(o=>{
+      if(o.id===id) return; const po=positions[o.id]; if(!po) return;
+      const minSep=rA+nodeRadius(o)+16;
+      let dx=p.x-po.x,dy=p.y-po.y,d=Math.sqrt(dx*dx+dy*dy);
+      if(d<minSep){ if(d<0.5){dx=(iter%2?1:-1)*(1+iter*0.3);dy=iter*0.2;d=Math.sqrt(dx*dx+dy*dy)||1;} const push=minSep-d; p.x+=dx/d*push; p.y+=dy/d*push; moved=true; }
+    });
+    p.x=Math.max(rA+8,Math.min(w-rA-8,p.x)); p.y=Math.max(rA+8,Math.min(h-rA-8,p.y));
+    if(!moved) break;
+  }
 }
 function removeGeneric(id){
   GENERICS=GENERICS.filter(g=>g.id!==id);
@@ -1115,17 +1139,23 @@ function computePositions(cId){
   const c=document.getElementById(cId);
   if(!c) return;
   const w=c.clientWidth,h=c.clientHeight,cx=w/2,cy=h/2;
+  // Virtual layout area grows with the animal count so dense groups can spread
+  // out without piling at the canvas edges; fitToContent zooms to frame it.
+  const nTot=INDS.length||1;
+  const need=Math.max(1,Math.ceil(Math.sqrt(nTot)))*70*1.25;
+  const VW=Math.max(w,need),VH=Math.max(h,need);
+  const bx0=cx-VW/2,bx1=cx+VW/2,by0=cy-VH/2,by1=cy+VH/2;
   // Grid arrangement by ID (numeric, low→high, left→right then top→bottom)
   if(prefs.cluster==='id'||prefs.cluster==='idfull'||prefs.cluster==='idabbr'){
     const keyOf=ind=>prefs.cluster==='idabbr'?(Number(abbrId(ind))||0):(Number(ind.id)||0);
     const sorted=[...INDS].sort((a,b)=>keyOf(a)-keyOf(b));
     const n=sorted.length||1;
-    const cols=Math.max(1,Math.round(Math.sqrt(n*(w/Math.max(h,1)))));
+    const cols=Math.max(1,Math.round(Math.sqrt(n*(VW/Math.max(VH,1)))));
     const rows=Math.ceil(n/cols);
-    const cellW=w/cols, cellH=h/rows;
+    const cellW=VW/cols, cellH=VH/rows;
     sorted.forEach((ind,i)=>{
       const cc=i%cols, rr=Math.floor(i/cols);
-      positions[ind.id]={x:cellW*(cc+0.5), y:cellH*(rr+0.5)};
+      positions[ind.id]={x:bx0+cellW*(cc+0.5), y:by0+cellH*(rr+0.5)};
       velocities[ind.id]={x:0,y:0};
     });
     return;
@@ -1141,8 +1171,10 @@ function computePositions(cId){
       offspringOf[ind.dam].push(ind.id);
     }
   });
-  // Phase 1: global layout with moderate repulsion + strong dam spring (500 iters)
-  for(let iter=0;iter<500;iter++){
+  // Phase 1: global layout with moderate repulsion + strong dam spring.
+  // Iterations scale down with group size to keep big-group layout responsive.
+  const iters=Math.max(200,Math.min(500,Math.round(40000/nTot)));
+  for(let iter=0;iter<iters;iter++){
     const damp=iter<100?0.4:0.65;
     INDS.forEach(a=>{
       let fx=0,fy=0;const ra=nodeRadius(a);
@@ -1178,12 +1210,14 @@ function computePositions(cId){
     });
     INDS.forEach(a=>{
       const pad=nodeRadius(a)+14;
-      positions[a.id].x=Math.max(pad,Math.min(w-pad,positions[a.id].x+velocities[a.id].x));
-      positions[a.id].y=Math.max(pad,Math.min(h-pad,positions[a.id].y+velocities[a.id].y));
+      positions[a.id].x=Math.max(bx0+pad,Math.min(bx1-pad,positions[a.id].x+velocities[a.id].x));
+      positions[a.id].y=Math.max(by0+pad,Math.min(by1-pad,positions[a.id].y+velocities[a.id].y));
     });
   }
   // Phase 2: overlap resolution pass — push apart any still-overlapping pairs
-  for(let pass=0;pass<80;pass++){
+  // (more passes for bigger groups; clamped to the virtual area, not the canvas)
+  const passes=Math.min(240,80+INDS.length);
+  for(let pass=0;pass<passes;pass++){
     INDS.forEach(a=>{
       INDS.forEach(b=>{
         if(a.id>=b.id) return;
@@ -1198,10 +1232,10 @@ function computePositions(cId){
           // Don't push offspring away from dam beyond their spring target
           const isDamPair=damOf[a.id]===b.id||damOf[b.id]===a.id;
           const pushScale=isDamPair?0.3:1.0;
-          positions[a.id].x=Math.max(pad_a,Math.min(w-pad_a,positions[a.id].x+nx*push*pushScale));
-          positions[a.id].y=Math.max(pad_a,Math.min(h-pad_a,positions[a.id].y+ny*push*pushScale));
-          positions[b.id].x=Math.max(pad_b,Math.min(w-pad_b,positions[b.id].x-nx*push*pushScale));
-          positions[b.id].y=Math.max(pad_b,Math.min(h-pad_b,positions[b.id].y-ny*push*pushScale));
+          positions[a.id].x=Math.max(bx0+pad_a,Math.min(bx1-pad_a,positions[a.id].x+nx*push*pushScale));
+          positions[a.id].y=Math.max(by0+pad_a,Math.min(by1-pad_a,positions[a.id].y+ny*push*pushScale));
+          positions[b.id].x=Math.max(bx0+pad_b,Math.min(bx1-pad_b,positions[b.id].x-nx*push*pushScale));
+          positions[b.id].y=Math.max(by0+pad_b,Math.min(by1-pad_b,positions[b.id].y-ny*push*pushScale));
         }
       });
     });
@@ -1385,6 +1419,7 @@ function renderSVG(svgId){
   const selA2=multiMode?multiA2:(an2Id?[an2Id]:[]);
   INDS.forEach(ind=>{
     const p=positions[ind.id];if(!p)return;
+    html+=`<g data-nid="${String(ind.id).replace(/"/g,'&quot;')}">`; // group so a node can be dragged in place (iOS-safe)
     const r=nodeRadius(ind);const col=nodeColor(ind);
     const isA1=selA1.includes(ind.id),isA2=selA2.includes(ind.id);
     const sc=isA1?'#4ecdc4':isA2?'#f7b731':'rgba(255,255,255,.18)',sw=isA1||isA2?3:1.5;
@@ -1413,6 +1448,7 @@ function renderSVG(svgId){
       html+=`<text x="${p.x}" y="${cy}" text-anchor="middle" dominant-baseline="middle" fill="${fill}" font-size="${fs}" font-family="${fam}" font-weight="${weight}" style="pointer-events:none;user-select:none">${t}</text>`;
       cursor+=fs+gap;
     });
+    html+=`</g>`;
   });
 
   svg.innerHTML=html;
@@ -1613,12 +1649,34 @@ function screenToSVG(svgId,sx,sy){
 }
 
 let nodeDragStartX=0,nodeDragStartY=0,nodeDragMoved=false;
+let nodeDragStartPos={x:0,y:0},nodeDragCurPos={x:0,y:0};
 function startNodeDrag(indId,svgId,e){
   const t=e.touches?e.touches[0]:e;
   nodeDragStartX=t.clientX; nodeDragStartY=t.clientY;
   nodeDragMoved=false;
   nodeDragId=indId; nodeDragSvg=svgId;
+  const p=positions[indId]||{x:0,y:0};
+  nodeDragStartPos={x:p.x,y:p.y}; nodeDragCurPos={x:p.x,y:p.y};
   e.stopPropagation(); // prevent pan
+}
+// Move the dragged node's group in place (no re-render) so the touch target survives
+// the gesture on iOS; edges snap to the new position on release.
+function applyNodeDrag(clientX,clientY){
+  const pos=screenToSVG(nodeDragSvg,clientX,clientY);
+  const pad=nodeRadius(INDS.find(i=>i.id===nodeDragId)||{})+14;
+  const c=document.getElementById(nodeDragSvg).parentElement;
+  nodeDragCurPos={x:Math.max(pad,Math.min(c.clientWidth-pad,pos.x)),y:Math.max(pad,Math.min(c.clientHeight-pad,pos.y))};
+  const g=document.getElementById(nodeDragSvg).querySelector('[data-nid="'+nodeDragId.replace(/"/g,'\\"')+'"]');
+  if(g) g.setAttribute('transform',`translate(${nodeDragCurPos.x-nodeDragStartPos.x},${nodeDragCurPos.y-nodeDragStartPos.y})`);
+}
+function endNodeDrag(){
+  const sv=nodeDragSvg;
+  if(nodeDragId&&nodeDragMoved){
+    positions[nodeDragId]={x:nodeDragCurPos.x,y:nodeDragCurPos.y};
+    nodeDragId=null;nodeDragSvg=null;nodeDragMoved=false;
+    renderSVG(sv);
+    if(sv==='evt-svg'){updateRecPanel();updateRecNav();}
+  } else { nodeDragId=null;nodeDragSvg=null;nodeDragMoved=false; }
 }
 
 // Store abort controllers per container so we can cleanly remove old listeners
@@ -1651,13 +1709,7 @@ function initPanZoom(containerId,svgId){
         if(Math.sqrt(dx*dx+dy*dy)<6) return;
         nodeDragMoved=true;
       }
-      const pos=screenToSVG(nodeDragSvg,e.clientX,e.clientY);
-      const pad=nodeRadius(INDS.find(i=>i.id===nodeDragId)||{})+14;
-      const w=document.getElementById(nodeDragSvg).parentElement.clientWidth;
-      const hh=document.getElementById(nodeDragSvg).parentElement.clientHeight;
-      positions[nodeDragId]={x:Math.max(pad,Math.min(w-pad,pos.x)),y:Math.max(pad,Math.min(hh-pad,pos.y))};
-      // Lightweight: just re-render SVG without rebuilding listeners
-      renderSVG(nodeDragSvg);
+      applyNodeDrag(e.clientX,e.clientY);
       return;
     }
     if(!isPanning)return;
@@ -1666,14 +1718,7 @@ function initPanZoom(containerId,svgId){
     applyPanZoom(svgId);
   },sig);
   window.addEventListener('mouseup',()=>{
-    if(nodeDragId&&nodeDragMoved){
-      const sv=nodeDragSvg;
-      nodeDragId=null;nodeDragSvg=null;nodeDragMoved=false;
-      renderSVG(sv);
-      if(sv==='evt-svg'){updateRecPanel();updateRecNav();}
-    } else {
-      nodeDragId=null;nodeDragSvg=null;nodeDragMoved=false;
-    }
+    endNodeDrag();
     isPanning=false;c.style.cursor='';
   },sig);
 
@@ -1710,12 +1755,7 @@ function initPanZoom(containerId,svgId){
         nodeDragMoved=true;
       }
       e.preventDefault();
-      const pos=screenToSVG(nodeDragSvg,e.touches[0].clientX,e.touches[0].clientY);
-      const pad=nodeRadius(INDS.find(i=>i.id===nodeDragId)||{})+14;
-      const w=document.getElementById(nodeDragSvg).parentElement.clientWidth;
-      const hh=document.getElementById(nodeDragSvg).parentElement.clientHeight;
-      positions[nodeDragId]={x:Math.max(pad,Math.min(w-pad,pos.x)),y:Math.max(pad,Math.min(hh-pad,pos.y))};
-      renderSVG(nodeDragSvg);
+      applyNodeDrag(e.touches[0].clientX,e.touches[0].clientY);
       return;
     }
     if(e.touches.length===1&&isPanning){
@@ -1744,14 +1784,7 @@ function initPanZoom(containerId,svgId){
     if(e.touches.length<2)pinchDist=null;
     if(e.touches.length===0){
       isPanning=false;
-      if(nodeDragId&&nodeDragMoved){
-        const sv=nodeDragSvg;
-        nodeDragId=null;nodeDragSvg=null;nodeDragMoved=false;
-        renderSVG(sv);
-        if(sv==='evt-svg'){updateRecPanel();updateRecNav();}
-      } else {
-        nodeDragId=null;nodeDragSvg=null;nodeDragMoved=false;
-      }
+      endNodeDrag();
     }
   },{passive:true,signal:ac.signal});
 }
@@ -1933,15 +1966,15 @@ function applyPrefs(relayout){
 
 // Double-tap/click to reset pan+zoom
 function resetPanZoom(svgId){
-  const pz=panZoom[svgId];
-  pz.x=0;pz.y=0;pz.scale=1;
-  applyPanZoom(svgId);
+  // Reset = frame all nodes (so nothing stays cut off after zoom/drag), not just 1:1
+  if(INDS.length){ fitToContent(svgId); }
+  else { const pz=panZoom[svgId]; pz.x=0;pz.y=0;pz.scale=1; applyPanZoom(svgId); }
 }
 
 function tapNode(id,evt){
   if(currentView==='network'){evt.stopPropagation();showAnimalInfo(id);return;}
   if(currentView!=='recording') return;
-  closeTip();
+  closeTip(); closeGenPicker();
   evt.stopPropagation();
   // Completing a pending redirection: this tap is the redirect target
   if(pendingRedirect){
@@ -2407,23 +2440,28 @@ function commitRecord(){
   [...recData.an1Ids,...recData.an2Ids].forEach(id=>{if(isGeneric(id)&&pendingGenCounts[id])gc[id]=pendingGenCounts[id];});
   recData.genCounts=gc;
 
-  if(sheetEditIdx!==null){
-    // Update existing record, preserve id/ts/groupId
-    records[sheetEditIdx]={...records[sheetEditIdx],...recData};
-  } else {
-    records.push({id:'R-'+(sessObserver||'X')+'-'+Date.now(),ts:Date.now(),timestamp:new Date().toISOString(),groupId:null,...recData});
+  if(!window._sessionEdit){ // saved-event edits are written in the _sessionEdit branch below
+    if(sheetEditIdx!==null){
+      // Update existing record, preserve id/ts/groupId
+      records[sheetEditIdx]={...records[sheetEditIdx],...recData};
+    } else {
+      records.push({id:'R-'+(sessObserver||'X')+'-'+Date.now(),ts:Date.now(),timestamp:new Date().toISOString(),groupId:null,...recData});
+    }
   }
 
   document.getElementById('sheet-overlay').style.display='none';
 
-  // If editing a record from the session view, write back there
+  // If editing a record from a saved event (session view OR browsing in recording), write back there
   if(window._sessionEdit){
     const {evIdx,recIdx}=window._sessionEdit;
     window._sessionEdit=null;
     const ev=reviewSession?reviewSession.events[evIdx]:events[evIdx];
     ev.records[recIdx]={...ev.records[recIdx],...recData};
-    sheetEditIdx=null;sheetLinkedRef=null;
-    updateSessionView();doFlash();
+    sheetEditIdx=null;sheetLinkedRef=null;sheetA1Ids=[];sheetA2Ids=[];pendingGenCounts={};
+    saveToLocalStorage();
+    if(currentView==='recording'){renderSVG('evt-svg');updateRecPanel();updateRecNav();}
+    else updateSessionView();
+    doFlash();
     return;
   }
 
@@ -2440,6 +2478,14 @@ function commitRecord(){
 // ═══════════════════════════════════════════
 //  RECORD PANEL
 // ═══════════════════════════════════════════
+// The record array the panel is currently showing: the live event, or a saved
+// event when browsing via prev/next. All panel edits/reorder/group act on this.
+function curRecs(){ return (recNavIdx>=0&&events[recNavIdx])?events[recNavIdx].records:records; }
+function commitPanelChange(){
+  groupSrc=null; dragSrc=null; dragOver=null;
+  renderSVG('evt-svg'); updateRecPanel(); updateRecNav(); saveToLocalStorage();
+}
+function editRow(i){ if(recNavIdx>=0) editSavedRecord(i); else editRecord(i); }
 function updateRecPanel(){
   const panel=document.getElementById('rec-panel');
   const panelRecs=recNavIdx>=0&&events[recNavIdx]?events[recNavIdx].records:records;
@@ -2513,18 +2559,8 @@ function recRowHtml(i,labels,recs,readOnly){
     ?`<button class="group-with-btn" style="color:var(--dim);border-color:var(--border);margin-top:2px" onclick="event.stopPropagation();ungroup(${i})">Ungroup</button>`
     :'';
 
-  if(readOnly){
-    // Browsing a saved event — tappable to edit, but no drag/delete
-    return `<div class="rec-row" onclick="editSavedRecord(${i})" style="cursor:pointer;">
-      <div class="rec-body">
-        <div class="rec-num">#${labels[i]} · ${time}</div>
-        <div class="rec-pair">${dots}${pair}</div>
-        <div class="rec-behs">${lines.join('<br>')}</div>
-        ${tags.length?`<div class="rec-tags">${tags.join('')}</div>`:''}
-  
-      </div>
-    </div>`;
-  }
+  // Saved-event records (browsed via prev/next) get the same full controls as the
+  // live event — edit, reorder, group, delete — acting on events[recNavIdx].records.
   return `<div class="rec-row${isMe?' dragging':''}"${groupSrc===i?' style="background:rgba(247,183,49,.08)"':''}
     data-idx="${i}" draggable="true"
     ondragstart="dStart(${i})" ondragover="dOver(event,${i})" ondragend="dEnd()" ondrop="dDrop(event,${i})"
@@ -2549,39 +2585,39 @@ function startGroup(i){groupSrc=i; updateRecPanel();}
 function cancelGroup(){groupSrc=null; updateRecPanel();}
 
 function mergeRecords(srcIdx,tgtIdx){
-  const srcRec=records[srcIdx],tgtRec=records[tgtIdx];
+  const recs=curRecs();
+  const srcRec=recs[srcIdx],tgtRec=recs[tgtIdx];
   if(!srcRec||!tgtRec||srcIdx===tgtIdx){groupSrc=null;updateRecPanel();return;}
   // Determine the shared groupId (merge two existing groups if needed)
   let gid;
   if(srcRec.groupId&&tgtRec.groupId&&srcRec.groupId!==tgtRec.groupId){
     gid=tgtRec.groupId;
     const old=srcRec.groupId;
-    records.forEach(r=>{if(r.groupId===old)r.groupId=gid;});
+    recs.forEach(r=>{if(r.groupId===old)r.groupId=gid;});
   } else {
     gid=tgtRec.groupId||srcRec.groupId||('G-'+Date.now());
   }
   srcRec.groupId=gid; tgtRec.groupId=gid;
   // Keep all members of this group contiguous (block placed at first member's slot)
-  const members=records.filter(r=>r.groupId===gid);
+  const members=recs.filter(r=>r.groupId===gid);
   const out=[]; let inserted=false;
-  records.forEach(r=>{
+  recs.forEach(r=>{
     if(r.groupId===gid){ if(!inserted){out.push(...members); inserted=true;} }
     else out.push(r);
   });
-  records.length=0; records.push(...out);
-  groupSrc=null; dragSrc=null;
-  updateRecPanel(); renderSVG('evt-svg'); saveToLocalStorage();
+  recs.length=0; recs.push(...out);
+  commitPanelChange();
 }
 
 function ungroup(i){
-  const gid=records[i].groupId;
-  records[i].groupId=null;
+  const recs=curRecs();
+  const gid=recs[i].groupId;
+  recs[i].groupId=null;
   if(gid){
-    const remaining=records.filter(r=>r.groupId===gid);
+    const remaining=recs.filter(r=>r.groupId===gid);
     if(remaining.length===1) remaining[0].groupId=null;
   }
-  groupSrc=null;
-  updateRecPanel(); renderSVG('evt-svg'); saveToLocalStorage();
+  commitPanelChange();
 }
 
 function behSummaryFull(rec){
@@ -2614,15 +2650,15 @@ function behSummaryFull(rec){
 }
 
 function delRec(i){
-  const gid=records[i].groupId;
-  records.splice(i,1);
+  const recs=curRecs();
+  const gid=recs[i].groupId;
+  recs.splice(i,1);
   // If only one member left in group, ungroup it
   if(gid){
-    const remaining=records.filter(r=>r.groupId===gid);
+    const remaining=recs.filter(r=>r.groupId===gid);
     if(remaining.length===1) remaining[0].groupId=null;
   }
-  groupSrc=null;
-  updateRecPanel();renderSVG('evt-svg');saveToLocalStorage();
+  commitPanelChange();
 }
 
 // ═══════════════════════════════════════════
@@ -2631,10 +2667,11 @@ function delRec(i){
 // Move records[from] so it lands at the drop target `to`:
 // dragging down → after the target row; dragging up → before it. Symmetric both ways.
 function moveRecord(from,to){
+  const recs=curRecs();
   if(from==null||to==null||from===to) return false;
-  if(from<0||to<0||from>=records.length||to>=records.length) return false;
-  const moved=records.splice(from,1)[0];
-  records.splice(to,0,moved); // `to` is interpreted in the post-splice array
+  if(from<0||to<0||from>=recs.length||to>=recs.length) return false;
+  const moved=recs.splice(from,1)[0];
+  recs.splice(to,0,moved); // `to` is interpreted in the post-splice array
   return true;
 }
 function dStart(i){dragSrc=i; updateRecPanel();}
@@ -2644,8 +2681,7 @@ function dDrop(e,i){
   e.preventDefault();
   if(dragSrc===null||dragSrc===i){dEnd();return;}
   const ok=moveRecord(dragSrc,i);
-  dEnd();
-  if(ok){renderSVG('evt-svg'); saveToLocalStorage();}
+  if(ok) commitPanelChange(); else dEnd();
 }
 
 // ── Row touch dispatch: reliable tap-to-edit + drag-to-reorder ──────────
@@ -2671,13 +2707,13 @@ function rowTouchEnd(e,i){
   if(rowTapIdx===i && !rowTapMoved){
     lastTouchEditT=Date.now();
     e.preventDefault();      // suppress the synthetic click so we don't open twice
-    editRecord(i);
+    editRow(i);
   }
   rowTapIdx=null;
 }
 function rowClick(i){
   if(Date.now()-lastTouchEditT<700) return; // already handled by touchend
-  editRecord(i);
+  editRow(i);
 }
 
 // Touch drag (reorder only)
@@ -2712,9 +2748,8 @@ function tEnd(){
   if(touchDragIdx!==null&&dragOver!==null&&touchDragIdx!==dragOver){
     moved=moveRecord(touchDragIdx,dragOver);
   }
-  touchDragIdx=null; dragSrc=null; dragOver=null;
-  updateRecPanel();
-  if(moved){renderSVG('evt-svg'); saveToLocalStorage();}
+  touchDragIdx=null;
+  if(moved){ commitPanelChange(); } else { dragSrc=null; dragOver=null; updateRecPanel(); }
 }
 
 // ═══════════════════════════════════════════

@@ -229,6 +229,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
     <div></div>
   </div>
   <div style="overflow-y:auto;flex:1;padding:14px;">
+    <div class="field-lbl" style="margin-bottom:4px;">Roster password <span style="color:var(--dim);font-weight:400;">(entered once, remembered on this device)</span></div>
+    <input class="field-in" id="roster-pw" type="password" autocomplete="off" placeholder="••••••" style="margin-bottom:10px;">
     <button class="btn-big" onclick="fetchRosterFromSheet()" style="margin-bottom:12px;">Fetch from Google Sheets</button>
     <div id="roster-status" style="font-size:11px;margin-bottom:14px;"></div>
     <div class="field-lbl" style="margin-bottom:5px;">Or paste TSV/CSV (with header row)</div>
@@ -738,16 +740,23 @@ function matrilineColor(mat){
   return MATRILINE_COLORS[mat];
 }
 const NODE_R=25;
-const SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/1-Zw3zA7_QJmv_OzWRB0xD5DzcHGQJobpcwRwoq8tCdc/export?format=csv&gid=0';
+// Roster is now fetched through the Apps Script doGet (password-gated), not the
+// public CSV. The password is entered once and remembered on this device.
+const ROSTER_PW_KEY='ethograph_roster_pw';
 async function fetchRosterFromSheet(){
+  const el=document.getElementById('roster-pw');
+  const pw=((el&&el.value)||localStorage.getItem(ROSTER_PW_KEY)||'').trim();
+  if(!pw){ setRosterStatus('🔑 Enter the roster password, then Fetch.','var(--warn)'); return; }
   setRosterStatus('⏳ Fetching…','var(--dim)');
   try{
-    const r=await fetch(SHEET_CSV_URL+'&_='+Date.now(),{mode:'cors',cache:'no-cache'});
+    const r=await fetch(APPS_SCRIPT_URL+'?pw='+encodeURIComponent(pw)+'&_='+Date.now(),{mode:'cors',cache:'no-cache'});
     if(!r.ok) throw new Error('HTTP '+r.status);
     const txt=await r.text();
+    if(/^\s*unauthorized/i.test(txt)){ setRosterStatus('❌ Wrong roster password.','#e74c3c'); return; }
     if(!txt||txt.length<20) throw new Error('Empty');
     parseRoster(txt);
-  }catch(e){setRosterStatus('❌ Fetch failed ('+e.message+'). Use Roster → Paste.','#e74c3c');}
+    try{localStorage.setItem(ROSTER_PW_KEY,pw);}catch(e){} // remember only after a successful fetch
+  }catch(e){setRosterStatus('❌ Fetch failed ('+e.message+'). Use paste below.','#e74c3c');}
 }
 function setRosterStatus(msg,color){
   ['roster-status','home-roster-status'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent=msg;el.style.color=color||'var(--dim)';}});
@@ -1056,6 +1065,7 @@ function showView(name){
   closeAllPopovers();
   if(name==='network'){scheduleLayout('net-svg','net-c');initPanZoom('net-c','net-svg');}
   if(name==='recording'){scheduleLayout('evt-svg','evt-c');initPanZoom('evt-c','evt-svg');updateRecPanel();updateRecNav();}
+  if(name==='roster'){const el=document.getElementById('roster-pw');if(el&&!el.value)el.value=localStorage.getItem(ROSTER_PW_KEY)||'';}
   if(name==='filter')  buildFilterUI();
   if(name==='dashboard') populateDashboard();
   if(name==='setup')   populateSetupForm();
@@ -2760,9 +2770,12 @@ const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbw9Z7yQt67KBdOsJb
 async function postSessionToSheet(sess){
   const rows=buildRows(sess);
   if(!rows.length){showSyncStatus('⚠ No records to sync','var(--warn)');return;}
+  const pw=(localStorage.getItem(ROSTER_PW_KEY)||'').trim();
+  if(!pw){showSyncStatus('🔑 Set the password on the Roster screen first','var(--warn)');return;}
   showSyncStatus('⏳ Syncing…','var(--dim)');
   try{
-    await fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(rows)});
+    // same credential as the roster read; sent in the body (no-cors can't read the reply)
+    await fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({pw:pw,rows:rows})});
     showSyncStatus('✓ '+rows.length+' row'+(rows.length!==1?'s':'')+' synced','var(--aff)');
   }catch(e){showSyncStatus('⚠ Sync failed — use Export CSV','var(--warn)');}
 }

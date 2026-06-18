@@ -62,7 +62,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
 
 /* ── Canvas ── */
 #net-c,#evt-c{flex:1;position:relative;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;}
-#net-svg,#evt-svg{position:absolute;inset:0;width:100%;height:100%;transform-origin:0 0;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;}
+#net-svg,#evt-svg{position:absolute;inset:0;width:100%;height:100%;transform-origin:0 0;overflow:visible;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;}
 
 /* ── Event header ── */
 .evt-hdr{padding:9px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--surface);flex-shrink:0;}
@@ -230,7 +230,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
   </div>
   <div style="overflow-y:auto;flex:1;padding:14px;">
     <div class="field-lbl" style="margin-bottom:4px;">Roster password <span style="color:var(--dim);font-weight:400;">(entered once, remembered on this device)</span></div>
-    <input class="field-in" id="roster-pw" type="password" autocomplete="off" placeholder="••••••" style="margin-bottom:10px;">
+    <input class="field-in" id="roster-pw" type="text" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="ethograph-roster-key" placeholder="enter roster password" style="margin-bottom:10px;-webkit-text-security:disc;text-security:disc;">
     <button class="btn-big" onclick="fetchRosterFromSheet()" style="margin-bottom:12px;">Fetch from Google Sheets</button>
     <div id="roster-status" style="font-size:11px;margin-bottom:14px;"></div>
     <div class="field-lbl" style="margin-bottom:5px;">Or paste TSV/CSV (with header row)</div>
@@ -1738,7 +1738,7 @@ function initPanZoom(containerId,svgId){
     const rect=c.getBoundingClientRect();
     const mx=e.clientX-rect.left,my=e.clientY-rect.top;
     const delta=e.deltaY>0?0.9:1.1;
-    const newScale=Math.max(0.3,Math.min(5,pz.scale*delta));
+    const newScale=Math.max(0.1,Math.min(5,pz.scale*delta));
     pz.x=mx-(mx-pz.x)*(newScale/pz.scale);
     pz.y=my-(my-pz.y)*(newScale/pz.scale);
     pz.scale=newScale;
@@ -1782,7 +1782,7 @@ function initPanZoom(containerId,svgId){
       const mx=(e.touches[0].clientX+e.touches[1].clientX)/2-rect.left;
       const my=(e.touches[0].clientY+e.touches[1].clientY)/2-rect.top;
       const delta=newDist/pinchDist;
-      const newScale=Math.max(0.3,Math.min(5,pz.scale*delta));
+      const newScale=Math.max(0.1,Math.min(5,pz.scale*delta));
       pz.x=mx-(mx-pz.x)*(newScale/pz.scale);
       pz.y=my-(my-pz.y)*(newScale/pz.scale);
       pz.scale=newScale;
@@ -3450,7 +3450,7 @@ document.addEventListener('click',e=>{
   // Register service worker (inline as blob)
   if('serviceWorker' in navigator){
     const swCode=`
-const CACHE='ethograph-v1';
+const CACHE='ethograph-v2';
 const ASSETS=[self.registration.scope];
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));
@@ -3463,18 +3463,20 @@ self.addEventListener('activate',e=>{
   self.clients.claim();
 });
 self.addEventListener('fetch',e=>{
+  const url=e.request.url;
+  // Google endpoints (roster read / sync): always network, never cache the data
+  if(url.includes('script.google.com')||url.includes('docs.google.com')||url.includes('googleapis.com')){
+    e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));
+    return;
+  }
+  // App shell + everything else: network-first so updates apply when online,
+  // fall back to the cached copy only when offline.
   e.respondWith(
-    caches.match(e.request).then(cached=>{
-      // Network first for roster CSV, cache first for app shell
-      if(e.request.url.includes('docs.google.com')||e.request.url.includes('googleapis.com')){
-        return fetch(e.request).catch(()=>cached);
-      }
-      return cached||fetch(e.request).then(res=>{
-        const clone=res.clone();
-        caches.open(CACHE).then(c=>c.put(e.request,clone));
-        return res;
-      });
-    })
+    fetch(e.request).then(res=>{
+      const clone=res.clone();
+      caches.open(CACHE).then(c=>c.put(e.request,clone));
+      return res;
+    }).catch(()=>caches.match(e.request))
   );
 });`;
     const swBlob=new Blob([swCode],{type:'text/javascript'});

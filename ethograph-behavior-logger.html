@@ -1672,10 +1672,11 @@ function startNodeDrag(indId,svgId,e){
 // Move the dragged node's group in place (no re-render) so the touch target survives
 // the gesture on iOS; edges snap to the new position on release.
 function applyNodeDrag(clientX,clientY){
+  // Node follows the finger exactly in SVG coords — no clamp, because with the
+  // virtual layout area nodes legitimately sit outside the canvas box (clamping
+  // here used to pin them and block dragging toward the edges). ⊙ reset re-frames.
   const pos=screenToSVG(nodeDragSvg,clientX,clientY);
-  const pad=nodeRadius(INDS.find(i=>i.id===nodeDragId)||{})+14;
-  const c=document.getElementById(nodeDragSvg).parentElement;
-  nodeDragCurPos={x:Math.max(pad,Math.min(c.clientWidth-pad,pos.x)),y:Math.max(pad,Math.min(c.clientHeight-pad,pos.y))};
+  nodeDragCurPos={x:pos.x,y:pos.y};
   const g=document.getElementById(nodeDragSvg).querySelector('[data-nid="'+nodeDragId.replace(/"/g,'\\"')+'"]');
   if(g) g.setAttribute('transform',`translate(${nodeDragCurPos.x-nodeDragStartPos.x},${nodeDragCurPos.y-nodeDragStartPos.y})`);
 }

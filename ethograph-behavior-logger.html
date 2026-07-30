@@ -213,6 +213,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
       <button class="btn btn-acc" onclick="showView('dashboard')" style="margin-left:8px;padding:3px 9px;font-size:10px;">Dashboard</button>
       <button class="btn btn-dim" onclick="showView('filter')" style="margin-left:4px;padding:3px 9px;font-size:10px;">Change</button>
     </div>
+    <button class="btn-big" onclick="resumeSession()" id="resume-session-btn" style="display:none;background:var(--aff);margin-bottom:8px;">▶ RESUME SESSION</button>
     <button class="btn-big" onclick="showView('setup')" id="new-event-btn" style="display:none">+ NEW SESSION</button>
   </div>
   <div style="padding:12px 0 0;">
@@ -381,6 +382,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
       <div id="an1-badge" style="display:none;font-size:11px;color:var(--accent);padding:3px 8px;background:rgba(78,205,196,.1);border-radius:6px;border:1px solid rgba(78,205,196,.3);"></div>
       <button class="btn btn-dim" onclick="openPrefs()" title="Display preferences">⚙</button>
       <button class="btn btn-dim" onclick="resetPanZoom('evt-svg')" title="Reset view">⊙</button>
+      <button class="btn btn-warn" onclick="pauseSession()" title="Pause — view dashboard / home (session stays open)">⏸</button>
       <button class="btn btn-dim" onclick="showView('session')">Session</button>
       <button class="btn btn-dng" onclick="endEvent()">End Event</button>
     </div>
@@ -392,7 +394,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
     <button class="btn btn-dim" id="rec-next-btn" onclick="recNavStep(1)">Next →</button>
   </div>
   <div class="hint hint-a1" id="hint-bar">
-    <span id="hint-text">Tap a node to select <span style="color:var(--accent)">An1</span></span>
+    <span id="hint-text">Tap a node to select <span style="color:var(--accent)">Init 1</span></span>
     <button class="btn-solo" id="multi-btn" style="display:none" onclick="toggleMulti()">⊕ Multi</button>
     <button class="btn-solo" id="unknown-btn" onclick="openGenPicker(event)">? Unknown</button>
     <button class="btn-solo" id="solo-btn" style="display:none" onclick="openSheet(true)">Solo Record</button>
@@ -412,7 +414,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
   <div class="sheet">
     <div class="sheet-hdr">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <div class="sheet-pair" id="sheet-pair">An1 — An2</div>
+        <div class="sheet-pair" id="sheet-pair">Init 1 — Recip 1</div>
         <button class="sheet-swap" id="swap-btn" onclick="swapAnimals()" style="display:none">⇄ Swap</button>
       </div>
       <div class="sheet-meta" id="sheet-meta">Select behaviors, then save</div>
@@ -524,8 +526,9 @@ const DEFAULT_PREFS={
   sizeScale:1,                // 0.8 | 1 | 1.25
   labelRows:['name','dye','abbrId'], // ordered label components, one per row
   abbrId:'last3',             // last2 | last3 | auto (shortest unique-in-group)
-  labelBoldRow1:true,         // row 1 bold
-  labelBigRow1:true,          // row 1 larger
+  labelBoldRow1:true,  labelBigRow1:true,   // row 1 bold / larger
+  labelBoldRow2:false, labelBigRow2:false,  // row 2 bold / larger
+  labelBoldRow3:false, labelBigRow3:false,  // row 3 bold / larger
   font:'med',                 // small | med | large (overall)
 };
 let prefs=JSON.parse(JSON.stringify(DEFAULT_PREFS));
@@ -1019,6 +1022,8 @@ let events=[], activeEvent=null, records=[];
 let an1Id=null, an2Id=null;
 // Multi-select (Feature #5): when multiMode is on, taps accumulate into multiA1/multiA2
 let multiMode=false, multiA1=[], multiA2=[], multiSide='an1';
+let multiPrimary=[];   // ids in the builder designated "primary" (either side)
+let buildFocus=null;   // last-tapped selected node — target of the "set primary" button
 // Generic "unknown" nodes (per group): category placeholders added to the network
 let GENERICS=[];            // node objects appended to INDS
 let pendingGenCounts={};    // {genericId: count} for the record currently being built/edited
@@ -1043,6 +1048,21 @@ let recMids={};
 let nodeDragId=null, nodeDragSvg=null;
 // Redirection: when set, the next node tap picks the redirect target {recIdx, redirectorId}
 let pendingRedirect=null;
+// Third-party response (#7): while selecting recipients for a classified response
+// {refRecIdx, type, initiators:[], recipients:[]}
+let pendingTP=null;
+let tpAwait=null;     // {refRecIdx, initiators:[]} — edge tapped as recipient, picking a type in the tray
+let sheetTpType=null; // tp classification carried into the sheet being built
+let sheetRedirectFrom=[]; // for redirects: the id(s) the responder is redirecting away from
+let sheetPrimary=[];     // ids designated "primary" for the record in the sheet
+let membersFromSheet=false; // true while re-editing participants launched from the sheet header
+const TP_TYPE_LABELS={redirect:'Redirect',intervene:'Intervene',seek_aid:'Seek aid',undirected:'Undirected (solo)'};
+// Edge/diamond colors by interaction type: direct=blue, intervene=red, seek-aid=green, redirect=yellow.
+const DIRECT_EDGE_COLOR='#3b82f6';
+const TP_TYPE_COLORS={redirect:'#f1c40f',intervene:'#e74c3c',seek_aid:'#2ecc71',undirected:'#95a5a6'};
+function edgeTypeColor(rec){ return (rec.tpType&&TP_TYPE_COLORS[rec.tpType])?TP_TYPE_COLORS[rec.tpType]:DIRECT_EDGE_COLOR; }
+function edgeTypeMarker(rec){ return rec.tpType?({intervene:'intervene',seek_aid:'seekaid',redirect:'redirect'}[rec.tpType]||'direct'):'direct'; }
+const TP_ROUTED=new Set(['intervene','seek_aid','redirect']); // types drawn via the referenced edge's node
 
 // Pan/zoom per SVG
 const panZoom={
@@ -1064,7 +1084,7 @@ function showView(name){
   currentView=name;
   closeAllPopovers();
   if(name==='network'){scheduleLayout('net-svg','net-c');initPanZoom('net-c','net-svg');}
-  if(name==='recording'){scheduleLayout('evt-svg','evt-c');initPanZoom('evt-c','evt-svg');updateRecPanel();updateRecNav();}
+  if(name==='recording'){scheduleLayout('evt-svg','evt-c');initPanZoom('evt-c','evt-svg');updateRecPanel();updateRecNav();updateHint();}
   if(name==='roster'){const el=document.getElementById('roster-pw');if(el&&!el.value)el.value=localStorage.getItem(ROSTER_PW_KEY)||'';}
   if(name==='filter')  buildFilterUI();
   if(name==='dashboard') populateDashboard();
@@ -1074,7 +1094,9 @@ function showView(name){
     const ready=INDS.length>0;
     const el=id=>document.getElementById(id);
     el('home-group-bar').style.display=ready?'block':'none';
-    el('new-event-btn').style.display=ready?'block':'none';
+    // A session is in progress → offer Resume, hide "+ New Session" (End Session first to start fresh)
+    el('resume-session-btn').style.display=activeSession?'block':'none';
+    el('new-event-btn').style.display=(ready&&!activeSession)?'block':'none';
     el('network-btn').style.display=ready?'block':'none';
     if(!ready&&!el('home-roster-status').textContent)
       el('home-roster-status').textContent='Tap Roster to load animals.';
@@ -1318,9 +1340,6 @@ function edgeMidpoint(s,t,offsetIdx,total){
   const shift=(offsetIdx-(total-1)/2)*20;
   return {x:mx+px*shift,y:my+py*shift};
 }
-function domainColor(dom){
-  return dom==='agg'?'#ef4444':dom==='sub'?'#f97316':dom==='aff'?'#22c55e':'#a78bfa';
-}
 // Multi-animal helpers (Feature #5): records carry an1Ids/an2Ids; fall back to the
 // legacy single an1Id/an2Id so old records and the diamond flows keep working.
 function a1List(rec){return (rec.an1Ids&&rec.an1Ids.length)?rec.an1Ids:(rec.an1Id?[rec.an1Id]:[]);}
@@ -1336,13 +1355,6 @@ function partName(id,rec){
   return nameOf(id);
 }
 function sideNames(ids,rec){return (ids||[]).map(id=>partName(id,rec)).join(', ');}
-function primaryDomain(rec){
-  const sz=v=>v instanceof Set?v.size:(Array.isArray(v)?v.length:0);
-  if(sz(rec.beh.agg.an1)+sz(rec.beh.agg.an2)>0) return 'agg';
-  if(sz(rec.beh.sub.an1)+sz(rec.beh.sub.an2)>0) return 'sub';
-  if(sz(rec.beh.aff.an1)+sz(rec.beh.aff.an2)>0) return 'aff';
-  return 'tp';
-}
 
 function renderSVG(svgId){
   const svg=document.getElementById(svgId); if(!svg) return;
@@ -1364,6 +1376,10 @@ function renderSVG(svgId){
     <marker id="m-sub" markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5z" fill="#f97316"/></marker>
     <marker id="m-aff" markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5z" fill="#22c55e"/></marker>
     <marker id="m-tp"  markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5z" fill="#a78bfa"/></marker>
+    <marker id="m-direct"    markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5z" fill="${DIRECT_EDGE_COLOR}"/></marker>
+    <marker id="m-intervene" markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5z" fill="${TP_TYPE_COLORS.intervene}"/></marker>
+    <marker id="m-seekaid"   markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5z" fill="${TP_TYPE_COLORS.seek_aid}"/></marker>
+    <marker id="m-redirect"  markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5z" fill="${TP_TYPE_COLORS.redirect}"/></marker>
     <marker id="m-dam" markerWidth="6" markerHeight="6" refX="5" refY="2.5" orient="auto"><path d="M0,0 L0,5 L6,2.5z" fill="rgba(255,255,255,.4)"/></marker>
   </defs>`;
   if(isEvt && dispRecords.length>0){
@@ -1383,12 +1399,26 @@ function renderSVG(svgId){
         if(c1&&c2) recMids[ri]=edgeMidpoint(c1,c2,offset,idxArr.length);
       });
     });
+    // Hub each record's edges pass through, and where its diamond sits.
+    // Third-party types (intervene / seek-aid / redirect) route through the
+    // referenced edge's node, so their two edges connect the animals via it.
+    const edgeHub={}, diaPos={};
+    dispRecords.forEach((rec,i)=>{
+      if(!a2List(rec).length) return;
+      const own=recMids[i]; if(!own) return;
+      const routed = rec.tpType && TP_ROUTED.has(rec.tpType) && rec.linkedRef!=null && recMids[rec.linkedRef];
+      if(routed){
+        const hub=recMids[rec.linkedRef], recipC=centroidOf(a2List(rec));
+        edgeHub[i]=hub;
+        diaPos[i]= recipC ? {x:(hub.x+recipC.x)/2, y:(hub.y+recipC.y)/2} : hub;
+      } else { edgeHub[i]=own; diaPos[i]=own; }
+    });
 
     // Primary edges: each initiator → hub, hub → each recipient
     dispRecords.forEach((rec,i)=>{
       if(!a2List(rec).length) return;
-      const mid=recMids[i]; if(!mid) return;
-      const dom=primaryDomain(rec),col=domainColor(dom);
+      const mid=edgeHub[i]; if(!mid) return;
+      const col=edgeTypeColor(rec), mk=edgeTypeMarker(rec);
       a1List(rec).forEach(id=>{
         const s=positions[id]; if(!s) return;
         const dx=mid.x-s.x,dy=mid.y-s.y,d=Math.max(Math.sqrt(dx*dx+dy*dy),.1);
@@ -1397,16 +1427,23 @@ function renderSVG(svgId){
       a2List(rec).forEach(id=>{
         const t=positions[id]; if(!t) return;
         const dx=t.x-mid.x,dy=t.y-mid.y,d=Math.max(Math.sqrt(dx*dx+dy*dy),.1);
-        html+=`<line x1="${mid.x}" y1="${mid.y}" x2="${t.x-(dx/d)*(NODE_R+9)}" y2="${t.y-(dy/d)*(NODE_R+9)}" stroke="${col}" stroke-width="2" stroke-opacity=".65" marker-end="url(#m-${dom})"/>`;
+        html+=`<line x1="${mid.x}" y1="${mid.y}" x2="${t.x-(dx/d)*(NODE_R+9)}" y2="${t.y-(dy/d)*(NODE_R+9)}" stroke="${col}" stroke-width="2" stroke-opacity=".65" marker-end="url(#m-${mk})"/>`;
       });
     });
 
     // Diamonds at the hub
+    const refIdx = tpAwait?tpAwait.refRecIdx:(pendingTP?pendingTP.refRecIdx:null);
     dispRecords.forEach((rec,i)=>{
       if(!a2List(rec).length) return;
-      const mid=recMids[i]; if(!mid) return;
-      const dom=primaryDomain(rec),col=domainColor(dom);
+      const mid=diaPos[i]; if(!mid) return;
+      const col=edgeTypeColor(rec);
       const hasTp=!!(rec.tpAn3||rec.tpAn4),ds=8;
+      // Highlight the edge currently selected as a third-party reference (like a node ring)
+      if(i===refIdx){
+        const hs=ds+6;
+        html+=`<polygon points="${mid.x},${mid.y-hs} ${mid.x+hs},${mid.y} ${mid.x},${mid.y+hs} ${mid.x-hs},${mid.y}"
+          fill="none" stroke="#fff" stroke-width="2.5" opacity=".9"/>`;
+      }
       html+=`<polygon points="${mid.x},${mid.y-ds} ${mid.x+ds},${mid.y} ${mid.x},${mid.y+ds} ${mid.x-ds},${mid.y}"
         fill="${col}" stroke="${hasTp?'#fff':col}" stroke-width="${hasTp?1.5:.5}" opacity=".92"
         style="cursor:pointer" onclick="tapDiamond(event,${i})"/>`;
@@ -1425,16 +1462,19 @@ function renderSVG(svgId){
     html+=`<line x1="${s.x+nx*rs}" y1="${s.y+ny*rs}" x2="${t.x-nx*rt}" y2="${t.y-ny*rt}" stroke="rgba(255,255,255,.28)" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#m-dam)"/>`;
   });
   // Nodes
-  const selA1=multiMode?multiA1:(an1Id?[an1Id]:[]);
-  const selA2=multiMode?multiA2:(an2Id?[an2Id]:[]);
+  const selA1=tpAwait?tpAwait.initiators:(pendingTP?pendingTP.initiators:(multiMode?multiA1:(an1Id?[an1Id]:[])));
+  const selA2=tpAwait?[]:(pendingTP?pendingTP.recipients:(multiMode?multiA2:(an2Id?[an2Id]:[])));
+  const primSet=multiMode?multiPrimary:[]; // "primary" designations while building
   INDS.forEach(ind=>{
     const p=positions[ind.id];if(!p)return;
     html+=`<g data-nid="${String(ind.id).replace(/"/g,'&quot;')}">`; // group so a node can be dragged in place (iOS-safe)
     const r=nodeRadius(ind);const col=nodeColor(ind);
     const isA1=selA1.includes(ind.id),isA2=selA2.includes(ind.id);
+    const isPrim=primSet.includes(ind.id);
     const sc=isA1?'#4ecdc4':isA2?'#f7b731':'rgba(255,255,255,.18)',sw=isA1||isA2?3:1.5;
     if(isA1) html+=`<circle cx="${p.x}" cy="${p.y}" r="${r+10}" fill="none" stroke="#4ecdc4" stroke-width="2.5" opacity=".8"/>`;
     if(isA2) html+=`<circle cx="${p.x}" cy="${p.y}" r="${r+10}" fill="none" stroke="#f7b731" stroke-width="2.5" opacity=".8"/>`;
+    if(isPrim) html+=`<text x="${p.x+r+2}" y="${p.y-r-1}" font-size="14" fill="#f1c40f" style="pointer-events:none" text-anchor="middle">★</text>`;
     const svgId=isEvt?'evt-svg':'net-svg';
     const click=`tapNode('${ind.id}',event)`;
     const dragStart=`startNodeDrag('${ind.id}','${svgId}',event)`;
@@ -1443,16 +1483,19 @@ function renderSVG(svgId){
     else{html+=`<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${col}" stroke="${sc}" stroke-width="${sw}"${gx} style="cursor:grab" onmousedown="${dragStart}" ontouchstart="${dragStart}" onclick="${click}"/>`;}
     const fMul=FONT_MUL[prefs.font]||1;
     const baseFs=Math.max(8,Math.round(r*0.36*fMul));
-    // Build label rows from the ordered components, skipping empties
-    const texts=(prefs.labelRows||[]).map(k=>labelComponentText(ind,k)).filter(t=>t&&t.length);
-    const sizes=texts.map((t,i)=>i===0&&prefs.labelBigRow1?Math.round(baseFs*1.3):baseFs);
+    // Build label rows from the ordered components, skipping empties. Cap at 3 shown —
+    // a configured 4th component acts as a fallback when one of the first 3 is NA/empty.
+    const texts=(prefs.labelRows||[]).map(k=>labelComponentText(ind,k)).filter(t=>t&&t.length).slice(0,3);
+    const rBig=i=>prefs['labelBigRow'+(i+1)];
+    const rBold=i=>prefs['labelBoldRow'+(i+1)];
+    const sizes=texts.map((t,i)=>rBig(i)?Math.round(baseFs*1.3):baseFs);
     const gap=Math.max(1,Math.round(baseFs*0.18));
     const totalH=sizes.reduce((s,fs)=>s+fs,0)+gap*Math.max(0,sizes.length-1);
     let cursor=p.y-totalH/2;
     texts.forEach((t,i)=>{
       const fs=sizes[i],cy=cursor+fs/2;
       const isR1=i===0;
-      const weight=isR1?(prefs.labelBoldRow1?900:700):600;
+      const weight=rBold(i)?900:(isR1?700:600);
       const fill=isR1?'#e8eaf0':'rgba(232,234,240,.8)';
       const fam=isR1?"'Sora',sans-serif":"'JetBrains Mono',monospace";
       html+=`<text x="${p.x}" y="${cy}" text-anchor="middle" dominant-baseline="middle" fill="${fill}" font-size="${fs}" font-family="${fam}" font-weight="${weight}" style="pointer-events:none;user-select:none">${t}</text>`;
@@ -1478,24 +1521,31 @@ function dMenuBtn(enabled,onclick,icon,label,sub){
 }
 function tapDiamond(evt,recIdx){
   evt.stopPropagation();
+  const rec=records[recIdx]; if(!rec) return;
+  // Ignore edge taps while already choosing a type or collecting third-party targets.
+  if(tpAwait||pendingTP) return;
   closeAllPopovers();
   pendingRedirect=null;
-  const rec=records[recIdx]; if(!rec) return;
-  const a1=INDS.find(i=>i.id===rec.an1Id),a2=rec.an2Id?INDS.find(i=>i.id===rec.an2Id):null;
+  // If we're building a record and the recipient side is active, tapping an edge means
+  // "these initiators are responding to this record" → start the third-party flow.
+  const onRecipSide = (!multiMode && an1Id) || (multiMode && multiSide==='an2');
+  if(currentInitiators().length && onRecipSide){ beginTPFromEdge(recIdx); return; }
+  // Otherwise: the record's edit menu.
   const labels=computeLabels();
   const {lines}=behSummaryFull(rec);
   const durLbl=DURATIONS.find(d=>d.id===rec.duration)?.label||'';
-  const intervener=an1Id?INDS.find(i=>i.id===an1Id):null;
   document.getElementById('d-tip-pair').textContent=`#${labels[recIdx]} ${sideNames(a1List(rec),rec)||'?'}${a2List(rec).length?' — '+sideNames(a2List(rec),rec):''}`;
   document.getElementById('d-tip-body').innerHTML=`
     <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
-      ${dMenuBtn(true,`closeTip();editRecord(${recIdx})`,'✎','Edit record','')}
-      ${dMenuBtn(!!intervener,`closeTip();startIntervention(${recIdx})`,'⚡','Intervention',intervener?`${intervener.name} steps in`:'tap an An1 node first')}
-      ${dMenuBtn(!!a2,`closeTip();startRedirection(${recIdx})`,'↗','Redirection',a2?`${a2.name} redirects to…`:'needs a recipient')}
+      ${dMenuBtn(true,`closeTip();editRecord(${recIdx})`,'✎','Edit record','behaviors, duration, notes')}
+      ${dMenuBtn(true,`closeTip();startEditMembers(${recIdx})`,'⇄','Change members','edit initiator / recipient(s)')}
       ${dMenuBtn(true,`toggleDiamondDetails()`,'ℹ','View details','')}
       <div id="d-tip-details" style="display:none;font-size:10px;color:var(--dim);line-height:1.6;border-top:1px solid var(--border);margin-top:2px;padding-top:7px;">
         ${lines.join('<br>')}${durLbl?`<br><span style="color:var(--accent)">${durLbl}</span>`:''}
       </div>
+    </div>
+    <div style="font-size:10px;color:var(--dim);margin-top:8px;border-top:1px solid var(--border);padding-top:6px;">
+      Tip: to record a third-party response, select initiator(s) first, then tap this edge.
     </div>`;
   document.getElementById('d-tip-edit-btn').style.display='none';
   const tip=document.getElementById('d-tip');
@@ -1508,6 +1558,131 @@ function toggleDiamondDetails(){
   if(d) d.style.display=d.style.display==='none'?'block':'none';
 }
 function closeTip(){document.getElementById('d-tip').style.display='none';}
+
+// ── Third-party response (#7): initiators respond to an existing record ──────
+// Initiator(s) come from the current selection (single an1Id or the multi builder).
+function currentInitiators(){
+  if(multiMode && multiA1.length) return multiA1.slice();
+  if(an1Id) return [an1Id];
+  return [];
+}
+// Third-party is entered by tapping an edge as a recipient (see beginTPFromEdge/pickTPType).
+function tpSolo(){ if(pendingTP){ pendingTP.recipients=[]; openTPSheet(); } }
+function tpRecord(){ if(pendingTP){ openTPSheet(); } }
+function cancelTP(){ pendingTP=null; tpAwait=null; updateHint(); renderSVG('evt-svg'); }
+// Edge tapped as a recipient while building → freeze the initiators.
+// If the responder isn't in the edge, it can only be an intervention → skip the
+// type menu and go straight to picking targets. Otherwise show the type menu.
+function beginTPFromEdge(refRecIdx){
+  const inits=currentInitiators();
+  if(!inits.length) return;
+  closeAllPopovers();
+  const ref=records[refRecIdx];
+  const refParts=ref?[...a1List(ref),...a2List(ref)]:[];
+  const initInEdge=inits.some(id=>refParts.includes(id));
+  an1Id=null; an2Id=null; multiMode=false; multiA1=[]; multiA2=[]; multiSide='an1';
+  if(!initInEdge){
+    // Responder is a fresh party → assume intervention, prompt for targets immediately.
+    pendingTP={refRecIdx, type:'intervene', initiators:inits.slice(), recipients:[]};
+  } else {
+    tpAwait={refRecIdx, initiators:inits.slice()};
+  }
+  updateHint(); renderSVG('evt-svg');
+}
+function pickTPType(type){
+  if(!tpAwait) return;
+  const {refRecIdx,initiators}=tpAwait; tpAwait=null;
+  pendingTP={refRecIdx, type, initiators, recipients:[]};
+  if(type==='undirected'){ openTPSheet(); return; } // solo — no targets
+  updateHint(); renderSVG('evt-svg');
+}
+// Latch build mode from the fast path, seeded with the current selection.
+function enterBuild(side){
+  if(!activeEvent) startEvent();
+  if(!multiMode){
+    multiMode=true;
+    multiA1 = an1Id ? [an1Id] : [];
+    multiA2 = an2Id ? [an2Id] : [];
+    multiPrimary=[]; buildFocus=null;
+    an1Id=null; an2Id=null;
+  }
+  multiSide=side;
+  updateHint(); renderSVG('evt-svg');
+}
+function clearSelection(){ an1Id=null; an2Id=null; updateHint(); renderSVG('evt-svg'); }
+// Toggle "primary" on the last-tapped selected node.
+function toggleBuildPrimary(){
+  if(!buildFocus) return;
+  if(!(multiA1.includes(buildFocus)||multiA2.includes(buildFocus))) return;
+  const i=multiPrimary.indexOf(buildFocus);
+  if(i>=0) multiPrimary.splice(i,1); else multiPrimary.push(buildFocus);
+  updateHint(); renderSVG('evt-svg');
+}
+// The builder's "Done" and "✕" dispatch by how the builder was entered.
+function buildDone(){ if(membersEdit){saveMembers();return;} if(membersFromSheet){returnToSheet(true);return;} multiOpenSheet(); }
+function buildCancel(){ if(membersEdit){cancelEditMembers();return;} if(membersFromSheet){returnToSheet(false);return;} toggleMulti(); }
+
+// ── Change members (#3): edit a past record's initiators / recipients ─────────
+// Reuses the multi builder, seeded from the record. Saving writes membership
+// back to the same record and leaves its behaviors/qualifiers/affect untouched.
+let membersEdit=null; // {idx} for a live record in the current event
+function startEditMembers(recIdx){
+  const rec=records[recIdx]; if(!rec) return;
+  closeAllPopovers();
+  pendingTP=null; tpAwait=null; pendingRedirect=null;
+  membersEdit={idx:recIdx};
+  multiMode=true; multiSide='an1';
+  multiA1=a1List(rec).slice();
+  multiA2=a2List(rec).slice();
+  multiPrimary=(rec.primaryIds||[]).slice(); buildFocus=null;
+  pendingGenCounts={...(rec.genCounts||{})};
+  an1Id=null; an2Id=null;
+  updateHint(); renderSVG('evt-svg');
+}
+function saveMembers(){
+  if(!membersEdit) return;
+  if(!multiA1.length) return; // need at least one initiator
+  const a1=multiA1.slice(), a2=multiA2.slice(), solo=a2.length===0;
+  const gc={};
+  [...a1,...a2].forEach(id=>{if(isGeneric(id)&&pendingGenCounts[id])gc[id]=pendingGenCounts[id];});
+  const prim=multiPrimary.filter(id=>a1.includes(id)||a2.includes(id));
+  const patch={an1Id:a1[0],an2Id:a2[0]||null,an1Ids:a1,an2Ids:a2,solo:solo,genCounts:gc,primaryIds:prim.length?prim:null};
+  const idx=membersEdit.idx; membersEdit=null;
+  records[idx]={...records[idx],...patch};
+  multiMode=false; multiA1=[]; multiA2=[]; multiSide='an1'; multiPrimary=[]; buildFocus=null; pendingGenCounts={};
+  saveToLocalStorage();
+  updateHint(); renderSVG('evt-svg'); updateRecPanel(); updateRecNav(); doFlash();
+}
+function cancelEditMembers(){
+  membersEdit=null;
+  multiMode=false; multiA1=[]; multiA2=[]; multiSide='an1'; multiPrimary=[]; buildFocus=null; pendingGenCounts={};
+  updateHint(); renderSVG('evt-svg');
+}
+// Step 3: open the behavior sheet, linked + tagged with the type (behaviors chosen normally)
+function openTPSheet(){
+  if(!pendingTP) return;
+  const {refRecIdx,type,initiators,recipients}=pendingTP;
+  if(!initiators.length){ pendingTP=null; return; } // no responder selected — nothing to record
+  const solo=recipients.length===0;
+  sheetSolo=solo; sheetEditIdx=null; sheetLinkedRef=refRecIdx; sheetTpType=type;
+  // For a redirection, record who the responder is redirecting away from = the other
+  // participant(s) of the referenced record (everyone in it except the responder[s]).
+  if(type==='redirect'){
+    const ref=records[refRecIdx];
+    const refParts=ref?[...a1List(ref),...a2List(ref)]:[];
+    sheetRedirectFrom=refParts.filter(id=>!initiators.includes(id));
+  } else { sheetRedirectFrom=[]; }
+  sheetA1Ids=initiators.slice(); sheetA2Ids=recipients.slice(); sheetPrimary=[];
+  sheetAn1=initiators[0]; sheetAn2=recipients[0]||null;
+  sel=freshSel(); selQua=freshQua(); selAffect=freshAffect();
+  dur='lt5'; tpAn3=''; tpAn4=''; recNotes=''; activeTab='aggsub';
+  renderSheetPair();
+  document.getElementById('sheet-meta').textContent=`${TP_TYPE_LABELS[type]} · responding to #${computeLabels()[refRecIdx]}`;
+  document.getElementById('swap-btn').style.display=solo?'none':'inline-block';
+  pendingTP=null;
+  buildTabs(); buildContent();
+  document.getElementById('sheet-overlay').style.display='flex';
+}
 
 // Intervention: the currently selected An1 steps into this interaction.
 function startIntervention(recIdx){
@@ -1926,12 +2101,18 @@ function buildPrefsPanel(){
     avail.forEach(([k,lbl])=>{h+=`<button class="chip" onclick="toggleLabelComp('${k}')">+ ${lbl}</button>`;});
     h+=`</div>`;
   }
+  h+=`<div style="font-size:9px;color:var(--dim);margin:4px 0 6px;">Up to 3 rows display; a 4th component acts as a fallback, shown only when one of the first 3 is blank/NA.</div>`;
   h+=`</div>`;
-  // ── Row 1 style ──
-  h+=`<div class="sec-lbl">Row 1 style</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
-    <button class="chip${prefs.labelBoldRow1?' active':''}" onclick="toggleFontFlag('labelBoldRow1')">Bold</button>
-    <button class="chip${prefs.labelBigRow1?' active':''}" onclick="toggleFontFlag('labelBigRow1')">Larger</button>
-  </div>`;
+  // ── Per-row style (bold / larger) for rows 1–3 ──
+  h+=`<div class="sec-lbl">Row styles</div><div style="margin-bottom:12px;">`;
+  [1,2,3].forEach(n=>{
+    h+=`<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+      <span style="flex:1;font-size:11px;color:var(--dim);">Row ${n}</span>
+      <button class="chip${prefs['labelBoldRow'+n]?' active':''}" onclick="toggleFontFlag('labelBoldRow${n}')">Bold</button>
+      <button class="chip${prefs['labelBigRow'+n]?' active':''}" onclick="toggleFontFlag('labelBigRow${n}')">Larger</button>
+    </div>`;
+  });
+  h+=`</div>`;
   document.getElementById('prefs-content').innerHTML=h;
 }
 function setPref(key,val){
@@ -1995,6 +2176,16 @@ function tapNode(id,evt){
     openRedirectionSheet(recIdx, redirectorId, id);
     return;
   }
+  // Third-party response: this tap picks a recipient
+  if(pendingTP){
+    if(pendingTP.initiators.includes(id)) return; // an initiator can't also be a recipient
+    const toggle=n=>{const arr=pendingTP.recipients,i=arr.indexOf(n);if(i>=0)arr.splice(i,1);else arr.push(n);updateHint();renderSVG('evt-svg');};
+    if(isGeneric(id)){
+      if(pendingTP.recipients.includes(id)){ toggle(id); return; }
+      openGenCounter(id,()=>toggle(id)); return;
+    }
+    toggle(id); return;
+  }
   // Generic "unknown" node: pop a counter (how many) before including it
   if(isGeneric(id)){
     const removing=(multiMode&&(multiA1.includes(id)||multiA2.includes(id)))||(!multiMode&&an1Id===id);
@@ -2012,19 +2203,22 @@ function selectParticipant(id,evt){
     const other=multiSide==='an1'?multiA2:multiA1;
     if(other.includes(id)) return; // an animal can't be on both sides
     const idx=arr.indexOf(id);
-    if(idx>=0) arr.splice(idx,1); else arr.push(id);
+    if(idx>=0){
+      arr.splice(idx,1);
+      const pi=multiPrimary.indexOf(id); if(pi>=0) multiPrimary.splice(pi,1); // drop primary if unselected
+      if(buildFocus===id) buildFocus=null;
+    } else {
+      arr.push(id); buildFocus=id; // newly added node becomes the "set primary" target
+    }
     updateHint(); renderSVG('evt-svg');
     return;
   }
   // Auto-start a new event on first tap if none active
   if(!activeEvent) startEvent();
   if(!an1Id){
-    const involved=records.map((r,i)=>({r,i})).filter(({r})=>a1List(r).includes(id)||a2List(r).includes(id)||parseIds(r.tpAn3).includes(id)||parseIds(r.tpAn4).includes(id));
-    if(involved.length>0){
-      showNodePicker(id,involved,evt);
-    } else {
-      an1Id=id; updateHint(); renderSVG('evt-svg');
-    }
+    // First tap = initiator (streamlined model). Editing a past record is done by
+    // tapping its edge, so a node tap no longer pops the old record picker.
+    an1Id=id; updateHint(); renderSVG('evt-svg');
   } else if(an1Id===id){
     an1Id=null; an2Id=null; updateHint(); renderSVG('evt-svg');
   } else if(!an2Id){
@@ -2064,7 +2258,7 @@ function showNodePicker(nodeId,involved,evt){
   const picker=document.getElementById('node-picker');
   const items=document.getElementById('picker-items');
   // Build option list
-  let html=`<div class="picker-item" style="color:var(--accent)" onclick="selectAn1FromPicker('${nodeId}')">Select as An1 for new record</div>`;
+  let html=`<div class="picker-item" style="color:var(--accent)" onclick="selectAn1FromPicker('${nodeId}')">Select as Init 1 for new record</div>`;
   html+=`<div class="picker-item" onclick="closePicker();showAnimalInfo('${nodeId}')">ℹ Animal info</div>`;
   involved.forEach(({r,i})=>{
     const pair=a2List(r).length?`${sideNames(a1List(r),r)}–${sideNames(a2List(r),r)}`:`${sideNames(a1List(r),r)} (solo)`;
@@ -2103,9 +2297,10 @@ function toggleGeneric(cat){ const id='?'+cat; if(INDS.find(i=>i.id===id)) remov
 // ═══════════════════════════════════════════
 function editRecord(i){
   const rec=records[i];
-  sheetEditIdx=i; sheetLinkedRef=null;
+  sheetEditIdx=i; sheetLinkedRef=rec.linkedRef!=null?rec.linkedRef:null; sheetTpType=rec.tpType||null; sheetRedirectFrom=(rec.redirectFrom||[]).slice();
   sheetSolo=rec.solo; sheetAn1=rec.an1Id; sheetAn2=rec.an2Id||null;
   sheetA1Ids=a1List(rec).slice(); sheetA2Ids=a2List(rec).slice(); // preserve membership
+  sheetPrimary=(rec.primaryIds||[]).slice();
   pendingGenCounts={...(rec.genCounts||{})}; // preserve generic counts
   // Restore Sets
   const toSetE=v=>v instanceof Set?v:new Set(Array.isArray(v)?v:[]);
@@ -2127,55 +2322,103 @@ function editRecord(i){
   tpAn3=rec.tpAn3||''; tpAn4=rec.tpAn4||'';
   recNotes=rec.notes||'';
   activeTab='aggsub';
-  const a1=INDS.find(x=>x.id===sheetAn1),a2=sheetAn2?INDS.find(x=>x.id===sheetAn2):null;
   const labels=computeLabels();
-  const em1=(sheetA1Ids.length>1)?sideNames(sheetA1Ids):sheetPartLabel(sheetAn1);
-  const em2=a2?((sheetA2Ids.length>1)?sideNames(sheetA2Ids):sheetPartLabel(sheetAn2)):null;
-  document.getElementById('sheet-pair').textContent=em1+(em2?' — '+em2:' (solo)');
-  document.getElementById('sheet-meta').textContent=`Editing record #${labels[i]}`+(sheetA1Ids.length>1||sheetA2Ids.length>1?' · multi (membership fixed)':'');
+  renderSheetPair();
+  document.getElementById('sheet-meta').textContent=`Editing record #${labels[i]}`;
   document.getElementById('swap-btn').style.display=sheetSolo?'none':'inline-block';
   buildTabs(); buildContent();
   document.getElementById('sheet-overlay').style.display='flex';
 }
 
+// State-aware action tray. Plain node taps keep the fast path (tap initiator →
+// tap recipient → sheet); touching a tray button (+Init/+Recip/Unknown) or tapping
+// an edge as a recipient latches "build mode" (finish with Done →).
 function updateHint(){
   const hintBar=document.getElementById('hint-bar');
   const hintTxt=document.getElementById('hint-text');
   const soloBtn=document.getElementById('solo-btn');
   const multiBtn=document.getElementById('multi-btn');
+  const unkBtn=document.getElementById('unknown-btn');
   const badge=document.getElementById('an1-badge');
   badge.style.display='none';
-  if(multiMode){
-    soloBtn.style.display='none';
-    multiBtn.style.display='inline-block'; multiBtn.textContent='✕ Multi';
-    const n1=sideNames(multiA1)||'—', n2=sideNames(multiA2)||'—';
-    if(multiSide==='an1'){
-      hintBar.className='hint hint-a1';
-      hintTxt.innerHTML=`Initiators: <b style="color:var(--accent)">${n1}</b> — tap nodes
-        <button class="btn-solo" style="margin-left:6px" onclick="event.stopPropagation();multiNext()">Recipients →</button>`;
-    } else {
-      hintBar.className='hint hint-a2';
-      hintTxt.innerHTML=`<span style="color:var(--accent)">${n1}</span> → <b style="color:var(--warn)">${n2}</b> — tap nodes
-        <button class="btn-solo" style="margin-left:6px" onclick="event.stopPropagation();multiBack()">← Init</button>
-        <button class="btn-solo" onclick="event.stopPropagation();multiOpenSheet()">Record →</button>`;
-    }
+  // The tray is rendered inline in hint-text; hide the legacy static buttons.
+  soloBtn.style.display='none'; multiBtn.style.display='none'; unkBtn.style.display='none';
+
+  const B=(label,onclick,style)=>`<button class="btn-solo" style="${style||''}" onclick="event.stopPropagation();${onclick}">${label}</button>`;
+  const unkHtml=B('? Unknown ▾','openGenPicker(event)');
+  const nameOfId=id=>{const a=INDS.find(i=>i.id===id);return (a&&a.name)||sheetPartLabel(id);};
+
+  // ── Edge tapped as a recipient → pick the third-party type ──
+  if(tpAwait){
+    hintBar.className='hint hint-a2';
+    const n1=sideNames(tpAwait.initiators)||'—';
+    const chip=(k,ic)=>B(`${ic} ${TP_TYPE_LABELS[k]}`,`pickTPType('${k}')`,`border-color:${TP_TYPE_COLORS[k]};color:${TP_TYPE_COLORS[k]}`);
+    // "Intervene" only makes sense when the responder was NOT already in the tapped edge.
+    const ref=records[tpAwait.refRecIdx];
+    const refParts=ref?[...a1List(ref),...a2List(ref)]:[];
+    const initInEdge=tpAwait.initiators.some(id=>refParts.includes(id));
+    const chips=[chip('redirect','↩')]
+      .concat(initInEdge?[]:[chip('intervene','⚡')])
+      .concat([chip('seek_aid','🛟'),chip('undirected','●')]);
+    hintTxt.innerHTML=`<span style="color:var(--accent)">${n1}</span> respond to #${computeLabels()[tpAwait.refRecIdx]} — <b>type:</b>
+      ${chips.join(' ')}
+      ${B('✕','cancelTP()')}`;
     return;
   }
-  if(!activeEvent){
-    hintBar.className='hint hint-a1';
-    hintTxt.innerHTML='Tap a node to start a new event';
-    soloBtn.style.display='none'; multiBtn.style.display='none';
-  } else if(!an1Id){
-    hintBar.className='hint hint-a1';
-    hintTxt.innerHTML='Tap a node to select <span style="color:var(--accent)">An1</span>';
-    soloBtn.style.display='none'; multiBtn.style.display='inline-block'; multiBtn.textContent='⊕ Multi';
-  } else {
-    const ind=INDS.find(i=>i.id===an1Id);
+  // ── Third-party: collecting target(s) after a type is chosen ──
+  if(pendingTP){
     hintBar.className='hint hint-a2';
-    hintTxt.innerHTML=`<b style="color:var(--accent)">${ind.name}</b> — tap <span style="color:var(--warn)">An2</span> or diamond:`;
-    soloBtn.style.display='inline-block'; multiBtn.style.display='none';
-    badge.textContent=ind.name; badge.style.display='block';
+    const n1=sideNames(pendingTP.initiators)||'—', n2=sideNames(pendingTP.recipients)||'—';
+    hintTxt.innerHTML=`<span style="color:var(--accent)">${n1}</span> · <b>${TP_TYPE_LABELS[pendingTP.type]||pendingTP.type}</b> → <b style="color:var(--warn)">${n2}</b> — tap target(s)
+      ${unkHtml}
+      ${B('Solo','tpSolo()')}
+      ${B('Done →','tpRecord()')}
+      ${B('✕','cancelTP()')}`;
+    return;
   }
+  // ── Build mode (latched): several initiators and/or recipients ──
+  if(multiMode){
+    const editing=!!membersEdit, fromSheet=membersFromSheet;
+    const sideLbl=ids=>ids.length?ids.map(id=>(multiPrimary.includes(id)?'★':'')+nameOfId(id)).join(', '):null;
+    const n1=sideLbl(multiA1)||'—', n2=sideLbl(multiA2)||'(none)';
+    const initActive=multiSide==='an1', recipActive=multiSide==='an2';
+    hintBar.className=initActive?'hint hint-a1':'hint hint-a2';
+    const initStyle=initActive?'background:rgba(78,205,196,.22);border-color:var(--accent);color:var(--accent)':'';
+    const recipStyle=recipActive?'background:rgba(247,183,49,.22);border-color:var(--warn);color:var(--warn)':'';
+    // "Set primary" acts on the last-tapped selected node.
+    const focusSel=buildFocus&&(multiA1.includes(buildFocus)||multiA2.includes(buildFocus));
+    const focusPrim=focusSel&&multiPrimary.includes(buildFocus);
+    const primaryBtn=focusSel?B(`${focusPrim?'★ Unset':'☆'} primary: ${nameOfId(buildFocus)}`,'toggleBuildPrimary()',focusPrim?'border-color:#f1c40f;color:#f1c40f':''):'';
+    const label=editing?'<span style="font-size:10px;color:var(--dim);margin-right:4px;">edit members:</span>'
+      :(fromSheet?'<span style="font-size:10px;color:var(--dim);margin-right:4px;">edit participants:</span>':'');
+    const doneLbl=editing?'Save members ✓':(fromSheet?'← Back to sheet':'Done →');
+    hintTxt.innerHTML=`
+      ${label}
+      ${B('+ Init: '+n1,"multiSetSide('an1')",initStyle)}
+      ${B('+ Recip: '+n2,"multiSetSide('an2')",recipStyle)}
+      ${primaryBtn}
+      ${(editing||fromSheet)?'':unkHtml}
+      ${B(doneLbl,'buildDone()')}
+      ${B('✕','buildCancel()')}`;
+    return;
+  }
+  // ── Fast path: exactly one initiator picked (tap a recipient → auto-opens sheet) ──
+  if(an1Id){
+    const nm=nameOfId(an1Id);
+    hintBar.className='hint hint-a2';
+    badge.textContent=nm; badge.style.display='block';
+    hintTxt.innerHTML=`<b style="color:var(--accent)">${nm}</b> — tap a <span style="color:var(--warn)">recipient</span> (node or edge), or:
+      ${B('+ Init',"enterBuild('an1')")}
+      ${B('+ Recip',"enterBuild('an2')")}
+      ${unkHtml}
+      ${B('Solo','openSheet(true)')}
+      ${B('ℹ Info',`showAnimalInfo('${an1Id}')`)}
+      ${B('✕','clearSelection()')}`;
+    return;
+  }
+  // ── Empty: nothing selected ──
+  hintBar.className='hint hint-a1';
+  hintTxt.innerHTML=`Tap animal(s) to <span style="color:var(--accent)">begin a record</span> &nbsp; ${unkHtml}`;
 }
 
 // ═══════════════════════════════════════════
@@ -2188,47 +2431,101 @@ function freshAffect(){return{an1:new Set(),an2:new Set()};}
 // ── Multi-select mode (Feature #5) ──────────────────────────────────
 function toggleMulti(){
   if(multiMode){
-    multiMode=false; multiA1=[]; multiA2=[]; multiSide='an1';
+    multiMode=false; multiA1=[]; multiA2=[]; multiSide='an1'; membersEdit=null; membersFromSheet=false; multiPrimary=[]; buildFocus=null; pendingGenCounts={};
   } else {
-    multiMode=true; multiSide='an1'; multiA1=[]; multiA2=[]; an1Id=null; an2Id=null;
+    multiMode=true; multiSide=an2Id?'an2':'an1';
+    multiA1 = an1Id ? [an1Id] : [];   // carry the already-selected animals into the builder
+    multiA2 = an2Id ? [an2Id] : [];
+    multiPrimary=[]; buildFocus=null;
+    an1Id=null; an2Id=null;
     if(!activeEvent) startEvent();
   }
   updateHint(); renderSVG('evt-svg');
 }
-function multiNext(){ if(!multiA1.length) return; multiSide='an2'; updateHint(); renderSVG('evt-svg'); }
+function multiSetSide(s){ multiSide=s; updateHint(); renderSVG('evt-svg'); }
+function multiNext(){ multiSide='an2'; updateHint(); renderSVG('evt-svg'); }
 function multiBack(){ multiSide='an1'; updateHint(); renderSVG('evt-svg'); }
 function multiOpenSheet(){
-  if(!multiA1.length||!multiA2.length) return;
-  sheetSolo=false; sheetEditIdx=null; sheetLinkedRef=null;
+  if(!multiA1.length) return;
+  const solo=multiA2.length===0;
+  sheetSolo=solo; sheetEditIdx=null; sheetLinkedRef=null;
   sheetA1Ids=multiA1.slice(); sheetA2Ids=multiA2.slice();
-  sheetAn1=multiA1[0]; sheetAn2=multiA2[0];
+  sheetAn1=multiA1[0]; sheetAn2=multiA2[0]||null;
+  sheetPrimary=multiPrimary.filter(id=>sheetA1Ids.includes(id)||sheetA2Ids.includes(id));
+  multiMode=false; multiA1=[]; multiA2=[]; multiPrimary=[]; buildFocus=null; // leaving the builder
   sel=freshSel(); selQua=freshQua(); selAffect=freshAffect();
   dur='lt5'; tpAn3=''; tpAn4=''; recNotes=''; activeTab='aggsub';
-  document.getElementById('sheet-pair').textContent=`${sideNames(sheetA1Ids)} — ${sideNames(sheetA2Ids)}`;
-  document.getElementById('sheet-meta').textContent=`${sheetA1Ids.length} initiator${sheetA1Ids.length>1?'s':''} · ${sheetA2Ids.length} recipient${sheetA2Ids.length>1?'s':''} (behaviors shared per side)`;
-  document.getElementById('swap-btn').style.display='inline-block';
+  renderSheetPair();
+  document.getElementById('sheet-meta').textContent=`${sheetA1Ids.length} initiator${sheetA1Ids.length>1?'s':''}${solo?' · solo':' · '+sheetA2Ids.length+' recipient'+(sheetA2Ids.length>1?'s':'')} (behaviors shared per side)`;
+  document.getElementById('swap-btn').style.display=solo?'none':'inline-block';
   buildTabs(); buildContent();
   document.getElementById('sheet-overlay').style.display='flex';
 }
 
 function openSheet(solo){
   sheetSolo=solo; sheetAn1=an1Id; sheetAn2=solo?null:an2Id;
-  sheetA1Ids=[]; sheetA2Ids=[];
+  sheetA1Ids=[]; sheetA2Ids=[]; sheetPrimary=[];
   sheetEditIdx=null; sheetLinkedRef=null;
   sel=freshSel(); selQua=freshQua(); selAffect=freshAffect();
   dur='lt5'; tpAn3=''; tpAn4=''; recNotes='';
   activeTab='aggsub';
-  document.getElementById('sheet-pair').textContent=sheetPartLabel(sheetAn1)+(sheetAn2?' — '+sheetPartLabel(sheetAn2):' (solo)');
+  renderSheetPair();
   document.getElementById('sheet-meta').textContent=solo?'Solo / undirected record':'Select behaviors, then save';
   document.getElementById('swap-btn').style.display=solo?'none':'inline-block';
   buildTabs(); buildContent();
   document.getElementById('sheet-overlay').style.display='flex';
 }
 
+// ── Sheet participant header (Request): clickable, primary-aware ──────────────
+function sheetSideText(ids, single){
+  const list=(ids&&ids.length)?ids:(single?[single]:[]);
+  return list.map(id=>(sheetPrimary.includes(id)?'★':'')+sheetPartLabel(id)).join(', ');
+}
+function renderSheetPair(){
+  const el=document.getElementById('sheet-pair'); if(!el) return;
+  const t1=sheetSideText(sheetA1Ids,sheetAn1);
+  const t2=sheetSolo?'':sheetSideText(sheetA2Ids,sheetAn2);
+  const editable=(currentView==='recording' && !window._sessionEdit);
+  el.innerHTML=`${t1}${t2?' — '+t2:' (solo)'}`+(editable?` <span style="font-size:11px;color:var(--dim)">✎</span>`:'');
+  el.style.cursor=editable?'pointer':'default';
+  el.onclick=editable?editSheetMembers:null;
+  el.title=editable?'Tap to change participants':'';
+}
+// Pop back to node-selection for the record being built/edited, keeping behaviors.
+function editSheetMembers(){
+  if(currentView!=='recording' || window._sessionEdit) return;
+  const rn=document.getElementById('rec-notes-in'); if(rn) recNotes=rn.value; // preserve typed notes
+  document.getElementById('sheet-overlay').style.display='none';
+  membersFromSheet=true;
+  an1Id=null; an2Id=null;
+  multiMode=true; multiSide='an1';
+  multiA1=(sheetA1Ids&&sheetA1Ids.length)?sheetA1Ids.slice():(sheetAn1?[sheetAn1]:[]);
+  multiA2=(sheetA2Ids&&sheetA2Ids.length)?sheetA2Ids.slice():(sheetAn2?[sheetAn2]:[]);
+  multiPrimary=(sheetPrimary||[]).slice();
+  buildFocus=null;
+  updateHint(); renderSVG('evt-svg');
+}
+// Return to the sheet; applyChanges=true writes the new membership, false discards it.
+function returnToSheet(applyChanges){
+  membersFromSheet=false;
+  if(applyChanges){
+    if(!multiA1.length){ membersFromSheet=true; return; } // need ≥1 initiator; stay in builder
+    sheetA1Ids=multiA1.slice(); sheetA2Ids=multiA2.slice();
+    sheetAn1=multiA1[0]; sheetAn2=multiA2[0]||null;
+    sheetSolo=multiA2.length===0;
+    sheetPrimary=multiPrimary.filter(id=>sheetA1Ids.includes(id)||sheetA2Ids.includes(id));
+  }
+  multiMode=false; multiA1=[]; multiA2=[]; multiSide='an1'; multiPrimary=[]; buildFocus=null;
+  renderSheetPair();
+  document.getElementById('swap-btn').style.display=sheetSolo?'none':'inline-block';
+  buildTabs(); buildContent(); // behaviors (sel/selQua/selAffect) are untouched
+  document.getElementById('sheet-overlay').style.display='flex';
+}
+
 function closeSheet(){
   document.getElementById('sheet-overlay').style.display='none';
   if(sheetEditIdx===null && !multiMode){an1Id=null; an2Id=null; updateHint(); renderSVG('evt-svg');}
-  sheetEditIdx=null; sheetLinkedRef=null; sheetA1Ids=[]; sheetA2Ids=[];
+  sheetEditIdx=null; sheetLinkedRef=null; sheetTpType=null; sheetRedirectFrom=[]; sheetPrimary=[]; sheetA1Ids=[]; sheetA2Ids=[];
 }
 
 function swapAnimals(){
@@ -2440,7 +2737,9 @@ function commitRecord(){
     affect:{an1:new Set(selAffect.an1),an2:new Set(selAffect.an2)},
 
     duration:dur,notes:recNotes.trim(),
-    solo:sheetSolo,linkedRef:sheetLinkedRef,
+    solo:sheetSolo,linkedRef:sheetLinkedRef,tpType:sheetTpType||null,
+    redirectFrom:(sheetRedirectFrom&&sheetRedirectFrom.length)?sheetRedirectFrom.slice():null,
+    primaryIds:(sheetPrimary&&sheetPrimary.length)?sheetPrimary.slice():null,
     an1Id:sheetAn1,an2Id:sheetAn2||null,
   };
   // Multi-animal lists (Feature #5). Fall back to the single ids when not multi.
@@ -2450,6 +2749,8 @@ function commitRecord(){
   const gc={};
   [...recData.an1Ids,...recData.an2Ids].forEach(id=>{if(isGeneric(id)&&pendingGenCounts[id])gc[id]=pendingGenCounts[id];});
   recData.genCounts=gc;
+  // Keep only primaries that are actual participants
+  if(recData.primaryIds){const members=[...recData.an1Ids,...recData.an2Ids];recData.primaryIds=recData.primaryIds.filter(id=>members.includes(id));if(!recData.primaryIds.length)recData.primaryIds=null;}
 
   if(!window._sessionEdit){ // saved-event edits are written in the _sessionEdit branch below
     if(sheetEditIdx!==null){
@@ -2468,7 +2769,7 @@ function commitRecord(){
     window._sessionEdit=null;
     const ev=reviewSession?reviewSession.events[evIdx]:events[evIdx];
     ev.records[recIdx]={...ev.records[recIdx],...recData};
-    sheetEditIdx=null;sheetLinkedRef=null;sheetA1Ids=[];sheetA2Ids=[];pendingGenCounts={};
+    sheetEditIdx=null;sheetLinkedRef=null;sheetTpType=null;sheetRedirectFrom=[];sheetPrimary=[];sheetA1Ids=[];sheetA2Ids=[];membersFromSheet=false;multiPrimary=[];buildFocus=null;pendingGenCounts={};
     saveToLocalStorage();
     if(currentView==='recording'){renderSVG('evt-svg');updateRecPanel();updateRecNav();}
     else updateSessionView();
@@ -2481,7 +2782,7 @@ function commitRecord(){
     // a fresh commit ends multi-select mode
     multiMode=false;multiA1=[];multiA2=[];multiSide='an1';
   }
-  sheetEditIdx=null;sheetLinkedRef=null;sheetA1Ids=[];sheetA2Ids=[];pendingGenCounts={};
+  sheetEditIdx=null;sheetLinkedRef=null;sheetTpType=null;sheetRedirectFrom=[];sheetPrimary=[];sheetA1Ids=[];sheetA2Ids=[];membersFromSheet=false;multiPrimary=[];buildFocus=null;pendingGenCounts={};
   updateHint();updateRecPanel();renderSVG('evt-svg');doFlash();
   saveToLocalStorage();
 }
@@ -2547,6 +2848,9 @@ function recRowHtml(i,labels,recs,readOnly){
   const affAll=[...rec.affect.an1,...rec.affect.an2];
   const tags=[];
   if(rec.groupId) tags.push(`<span class="rec-tag" style="background:rgba(167,139,250,.2);color:var(--tp)">simultaneous</span>`);
+  if(rec.tpType){const tc=TP_TYPE_COLORS[rec.tpType]||'var(--tp)';tags.push(`<span class="rec-tag" style="background:${tc}2e;color:${tc}">${TP_TYPE_LABELS[rec.tpType]||rec.tpType}</span>`);}
+  if(rec.redirectFrom&&rec.redirectFrom.length) tags.push(`<span class="rec-tag" style="background:rgba(243,156,18,.18);color:#f39c12">⤪ from ${sideNames(rec.redirectFrom,rec)}</span>`);
+  if(rec.primaryIds&&rec.primaryIds.length) tags.push(`<span class="rec-tag" style="background:rgba(241,196,15,.18);color:#f1c40f">★ ${sideNames(rec.primaryIds,rec)}</span>`);
   if(rec.linkedRef!=null) tags.push(`<span class="rec-tag" style="background:rgba(78,205,196,.15);color:var(--accent)">→ rec #${computeLabels()[rec.linkedRef]}</span>`);
   if(rec.solo) tags.push(`<span class="rec-tag" style="background:rgba(247,183,49,.15);color:var(--warn)">solo</span>`);
   if(durLbl) tags.push(`<span class="rec-tag" style="background:var(--hi);color:var(--dim)">${durLbl}</span>`);
@@ -2643,12 +2947,12 @@ function behSummaryFull(rec){
     dots.push(`<span class="dot" style="background:${domColors[d]}"></span>`);
     const parts=[];
     if(a1s.size){
-      const lbl=sideNames(a1List(rec),rec)||'An1';
+      const lbl=sideNames(a1List(rec),rec)||'Init';
       const names=[...a1s].map(bid=>(BEHAVIORS[d].find(x=>x.id===bid)||{label:bid}).label).join(', ');
       parts.push(`<span style="color:${domColors[d]}">${lbl}</span>: ${names}`);
     }
     if(a2s.size){
-      const lbl=sideNames(a2List(rec),rec)||'An2';
+      const lbl=sideNames(a2List(rec),rec)||'Recip';
       const names=[...a2s].map(bid=>(BEHAVIORS[d].find(x=>x.id===bid)||{label:bid}).label).join(', ');
       parts.push(`<span style="color:var(--warn)">${lbl}</span>: ${names}`);
     }
@@ -2789,7 +3093,9 @@ function showSyncStatus(msg,color){
 function buildRows(sess){
   const getName=id=>{const a=INDS.find(i=>i.id===id)||ROSTER.find(r=>r.id===id);return a?(a.name||a.dye||id):id;};
   const getL=(d,side,rec)=>[...(rec.beh[d][side]||[])].map(bid=>(BEHAVIORS[d].find(x=>x.id===bid)||{label:bid}).label).join('; ');
-  const getQ=(qd,rec)=>[...(rec.qualifiers[qd]||[])].map(qid=>(ALL_QUALS.find(x=>x.id===qid)||{label:qid}).label).join('; ');
+  const getQ=(qd,rec)=>{const v=rec.qualifiers[qd];if(!v)return '';
+    const ids=(v instanceof Set||Array.isArray(v))?[...v]:[...(v.an1||[]),...(v.an2||[])]; // per-side objects (agg/sub/aff) or flat (ix)
+    return ids.map(qid=>(ALL_QUALS.find(x=>x.id===qid)||{label:qid}).label).join('; ');};
   const getQSide=(qd,side,rec)=>{const v=rec.qualifiers[qd];const arr=v?[...(v[side]||v||[])]:[];return arr.map(qid=>(ALL_QUALS.find(x=>x.id===qid)||{label:qid}).label).join('; ');};
   const getQIx=(rec)=>{const v=rec.qualifiers.ix;return[...(v instanceof Set?v:(Array.isArray(v)?v:[]))].map(qid=>(ALL_QUALS.find(x=>x.id===qid)||{label:qid}).label).join('; ');};
   const getA=(side,rec)=>[...(rec.affect[side]||[])].join('; ');
@@ -2824,6 +3130,9 @@ function buildRows(sess){
         Solo:          rec.solo?'yes':'no',
         Duration:      DURATIONS.find(d=>d.id===rec.duration)?.label||'',
         LinkedToRecord:rec.linkedRef!=null?labels[rec.linkedRef]:'',
+        TP_Type:        rec.tpType||'',
+        Redirected_From:(rec.redirectFrom&&rec.redirectFrom.length)?rec.redirectFrom.map(id=>syncPartId(rec,id)).join(','):'',
+        Primary_IDs:    (rec.primaryIds&&rec.primaryIds.length)?rec.primaryIds.map(id=>syncPartId(rec,id)).join(','):'',
         An1_Aggression:   getL('agg','an1',rec),
         An1_Submission:   getL('sub','an1',rec),
         An1_Affiliation:  getL('aff','an1',rec),
@@ -2948,8 +3257,11 @@ function startSession(){
     individualNotes:{...dashNotes.individual},events:[]};
   resetDashNotes(); // notes are per-session — clear the staging draft
   events=[];
-  showView('session');
-  updateSessionView();
+  // Begin on the network, in the same "ready to record" state as after ending an event
+  showView('recording');
+  document.getElementById('evt-name').textContent='—';
+  document.getElementById('evt-sub').textContent='tap a node to start a new event';
+  updateHint();
 }
 function openPastSession(sessId){
   const sess=sessions.find(s=>s.id===sessId);
@@ -2964,6 +3276,9 @@ function resumeToRecording(){
   reviewSession=null;
   showView('recording');
 }
+// Pause the session (session + any active event stay open) to visit home/dashboard
+function pauseSession(){ showView('home'); }
+function resumeSession(){ reviewSession=null; showView('recording'); }
 
 function updateSessionView(){
   const sess=reviewSession||activeSession;
@@ -3162,7 +3477,7 @@ function startEvent(){
     observer:activeSession?.observer||sessObserver,group:activeSession?.group||activeGroup,
     demog:activeSession?.demog||'',datatype:activeSession?.datatype||sessDatatype,
     conditions:activeSession?.conditions||sessConditions,scanNum:activeSession?.scanNum||sessScan};
-  records=[];an1Id=null;an2Id=null;recNavIdx=-1;pendingRedirect=null;multiMode=false;multiA1=[];multiA2=[];multiSide='an1';pendingGenCounts={};
+  records=[];an1Id=null;an2Id=null;recNavIdx=-1;pendingRedirect=null;pendingTP=null;tpAwait=null;sheetTpType=null;multiMode=false;multiA1=[];multiA2=[];multiSide='an1';multiPrimary=[];buildFocus=null;membersEdit=null;membersFromSheet=false;pendingGenCounts={};
   showView('recording');updateHint();updateRecPanel();updateRecNav();
   document.getElementById('evt-name').textContent=activeEvent.label;
   document.getElementById('evt-sub').textContent='0 records';
@@ -3177,7 +3492,7 @@ function endEvent(){
     }));
     events.push({...activeEvent,records:savedRecs});
   }
-  activeEvent=null;records=[];an1Id=null;an2Id=null;recNavIdx=-1;pendingRedirect=null;multiMode=false;multiA1=[];multiA2=[];multiSide='an1';pendingGenCounts={};
+  activeEvent=null;records=[];an1Id=null;an2Id=null;recNavIdx=-1;pendingRedirect=null;pendingTP=null;tpAwait=null;sheetTpType=null;multiMode=false;multiA1=[];multiA2=[];multiSide='an1';multiPrimary=[];buildFocus=null;membersEdit=null;membersFromSheet=false;pendingGenCounts={};
   saveToLocalStorage();
   // Stay on recording view — edges clear, ready for next node tap
   renderSVG('evt-svg');
@@ -3276,13 +3591,15 @@ function renderEvList(){
 function exportData(){
   const getName=id=>(INDS.find(i=>i.id===id)||{}).name||id;
   const getL=(d,side,rec)=>[...(rec.beh[d][side]||[])].map(bid=>(BEHAVIORS[d].find(x=>x.id===bid)||{label:bid}).label).join('; ');
-  const getQ=(qd,rec)=>[...(rec.qualifiers[qd]||[])].map(qid=>(ALL_QUALS.find(x=>x.id===qid)||{label:qid}).label).join('; ');
+  const getQ=(qd,rec)=>{const v=rec.qualifiers[qd];if(!v)return '';
+    const ids=(v instanceof Set||Array.isArray(v))?[...v]:[...(v.an1||[]),...(v.an2||[])]; // per-side objects (agg/sub/aff) or flat (ix)
+    return ids.map(qid=>(ALL_QUALS.find(x=>x.id===qid)||{label:qid}).label).join('; ');};
   const getQSide=(qd,side,rec)=>{const v=rec.qualifiers[qd];const arr=v?[...(v[side]||v||[])]:[];return arr.map(qid=>(ALL_QUALS.find(x=>x.id===qid)||{label:qid}).label).join('; ');};
   const getQIx=(rec)=>{const v=rec.qualifiers.ix;return[...(v instanceof Set?v:(Array.isArray(v)?v:[]))].map(qid=>(ALL_QUALS.find(x=>x.id===qid)||{label:qid}).label).join('; ');};
   const getA=(side,rec)=>[...(rec.affect[side]||[])].join('; ');
   const rows=[['Event','Observer','Group','Enclosure','DataType','Conditions','ScanNum',
     'Record_Label','Timestamp','GroupID','An1_ID','An1_Name','An2_ID','An2_Name',
-    'Solo','Duration','LinkedToRecord',
+    'Solo','Duration','LinkedToRecord','TP_Type','Redirected_From','Primary_IDs',
     'An1_Aggression','An1_Submission','An1_Affiliation',
     'An2_Aggression','An2_Submission','An2_Affiliation',
     'ThirdParty_Behaviors','An3_IDs','An4_IDs',
@@ -3297,6 +3614,9 @@ function exportData(){
         a1List(rec).map(id=>syncPartId(rec,id)).join(','),a1List(rec).map(id=>syncPartName(rec,id,getName)).join(','),a2List(rec).map(id=>syncPartId(rec,id)).join(','),a2List(rec).map(id=>syncPartName(rec,id,getName)).join(','),
         rec.solo?'yes':'no',DURATIONS.find(d=>d.id===rec.duration)?.label||'',
         rec.linkedRef!=null?labels[rec.linkedRef]:'',
+        rec.tpType||'',
+        (rec.redirectFrom&&rec.redirectFrom.length)?rec.redirectFrom.map(id=>syncPartId(rec,id)).join(','):'',
+        (rec.primaryIds&&rec.primaryIds.length)?rec.primaryIds.map(id=>syncPartId(rec,id)).join(','):'',
         getL('agg','an1',rec),getL('sub','an1',rec),getL('aff','an1',rec),
         getL('agg','an2',rec),getL('sub','an2',rec),getL('aff','an2',rec),
         getL('tp','an1',rec),rec.tpAn3||'',rec.tpAn4||'',

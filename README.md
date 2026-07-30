@@ -37,9 +37,9 @@ Data is organized as **Sessions → Events → Records**:
 
 1. **Set observer** — tap **👤** on the home screen and choose/enter your initials. Your display preferences are remembered for next time.
 2. **Load the roster** — **Roster → Fetch from Google Sheets** (enter the roster password once; it's remembered on the device) — or paste a sheet.
-3. **Select a group** — filter by group type, pick a group, then optionally narrow to a subset (tap demographic chips to bulk‑select, or check individual animals in the roster table). Leave everything unchecked for the whole group.
-4. *(Optional)* **Group Dashboard** — log **group notes** (DOS / Monitoring / Group Release / Formation / Introduction) and **individual notes** (DOS / Wound / Infant / Behavior / Appearance / Social / Release / Clinical / Other; select one or more animals per note). Notes are saved for the group immediately; if a session is active they're also tagged with it.
-5. **Begin Session** — the network opens on "tap a node to start a new event."
+3. **Select a group** — filter by group type and tap a group. That returns you to the home hub, where you choose **▶ Begin Session** or **📝 Notes**.
+4. *(Optional)* **📝 Notes** — log **group notes** (DOS / Monitoring / Group Release / Formation / Introduction) and **individual notes** (DOS / Wound / Infant / Behavior / Appearance / Social / Release / Clinical / Other; select one or more animals per note; each note has an editable date/time). Notes opened from **home** are general (**Session = n/a**); notes opened from **inside a session** are tagged with it. **↑ Sync Notes** pushes them to the Notes tab.
+5. **▶ Begin Session** — the Setup screen opens with the **per‑session animal picker** (tap rows / demographic chips to narrow to a subset; leave unchecked for the whole group) plus session details, then **Start Session →** opens the network on "tap a node to start a new event."
 6. **Record interactions** — the top **action tray** changes with what you've selected:
    - Tap an animal → it becomes the initiator; tap a second animal → recipient, and the behavior sheet opens automatically (**the 2‑tap fast path**).
    - The tray also offers **+Init / +Recip** (build a multi‑animal record — finish with **Done →**), **? Unknown** (add a generic placeholder), **Solo** (undirected), and **★ set primary** for the last‑tapped animal.

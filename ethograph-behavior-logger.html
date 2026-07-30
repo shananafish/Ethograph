@@ -210,11 +210,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
     <div id="home-group-bar" style="display:none;margin-bottom:10px;">
       <span style="font-size:10px;color:var(--dim);">Group: </span>
       <span id="home-group-label" style="font-size:11px;font-weight:700;color:var(--accent);"></span>
-      <button class="btn btn-acc" onclick="showView('dashboard')" style="margin-left:8px;padding:3px 9px;font-size:10px;">Dashboard</button>
-      <button class="btn btn-dim" onclick="showView('filter')" style="margin-left:4px;padding:3px 9px;font-size:10px;">Change</button>
+      <button class="btn btn-acc" onclick="openNotes()" style="margin-left:8px;padding:3px 9px;font-size:10px;">📝 Notes</button>
+      <button class="btn btn-dim" onclick="showView('filter')" style="margin-left:4px;padding:3px 9px;font-size:10px;">Change group</button>
     </div>
     <button class="btn-big" onclick="resumeSession()" id="resume-session-btn" style="display:none;background:var(--aff);margin-bottom:8px;">▶ RESUME SESSION</button>
-    <button class="btn-big" onclick="showView('setup')" id="new-event-btn" style="display:none">+ NEW SESSION</button>
+    <button class="btn-big" onclick="showView('setup')" id="new-event-btn" style="display:none">▶ Begin Session</button>
   </div>
   <div style="padding:12px 0 0;">
     <div class="sec-title" id="ev-lbl" style="display:none">Recorded Events</div>
@@ -250,17 +250,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
   <div style="overflow-y:auto;flex:1;padding:14px;">
     <div class="field-lbl" style="margin-bottom:8px;">Group type</div>
     <div id="filter-types" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;"></div>
-    <div class="field-lbl" style="margin-bottom:8px;">Group</div>
+    <div class="field-lbl" style="margin-bottom:8px;">Group <span style="color:var(--dim);font-weight:400;text-transform:none;">— tap to select, then choose Begin Session or Notes</span></div>
     <div id="filter-groups" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;"></div>
-    <div class="field-lbl" style="margin-bottom:8px;">Quick-select by demographic <span style="color:var(--dim);font-weight:400;">(taps check/uncheck that category below)</span></div>
-    <div id="filter-demogs" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;"></div>
-    <div class="field-lbl" style="margin-bottom:8px;">Individuals <span style="color:var(--dim);font-weight:400;">(tap rows to include; none checked = whole group)</span>
-      <button class="chip" style="margin-left:6px;padding:2px 8px;" onclick="selectAllInds(true)">All</button>
-      <button class="chip" style="padding:2px 8px;" onclick="selectAllInds(false)">None</button>
-    </div>
-    <div id="filter-individuals" style="border:1px solid var(--border);border-radius:8px;max-height:52vh;overflow:auto;margin-bottom:12px;"></div>
-    <div id="filter-count" style="font-size:11px;color:var(--dim);margin-bottom:16px;"></div>
-    <button class="btn-big" onclick="applyRosterFilter()">✓ Apply</button>
   </div>
 </div>
 
@@ -277,6 +268,14 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
       <div><span style="color:var(--dim);">Demog:</span> <span id="setup-demog" style="color:var(--text);"></span></div>
       <div><span style="color:var(--dim);">Date/Time:</span> <span id="setup-datetime" style="color:var(--text);"></span></div>
     </div>
+    <div class="field-lbl" style="margin-bottom:8px;">Animals for this session <span style="color:var(--dim);font-weight:400;text-transform:none;">(tap rows to include; none checked = whole group)</span>
+      <button class="chip" style="margin-left:6px;padding:2px 8px;" onclick="selectAllInds(true)">All</button>
+      <button class="chip" style="padding:2px 8px;" onclick="selectAllInds(false)">None</button>
+    </div>
+    <div class="field-lbl" style="margin-bottom:6px;font-weight:400;text-transform:none;color:var(--dim);">Quick-select by demographic</div>
+    <div id="filter-demogs" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:8px;"></div>
+    <div id="filter-individuals" style="border:1px solid var(--border);border-radius:8px;max-height:34vh;overflow:auto;margin-bottom:8px;"></div>
+    <div id="filter-count" style="font-size:11px;color:var(--dim);margin-bottom:14px;"></div>
     <div style="margin-bottom:9px;"><div class="field-lbl">Observer</div><input class="field-in" id="sess-observer" placeholder="Initials"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:9px;">
       <div><div class="field-lbl">Data Type</div>
@@ -299,16 +298,16 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
     </div>
     <div style="margin-bottom:9px;"><div class="field-lbl">Scan # (if scan)</div><input class="field-in" id="sess-scan" type="number" placeholder="1" style="width:50%;"></div>
     <div style="margin-bottom:14px;"><div class="field-lbl">Session Notes</div><textarea class="notes-in" id="sess-notes" placeholder="Notes…"></textarea></div>
-    <button class="btn-big" onclick="startSession()">Begin Session</button>
+    <button class="btn-big" onclick="startSession()">Start Session →</button>
   </div>
 </div>
 
 <!-- ════ GROUP DASHBOARD ════ -->
 <div id="view-dashboard" class="view">
   <div class="hdr" style="padding:11px 14px;">
-    <button class="btn btn-dim" onclick="showView('home')">← Back</button>
-    <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:var(--accent);">Group Dashboard</div>
-    <div></div>
+    <button class="btn btn-dim" onclick="notesBack()">← Back</button>
+    <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:var(--accent);">Notes</div>
+    <button class="btn btn-dim" onclick="syncNotesOnly()" style="padding:5px 9px;font-size:10px;">↑ Sync Notes</button>
   </div>
   <div style="overflow-y:auto;flex:1;padding:14px;">
     <div style="background:var(--hi);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11px;line-height:1.8;">
@@ -316,7 +315,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
       <div><span style="color:var(--dim);">Demog:</span> <span id="dash-demog" style="color:var(--text);"></span></div>
       <div><span style="color:var(--dim);">Animals:</span> <span id="dash-count" style="color:var(--text);"></span></div>
     </div>
-    <div id="dash-banner" style="font-size:10px;color:var(--dim);margin-bottom:12px;"></div>
+    <div id="dash-banner" style="font-size:10px;color:var(--dim);margin-bottom:8px;"></div>
+    <div id="notes-sync-status" style="font-size:11px;margin-bottom:10px;"></div>
 
     <!-- GROUP NOTES -->
     <div class="field-lbl">Group Notes</div>
@@ -340,8 +340,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
       <button class="btn btn-acc" onclick="addIndivNote()" style="flex:0 0 auto;">+ Add</button>
     </div>
     <div id="ind-note-log" style="margin-bottom:16px;"></div>
-
-    <button class="btn-big" id="dash-begin-btn" onclick="beginSessionFromDashboard()">Begin Session →</button>
   </div>
 </div>
 
@@ -354,6 +352,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
     </div>
     <div style="display:flex;gap:6px;">
       <button class="btn btn-dim" id="sess-back-btn" onclick="showView('home')">← Back</button>
+      <button class="btn btn-dim" onclick="openNotes()">📝 Notes</button>
       <button class="btn btn-acc" id="sess-new-event-btn" onclick="resumeToRecording()">+ Record</button>
       <button class="btn btn-dng" id="sess-end-btn" onclick="endSession()">End Session</button>
     </div>
@@ -395,7 +394,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
       <div id="an1-badge" style="display:none;font-size:11px;color:var(--accent);padding:3px 8px;background:rgba(78,205,196,.1);border-radius:6px;border:1px solid rgba(78,205,196,.3);"></div>
       <button class="btn btn-dim" onclick="openPrefs()" title="Display preferences">⚙</button>
       <button class="btn btn-dim" onclick="resetPanZoom('evt-svg')" title="Reset view">⊙</button>
-      <button class="btn btn-warn" onclick="pauseSession()" title="Pause — view dashboard / home (session stays open)">⏸</button>
+      <button class="btn btn-dim" onclick="openNotes()" title="Add session notes">📝</button>
+      <button class="btn btn-warn" onclick="pauseSession()" title="Pause — view home (session stays open)">⏸</button>
       <button class="btn btn-dim" onclick="showView('session')">Session</button>
       <button class="btn btn-dng" onclick="endEvent()">End Event</button>
     </div>
@@ -819,10 +819,13 @@ function buildFilterUI(){
   const groups=allGroups.filter(g=>!activeGroupType||groupType(g)===activeGroupType);
   const gel=document.getElementById('filter-groups');if(!gel)return;
   gel.innerHTML=groups.map(g=>`<button class="chip${activeGroup===g?' active':''}" data-group="${g}">${g}</button>`).join('');
-  gel.onclick=e=>{const btn=e.target.closest('button[data-group]');if(!btn)return;activeGroup=btn.dataset.group;activeDemogs=new Set();selectedInds=new Set();buildFilterUI();};
-  buildDemogUI();
-  buildIndividualUI();
+  // Tapping a group applies it (whole group) and returns to the home hub, where you
+  // choose Begin Session or Notes. The per-session animal picker lives on the Setup screen.
+  gel.onclick=e=>{const btn=e.target.closest('button[data-group]');if(!btn)return;pickGroup(btn.dataset.group);};
 }
+function pickGroup(g){ activeGroup=g; activeDemogs=new Set(); selectedInds=new Set(); applyRosterFilter(); }
+// The animal (subset) picker — now shown on the Setup screen after Begin Session.
+function buildAnimalPicker(){ buildDemogUI(); buildIndividualUI(); }
 function selectGroup(g){activeGroup=g;activeDemogs=new Set();selectedInds=new Set();buildFilterUI();}
 // Demographic chips quick-select: tapping toggles all members of that category in selectedInds
 function buildDemogUI(){
@@ -877,7 +880,7 @@ function updateFilterCount(){
   const el=document.getElementById('filter-count');
   if(el)el.textContent=n?(n+' of '+total+' selected'):('Whole group ('+total+' animals)');
 }
-function applyRosterFilter(){
+function applyRosterFilter(dest){
   if(!activeGroup){alert('Select a group first.');return;}
   // selectedInds empty = whole group; otherwise exactly the checked individuals
   const filtered=ROSTER.filter(r=>r.current_group===activeGroup&&(selectedInds.size===0||selectedInds.has(String(r.id))));
@@ -894,7 +897,8 @@ function applyRosterFilter(){
   ['evt-svg','net-svg'].forEach(id=>{const p=panZoom[id];p.x=0;p.y=0;p.scale=1;});
   const lbl=document.getElementById('home-group-label');
   if(lbl)lbl.textContent=activeGroup+(selectedInds.size?' · '+filtered.length+' selected':'');
-  updateHomeStats();showView('home');
+  updateHomeStats();
+  if(dest!==false) showView(dest||'home');
 }
 
 const BEHAVIORS={
@@ -3188,9 +3192,25 @@ function buildNoteRows(){
       Note_ID:n.id, Timestamp:n.timestamp, Observer:n.observer||'', Group:n.group||'',
       Scope:n.scope||'', Subtype:n.subtype||'', Animal_ID:ids.join(','),
       Animal_Name:ids.map(noteAnimalName).join(','), Text:n.text||'',
-      Session:n.sessionLabel||'', Session_ID:n.sessionId||''
+      Session:n.sessionLabel||'n/a', Session_ID:n.sessionId||''
     };
   });
+}
+// Notes navigation: reachable from home (general — no session) and from within a
+// session (tagged with it). Back returns to wherever you came from.
+let notesReturnView='home';
+function openNotes(){ if(currentView!=='dashboard') notesReturnView=currentView; showView('dashboard'); }
+function notesBack(){ showView(notesReturnView||'home'); }
+function notesSyncStatus(msg,color){ const el=document.getElementById('notes-sync-status'); if(!el)return; el.textContent=msg; el.style.color=color; }
+function syncNotesOnly(){
+  const rows=buildNoteRows();
+  if(!rows.length){ notesSyncStatus('⚠ No notes to sync','var(--warn)'); return; }
+  const pw=(localStorage.getItem(ROSTER_PW_KEY)||'').trim();
+  if(!pw){ notesSyncStatus('🔑 Set the roster password first (Roster screen)','var(--warn)'); return; }
+  notesSyncStatus('⏳ Syncing notes…','var(--dim)');
+  postNotesToSheet()
+    .then(()=>notesSyncStatus('✓ '+rows.length+' note'+(rows.length!==1?'s':'')+' synced to the Notes tab','var(--aff)'))
+    .catch(()=>notesSyncStatus('⚠ Sync failed — use Export CSV','var(--warn)'));
 }
 // ═══ GROUP DASHBOARD / NOTES LOG ═════════════════════════════════════
 function escHtml(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
@@ -3317,19 +3337,13 @@ function populateDashboard(){
   indNoteSel.clear();
   buildNoteAnimalList();
   const banner=document.getElementById('dash-banner');
-  const beginBtn=document.getElementById('dash-begin-btn');
   if(activeSession){
-    banner.innerHTML=`New notes tag the live <b style="color:var(--aff)">${escHtml(activeSession.label)}</b>. Notes are kept even without a session.`;
-    beginBtn.textContent='Open Session →';
+    banner.innerHTML=`These notes are tagged with the live session <b style="color:var(--aff)">${escHtml(activeSession.label)}</b> (Session column).`;
   } else {
-    banner.textContent='Notes are logged for this group right away; begin a session to also tag them with it.';
-    beginBtn.textContent='Begin Session →';
+    banner.innerHTML='General notes for this group — <b>Session = n/a</b>. Open Notes from inside a session to tag them with it.';
   }
+  notesSyncStatus('','var(--dim)');
   renderNoteLogs();
-}
-function beginSessionFromDashboard(){
-  if(!INDS.length){alert('Select a group first.');return;}
-  showView(activeSession?'session':'setup');
 }
 
 // ═══ SESSION & EVENT MANAGEMENT ══════════════════════════════════════
@@ -3342,9 +3356,13 @@ function populateSetupForm(){
   document.getElementById('sess-conditions').value=sessConditions;
   document.getElementById('sess-scan').value=sessScan;
   document.getElementById('sess-notes').value='';
+  buildAnimalPicker(); // per-session animal selection now lives here
 }
 function startSession(){
-  if(!INDS.length){alert('Load a roster and select a group first.');return;}
+  if(!activeGroup){alert('Load a roster and select a group first.');return;}
+  // Rebuild the animal set from the Setup screen's selection (subset or whole group)
+  applyRosterFilter(false);
+  if(!INDS.length){alert('No animals selected.');return;}
   // Full reset of any prior recording/review state so a new session starts clean
   // (guards against stale state after reviewing a past session — see Bug #6).
   reviewSession=null; reviewEventIdx=0;

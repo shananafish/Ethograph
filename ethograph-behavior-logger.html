@@ -318,15 +318,28 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'JetBra
     </div>
     <div id="dash-banner" style="font-size:10px;color:var(--dim);margin-bottom:12px;"></div>
 
-    <div style="margin-bottom:12px;"><div class="field-lbl">Group Notes</div>
-      <textarea class="notes-in" id="dash-group-notes" placeholder="Group-level notes…" oninput="setDashField('group',this.value)"></textarea></div>
-    <div style="margin-bottom:12px;"><div class="field-lbl">DOS — Daily Observation Sheet</div>
-      <textarea class="notes-in" id="dash-dos-notes" placeholder="Daily observation notes…" oninput="setDashField('dos',this.value)"></textarea></div>
-    <div style="margin-bottom:12px;"><div class="field-lbl">Births</div>
-      <textarea class="notes-in" id="dash-births" placeholder="New births, dam, date, notes…" oninput="setDashField('births',this.value)"></textarea></div>
+    <!-- GROUP NOTES -->
+    <div class="field-lbl">Group Notes</div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+      <select class="field-in" id="grp-note-sub" style="flex:0 0 auto;font-size:11px;"></select>
+      <input type="datetime-local" class="field-in" id="grp-note-when" style="flex:0 0 auto;font-size:11px;">
+      <input class="field-in" id="grp-note-txt" placeholder="note…" style="flex:1;min-width:120px;font-size:11px;" onkeydown="if(event.key==='Enter')addGroupNote()">
+      <button class="btn btn-acc" onclick="addGroupNote()" style="flex:0 0 auto;">+ Add</button>
+    </div>
+    <div id="grp-note-log" style="margin-bottom:18px;"></div>
 
-    <div class="field-lbl" style="margin-bottom:6px;">Individual Notes <span style="color:var(--dim);font-weight:400;text-transform:none;">— tap an animal to add a note</span></div>
-    <div id="dash-indiv-list" style="margin-bottom:16px;"></div>
+    <!-- INDIVIDUAL NOTES -->
+    <div class="field-lbl">Individual Notes</div>
+    <div style="font-size:10px;color:var(--dim);margin-bottom:4px;">Select animal(s) — <span id="ind-note-selcount">0 selected</span> · <span onclick="clearIndNoteSel()" style="cursor:pointer;text-decoration:underline;">clear</span></div>
+    <div id="ind-note-demogs" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;"></div>
+    <div id="ind-note-table" style="max-height:230px;overflow:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;"></div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+      <select class="field-in" id="ind-note-sub" style="flex:0 0 auto;font-size:11px;"></select>
+      <input type="datetime-local" class="field-in" id="ind-note-when" style="flex:0 0 auto;font-size:11px;">
+      <input class="field-in" id="ind-note-txt" placeholder="note…" style="flex:1;min-width:120px;font-size:11px;" onkeydown="if(event.key==='Enter')addIndivNote()">
+      <button class="btn btn-acc" onclick="addIndivNote()" style="flex:0 0 auto;">+ Add</button>
+    </div>
+    <div id="ind-note-log" style="margin-bottom:16px;"></div>
 
     <button class="btn-big" id="dash-begin-btn" onclick="beginSessionFromDashboard()">Begin Session →</button>
   </div>
@@ -878,7 +891,6 @@ function applyRosterFilter(){
   recomputeDisplayMeta();
   [...new Set(INDS.map(i=>i.matriline))].sort().forEach(m=>matrilineColor(m));
   positions={}; velocities={}; // Fresh layout for new group
-  resetDashNotes(); // new group → fresh per-session dashboard notes
   ['evt-svg','net-svg'].forEach(id=>{const p=panZoom[id];p.x=0;p.y=0;p.scale=1;});
   const lbl=document.getElementById('home-group-label');
   if(lbl)lbl.textContent=activeGroup+(selectedInds.size?' · '+filtered.length+' selected':'');
@@ -1030,8 +1042,12 @@ let pendingGenCounts={};    // {genericId: count} for the record currently being
 const GENERICS_KEY='ethograph_generics'; // { [group]: [category,...] }
 let sessObserver='',sessDatatype='opportunistic',sessConditions='unprovisioned';
 let sessScan='',sessNotes='';
-// Group dashboard — per-session notes staged before a session starts (see Feature #1)
-let dashNotes={group:'',dos:'',births:'',individual:{}};
+// Notes log (2026-07-30 redesign): standalone, subtyped notes, optionally tied to a session.
+// entry: {id, ts, timestamp, scope:'group'|'individual', subtype, animalId, group, text, sessionId, sessionLabel, observer}
+let notesLog=[];
+let indNoteSel=new Set(); // animals selected for the pending individual note
+const GROUP_NOTE_TYPES=['DOS','Monitoring','Group Release','Formation','Introduction'];
+const INDIV_NOTE_TYPES=['DOS','Wound','Infant','Behavior','Appearance','Social','Release','Clinical','Other'];
 
 // Sheet
 let sheetSolo=false,sheetAn1=null,sheetAn2=null,activeTab='aggsub';
@@ -3084,6 +3100,16 @@ async function postSessionToSheet(sess){
     showSyncStatus('✓ '+rows.length+' row'+(rows.length!==1?'s':'')+' synced','var(--aff)');
   }catch(e){showSyncStatus('⚠ Sync failed — use Export CSV','var(--warn)');}
 }
+// Notes go to a separate "EthographNotes" tab (body.notes → Apps Script upserts by Note_ID).
+async function postNotesToSheet(){
+  const noteRows=buildNoteRows();
+  if(!noteRows.length) return;
+  const pw=(localStorage.getItem(ROSTER_PW_KEY)||'').trim();
+  if(!pw) return;
+  try{
+    await fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({pw:pw,notes:noteRows})});
+  }catch(e){}
+}
 function showSyncStatus(msg,color){
   let el=document.getElementById('sync-status');
   if(!el){el=document.createElement('div');el.id='sync-status';el.style.cssText='padding:6px 14px;font-size:11px;';document.getElementById('ev-list').before(el);}
@@ -3114,10 +3140,6 @@ function buildRows(sess){
         ScanNum:       sess.scanNum||'',
         Session_Start: sess.startTime||'',
         Session_End:   sess.endTime||'',
-        Group_Notes:   sess.groupNotes||'',
-        DOS_Notes:     sess.dosNotes||'',
-        Births:        sess.births||'',
-        Individual_Notes: individualNotesStr(sess.individualNotes),
         Session_Notes: sess.notes||'',
         Event:         ev.label,
         Record_Label:  labels[i],
@@ -3156,74 +3178,158 @@ function buildRows(sess){
   });
   return rows;
 }
-// ═══ GROUP DASHBOARD (per-session notes) ═════════════════════════════
-const DASH_KEY='ethograph_dash_draft';
-const DASH_FIELD_MAP={group:'groupNotes',dos:'dosNotes',births:'births'};
-// When a session is active the dashboard edits ITS notes live; otherwise it
-// stages notes (a draft) that attach to the next session you begin.
-function dashRead(){
-  if(activeSession) return {group:activeSession.groupNotes||'',dos:activeSession.dosNotes||'',births:activeSession.births||'',individual:activeSession.individualNotes||{}};
-  return dashNotes;
+// Rows for the separate Notes tab / CSV. animalName resolved from the roster.
+const NOTE_COLUMNS=['Note_ID','Timestamp','Observer','Group','Scope','Subtype','Animal_ID','Animal_Name','Text','Session','Session_ID'];
+function noteAnimalName(id){ if(!id) return ''; const a=INDS.find(i=>i.id===id)||ROSTER.find(r=>r.id===id); return a?(a.name||a.dye||id):id; }
+function buildNoteRows(){
+  return notesLog.slice().sort((a,b)=>a.ts-b.ts).map(n=>{
+    const ids=noteAnimalIds(n);
+    return {
+      Note_ID:n.id, Timestamp:n.timestamp, Observer:n.observer||'', Group:n.group||'',
+      Scope:n.scope||'', Subtype:n.subtype||'', Animal_ID:ids.join(','),
+      Animal_Name:ids.map(noteAnimalName).join(','), Text:n.text||'',
+      Session:n.sessionLabel||'', Session_ID:n.sessionId||''
+    };
+  });
 }
-function setDashField(key,val){
-  if(activeSession){ activeSession[DASH_FIELD_MAP[key]]=val; saveToLocalStorage(); }
-  else { dashNotes[key]=val; saveDashDraft(); }
+// ═══ GROUP DASHBOARD / NOTES LOG ═════════════════════════════════════
+function escHtml(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+// Node-style label for an individual (respects the label-row prefs).
+function individualLabel(ind){
+  if(!ind) return '';
+  const parts=(prefs.labelRows||['name']).map(k=>labelComponentText(ind,k)).filter(t=>t&&t.length);
+  return parts.length?parts.join(' · '):(ind.name||ind.dye||ind.id);
 }
-function setDashIndiv(id,val){
-  const target=activeSession?(activeSession.individualNotes||(activeSession.individualNotes={})):dashNotes.individual;
-  if(val) target[id]=val; else delete target[id];
-  if(activeSession) saveToLocalStorage(); else saveDashDraft();
+function individualLabelById(id){ return individualLabel(INDS.find(i=>i.id===id)||ROSTER.find(r=>r.id===id)||{id,name:id}); }
+function optionList(arr,sel){ return arr.map(t=>`<option value="${escHtml(t)}"${t===sel?' selected':''}>${escHtml(t)}</option>`).join(''); }
+
+// Backward-compatible accessor: notes may carry animalIds[] (new) or animalId (old).
+function noteAnimalIds(n){ return (n.animalIds&&n.animalIds.length)?n.animalIds:(n.animalId?[n.animalId]:[]); }
+function nowLocalInput(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;}
+function addNoteEntry(scope,subtype,text,animalIds,when){
+  const t=(text||'').trim(); if(!t) return false;
+  let d=when?new Date(when):new Date(); if(isNaN(d.getTime())) d=new Date();
+  notesLog.push({
+    id:'N-'+(currentObserver||sessObserver||'X')+'-'+Date.now()+'-'+Math.floor(performance.now()),
+    ts:d.getTime(), timestamp:d.toISOString(),
+    scope, subtype:subtype||'', animalIds:(animalIds||[]).slice(),
+    group:activeGroup||'', text:t,
+    sessionId:activeSession?activeSession.id:null,
+    sessionLabel:activeSession?activeSession.label:'',
+    observer:(activeSession?activeSession.observer:'')||currentObserver||sessObserver||''
+  });
+  saveToLocalStorage();
+  return true;
+}
+function clearIndNoteSel(){ indNoteSel.clear(); buildNoteAnimalList(); }
+// Individual-note animal picker: same spreadsheet table + demographic quick-select
+// chips as the session animal picker, but driven by indNoteSel.
+function buildNoteDemogChips(){
+  const del=document.getElementById('ind-note-demogs'); if(!del) return;
+  if(!activeGroup){del.innerHTML='';return;}
+  const demogs=[...new Set(ROSTER.filter(r=>r.current_group===activeGroup).map(r=>r.demog_cat))].filter(Boolean).sort();
+  const membersOf=d=>ROSTER.filter(r=>r.current_group===activeGroup&&r.demog_cat===d).map(r=>String(r.id));
+  del.innerHTML=demogs.map(d=>{
+    const m=membersOf(d);const allSel=m.length>0&&m.every(id=>indNoteSel.has(id));
+    return `<button class="chip${allSel?' active':''}" data-ndemog="${escHtml(d)}">${escHtml(d)}</button>`;
+  }).join('');
+  del.onclick=e=>{const btn=e.target.closest('button[data-ndemog]');if(!btn)return;
+    const m=membersOf(btn.dataset.ndemog);const allSel=m.length>0&&m.every(id=>indNoteSel.has(id));
+    if(allSel) m.forEach(id=>indNoteSel.delete(id)); else m.forEach(id=>indNoteSel.add(id));
+    buildNoteAnimalList();};
+}
+function buildNoteAnimalTable(){
+  const el=document.getElementById('ind-note-table'); if(!el) return;
+  if(!activeGroup){el.innerHTML='<div style="color:var(--dim);font-size:11px;padding:10px;">Select a group first</div>';return;}
+  const animals=ROSTER.filter(r=>r.current_group===activeGroup).sort((a,b)=>(Number(a.id)||0)-(Number(b.id)||0));
+  if(!animals.length){el.innerHTML='<div style="color:var(--dim);font-size:11px;padding:10px;">No animals.</div>';return;}
+  const cols=Object.keys(animals[0]).filter(c=>c!=='current_group');
+  const cell=(c,v)=>{ if(v==null||v==='') return ''; if(c==='age'){const n=parseFloat(v);return isNaN(n)?String(v):n.toFixed(1);} return String(v); };
+  const th='padding:5px 8px;text-align:left;border-bottom:1px solid var(--border);color:var(--dim);font-weight:700;background:var(--surface);position:sticky;top:0;text-transform:capitalize;';
+  let h=`<table style="border-collapse:collapse;font-size:10px;white-space:nowrap;font-family:'JetBrains Mono',monospace;">`;
+  h+=`<thead><tr><th style="${th}">✓</th>`+cols.map(c=>`<th style="${th}">${infoLabel(c)}</th>`).join('')+`</tr></thead><tbody>`;
+  animals.forEach(r=>{
+    const id=String(r.id), sel=indNoteSel.has(id);
+    const td=`padding:5px 8px;border-bottom:1px solid var(--border);color:${sel?'var(--accent)':'var(--text)'};`;
+    h+=`<tr data-nind="${escHtml(id)}" style="cursor:pointer;background:${sel?'rgba(78,205,196,.12)':'transparent'};">`;
+    h+=`<td style="${td}text-align:center;color:${sel?'var(--accent)':'var(--dim)'};">${sel?'☑':'☐'}</td>`;
+    h+=cols.map(c=>`<td style="${td}">${escHtml(cell(c,r[c]))}</td>`).join('');
+    h+=`</tr>`;
+  });
+  h+=`</tbody></table>`;
+  el.innerHTML=h;
+  el.onclick=e=>{const row=e.target.closest('[data-nind]');if(!row)return;const id=row.dataset.nind;indNoteSel.has(id)?indNoteSel.delete(id):indNoteSel.add(id);buildNoteAnimalList();};
+}
+function buildNoteAnimalList(){
+  buildNoteDemogChips(); buildNoteAnimalTable();
+  const c=document.getElementById('ind-note-selcount'); if(c) c.textContent=indNoteSel.size+' selected';
+}
+function addGroupNote(){
+  const sub=document.getElementById('grp-note-sub').value;
+  const when=document.getElementById('grp-note-when').value;
+  const txt=document.getElementById('grp-note-txt');
+  if(addNoteEntry('group',sub,txt.value,null,when)){ txt.value=''; document.getElementById('grp-note-when').value=nowLocalInput(); renderNoteLogs(); txt.focus(); }
+}
+function addIndivNote(){
+  if(!indNoteSel.size){ alert('Select at least one animal.'); return; }
+  const sub=document.getElementById('ind-note-sub').value;
+  const when=document.getElementById('ind-note-when').value;
+  const txt=document.getElementById('ind-note-txt');
+  if(addNoteEntry('individual',sub,txt.value,[...indNoteSel],when)){ txt.value=''; document.getElementById('ind-note-when').value=nowLocalInput(); indNoteSel.clear(); buildNoteAnimalList(); renderNoteLogs(); txt.focus(); }
+}
+function deleteNote(id){
+  const i=notesLog.findIndex(n=>n.id===id);
+  if(i<0) return;
+  notesLog.splice(i,1); saveToLocalStorage(); renderNoteLogs();
+}
+function noteItemHtml(n){
+  const meta=[new Date(n.ts).toLocaleString([],{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}),n.observer,n.sessionLabel].filter(Boolean).join(' · ');
+  const ids=noteAnimalIds(n);
+  const who=n.scope==='individual'?`<b style="color:var(--accent)">${escHtml(ids.map(individualLabelById).join(', '))}</b> — `:'';
+  return `<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--border);">
+    <div style="flex:1;font-size:11px;line-height:1.5;">
+      ${n.subtype?`<span style="font-size:9px;font-weight:700;color:var(--warn);background:rgba(247,183,49,.14);padding:1px 6px;border-radius:4px;margin-right:5px;">${escHtml(n.subtype)}</span>`:''}${who}${escHtml(n.text)}
+      <div style="font-size:9px;color:var(--dim);margin-top:2px;">${escHtml(meta)}</div>
+    </div>
+    <button class="btn btn-dng" style="font-size:9px;padding:2px 7px;flex-shrink:0;" onclick="deleteNote('${n.id}')">✕</button>
+  </div>`;
+}
+function renderNoteLogs(){
+  const g=activeGroup||'';
+  const forGroup=notesLog.filter(n=>n.group===g).sort((a,b)=>b.ts-a.ts);
+  const gl=document.getElementById('grp-note-log');
+  const il=document.getElementById('ind-note-log');
+  if(gl){ const rows=forGroup.filter(n=>n.scope==='group');
+    gl.innerHTML=rows.length?rows.map(noteItemHtml).join(''):'<span style="color:var(--dim);font-size:10px;">No group notes yet.</span>'; }
+  if(il){ const rows=forGroup.filter(n=>n.scope==='individual');
+    il.innerHTML=rows.length?rows.map(noteItemHtml).join(''):'<span style="color:var(--dim);font-size:10px;">No individual notes yet.</span>'; }
 }
 function populateDashboard(){
   document.getElementById('dash-group').textContent=activeGroup||'(no group selected)';
   document.getElementById('dash-demog').textContent=selectedInds.size?(selectedInds.size+' selected'):'Whole group';
   document.getElementById('dash-count').textContent=INDS.filter(i=>!i.generic).length;
-  const d=dashRead();
-  document.getElementById('dash-group-notes').value=d.group||'';
-  document.getElementById('dash-dos-notes').value=d.dos||'';
-  document.getElementById('dash-births').value=d.births||'';
+  // subtype pickers
+  document.getElementById('grp-note-sub').innerHTML=optionList(GROUP_NOTE_TYPES,GROUP_NOTE_TYPES[0]);
+  document.getElementById('ind-note-sub').innerHTML=optionList(INDIV_NOTE_TYPES,INDIV_NOTE_TYPES[0]);
+  document.getElementById('grp-note-when').value=nowLocalInput();
+  document.getElementById('ind-note-when').value=nowLocalInput();
+  // multi-select animal table (same style as the session animal picker)
+  indNoteSel.clear();
+  buildNoteAnimalList();
   const banner=document.getElementById('dash-banner');
   const beginBtn=document.getElementById('dash-begin-btn');
   if(activeSession){
-    banner.innerHTML=`Editing notes for the live <b style="color:var(--aff)">${activeSession.label}</b> — changes save immediately.`;
+    banner.innerHTML=`New notes tag the live <b style="color:var(--aff)">${escHtml(activeSession.label)}</b>. Notes are kept even without a session.`;
     beginBtn.textContent='Open Session →';
   } else {
-    banner.textContent='Notes below attach to the next session you begin and sync with its data.';
+    banner.textContent='Notes are logged for this group right away; begin a session to also tag them with it.';
     beginBtn.textContent='Begin Session →';
   }
-  buildDashIndivList();
-}
-function buildDashIndivList(){
-  const el=document.getElementById('dash-indiv-list'); if(!el) return;
-  if(!INDS.length){el.innerHTML='<span style="color:var(--dim);font-size:11px;">Select a group first.</span>';return;}
-  const map=dashRead().individual||{};
-  el.innerHTML=INDS.map(ind=>{
-    const label=ind.name?ind.name+(ind.dye?' · '+ind.dye:''):(ind.dye||ind.id);
-    const val=(map[ind.id]||'').replace(/"/g,'&quot;');
-    const has=(map[ind.id]||'').length>0;
-    return `<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">
-      <div onclick="showAnimalInfo('${ind.id}')" title="View roster info" style="flex-shrink:0;width:96px;font-size:11px;font-weight:600;color:${has?'var(--accent)':'var(--text)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;text-decoration:underline dotted var(--dim);">${label}</div>
-      <input class="field-in" value="${val}" oninput="setDashIndiv('${ind.id}',this.value)" placeholder="note…" style="flex:1;font-size:11px;">
-    </div>`;
-  }).join('');
-}
-function saveDashDraft(){ try{localStorage.setItem(DASH_KEY,JSON.stringify(dashNotes));}catch(e){} }
-function resetDashNotes(){
-  dashNotes={group:'',dos:'',births:'',individual:{}};
-  try{localStorage.removeItem(DASH_KEY);}catch(e){}
+  renderNoteLogs();
 }
 function beginSessionFromDashboard(){
   if(!INDS.length){alert('Select a group first.');return;}
   showView(activeSession?'session':'setup');
-}
-// Serialize per-animal notes as "Name: note; Name: note" for the sheet/CSV
-function individualNotesStr(map){
-  if(!map) return '';
-  return Object.keys(map).map(id=>{
-    const a=INDS.find(i=>i.id===id)||ROSTER.find(r=>r.id===id);
-    const name=a?(a.name||a.dye||id):id;
-    return `${name}: ${map[id]}`;
-  }).join('; ');
 }
 
 // ═══ SESSION & EVENT MANAGEMENT ══════════════════════════════════════
@@ -3252,10 +3358,7 @@ function startSession(){
   sessNotes=document.getElementById('sess-notes').value.trim();
   activeSession={id:'SESS-'+Date.now(),label:'Session '+(sessions.length+1),startTime:new Date().toISOString(),
     observer:sessObserver,group:activeGroup,demog:selectedInds.size?(selectedInds.size+' selected'):'Whole group',
-    datatype:sessDatatype,conditions:sessConditions,scanNum:sessScan,notes:sessNotes,
-    groupNotes:dashNotes.group||'',dosNotes:dashNotes.dos||'',births:dashNotes.births||'',
-    individualNotes:{...dashNotes.individual},events:[]};
-  resetDashNotes(); // notes are per-session — clear the staging draft
+    datatype:sessDatatype,conditions:sessConditions,scanNum:sessScan,notes:sessNotes,events:[]};
   events=[];
   // Begin on the network, in the same "ready to record" state as after ending an event
   showView('recording');
@@ -3542,10 +3645,11 @@ function deleteSession(sessId){
 
 function syncAll(){
   const allSess=[...sessions,...(activeSession?[{...activeSession,events:[...events]}]:[])];
-  if(!allSess.length){showSyncStatus('⚠ No sessions to sync','var(--warn)');return;}
-  // Post each session sequentially
-  Promise.all(allSess.map(s=>postSessionToSheet(s)))
-    .then(()=>showSyncStatus('✓ All sessions synced','var(--aff)'));
+  const noteCount=notesLog.length;
+  if(!allSess.length && !noteCount){showSyncStatus('⚠ Nothing to sync','var(--warn)');return;}
+  // Sessions → data tab; notes → separate notes tab.
+  Promise.all([...allSess.map(s=>postSessionToSheet(s)), postNotesToSheet()])
+    .then(()=>showSyncStatus(`✓ Synced${noteCount?` (+${noteCount} note${noteCount!==1?'s':''})`:''}`,'var(--aff)'));
 }
 
 function updateHomeStats(){
@@ -3604,8 +3708,7 @@ function exportData(){
     'An2_Aggression','An2_Submission','An2_Affiliation',
     'ThirdParty_Behaviors','An3_IDs','An4_IDs',
     'Qualifiers_Agg','Qualifiers_Sub','Qualifiers_Aff','Qualifiers_Interaction',
-    'Affect_An1','Affect_An2','Notes',
-    'Group_Notes','DOS_Notes','Births','Individual_Notes','Session_Notes']];
+    'Affect_An1','Affect_An2','Notes','Session_Notes']];
   sessions.forEach(sess=>{sess.events.forEach(ev=>{
     const labels=computeLabelsFor(ev.records);
     ev.records.forEach((rec,i)=>{
@@ -3621,15 +3724,20 @@ function exportData(){
         getL('agg','an2',rec),getL('sub','an2',rec),getL('aff','an2',rec),
         getL('tp','an1',rec),rec.tpAn3||'',rec.tpAn4||'',
         getQ('agg',rec),getQ('sub',rec),getQ('aff',rec),getQ('ix',rec),
-        getA('an1',rec),getA('an2',rec),rec.notes||'',
-        sess.groupNotes||'',sess.dosNotes||'',sess.births||'',individualNotesStr(sess.individualNotes),sess.notes||'']);
+        getA('an1',rec),getA('an2',rec),rec.notes||'',sess.notes||'']);
     });
   });});
   const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-  a.download=`ethogram_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
+  const stamp=new Date().toISOString().slice(0,10);
+  const dl=(text,name)=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));a.download=name;a.click();};
+  dl(csv,`ethogram_${stamp}.csv`);
+  // Notes export as a separate file (mirrors the separate sheet tab)
+  const noteRows=buildNoteRows();
+  if(noteRows.length){
+    const nrows=[NOTE_COLUMNS,...noteRows.map(n=>NOTE_COLUMNS.map(c=>n[c]))];
+    const ncsv=nrows.map(r=>r.map(v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    dl(ncsv,`ethogram_notes_${stamp}.csv`);
+  }
 }
 
 function computeLabelsFor(recs){
@@ -3665,7 +3773,7 @@ function saveToLocalStorage(){
       _activeRecords: records.map(r=>serializeRec(r)),
       _activeEvent: activeEvent?{...activeEvent}:null,
     }:null;
-    localStorage.setItem(LS_KEY,JSON.stringify({sessions:data,active}));
+    localStorage.setItem(LS_KEY,JSON.stringify({sessions:data,active,notes:notesLog}));
   } catch(e){console.warn('localStorage save failed:',e);}
 }
 
@@ -3690,12 +3798,11 @@ function serializeRec(r){
 }
 
 function loadFromLocalStorage(){
-  // Restore any staged (un-started) dashboard notes
-  try{const d=localStorage.getItem(DASH_KEY);if(d){const p=JSON.parse(d);dashNotes={group:p.group||'',dos:p.dos||'',births:p.births||'',individual:p.individual||{}};}}catch(e){}
   try{
     const raw=localStorage.getItem(LS_KEY);
     if(!raw) return;
-    const {sessions:savedSessions,active}=JSON.parse(raw);
+    const {sessions:savedSessions,active,notes}=JSON.parse(raw);
+    if(Array.isArray(notes)) notesLog=notes;
     if(savedSessions&&savedSessions.length){
       sessions=savedSessions;
     }

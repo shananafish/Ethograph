@@ -19,7 +19,7 @@ Built by Shannon (primate behavior/welfare specialist, BSU) in collaboration wit
 - 🎨 **Type‑colored edges** — direct = blue, intervene = red, seek‑aid = green, redirect = yellow
 - ⏸️ **Pause / resume a session** to check the dashboard mid‑observation
 - 🎨 **Display preferences** (layout, color, size, labels, fonts) saved **per observer**
-- 🗂️ **Group Dashboard** for per‑session notes (group, daily observation, births, per‑animal)
+- 🗂️ **Group Dashboard** — subtyped **group & individual notes** (standalone, optionally session‑tagged), synced to their own sheet tab
 - ☁️ **Google Sheets sync** + **CSV export**
 - 📱 **Installable PWA**, works offline, saves to the device automatically
 
@@ -38,7 +38,7 @@ Data is organized as **Sessions → Events → Records**:
 1. **Set observer** — tap **👤** on the home screen and choose/enter your initials. Your display preferences are remembered for next time.
 2. **Load the roster** — **Roster → Fetch from Google Sheets** (enter the roster password once; it's remembered on the device) — or paste a sheet.
 3. **Select a group** — filter by group type, pick a group, then optionally narrow to a subset (tap demographic chips to bulk‑select, or check individual animals in the roster table). Leave everything unchecked for the whole group.
-4. *(Optional)* **Group Dashboard** — jot group / daily‑observation / births / per‑animal notes for the session.
+4. *(Optional)* **Group Dashboard** — log **group notes** (DOS / Monitoring / Group Release / Formation / Introduction) and **individual notes** (DOS / Wound / Infant / Behavior / Appearance / Social / Release / Clinical / Other; select one or more animals per note). Notes are saved for the group immediately; if a session is active they're also tagged with it.
 5. **Begin Session** — the network opens on "tap a node to start a new event."
 6. **Record interactions** — the top **action tray** changes with what you've selected:
    - Tap an animal → it becomes the initiator; tap a second animal → recipient, and the behavior sheet opens automatically (**the 2‑tap fast path**).
@@ -113,21 +113,29 @@ Any **additional columns** are kept and shown on the animal info card and the in
 
 Records are pushed to a Google Sheet via a bound **Apps Script web app** (header‑keyed rows, deduplicated and upserted by `Record_ID`). The **roster is also read through the Apps Script** (`doGet?pw=…`), gated by a password the user enters once per device — so the roster Sheet can be kept private rather than published. The Apps Script endpoint is configured as a constant near the top of the HTML file.
 
-The output sheet should have header cells matching the record fields, including these columns added for the dashboard, third‑party, primary, and multi/unknown features:
+Records go to the **`EthographData`** tab; **dashboard notes go to a separate `EthographNotes` tab** (the Apps Script creates it and its header row automatically). The data tab's per‑record columns include these added for third‑party, primary, and multi/unknown features:
 
 ```
-TP_Type, Redirected_From, Primary_IDs,
-Group_Notes, DOS_Notes, Births, Individual_Notes, Session_Notes
+TP_Type, Redirected_From, Primary_IDs, Session_Notes
 ```
 
 Notes:
 - With **multiple participants**, `An1_ID` / `An1_Name` / `An2_ID` / `An2_Name` become comma‑joined lists.
 - A **generic/unknown** participant appears as `UNK:<category>×N` (ID) and `<category> (unknown)×N` (name).
-- **Third‑party responses** populate `TP_Type` (`redirect` / `intervene` / `seek_aid` / `undirected`) and `LinkedToRecord` (the label of the record responded to). `Redirected_From` holds the ID(s) a redirection moved away from.
-- `Primary_IDs` lists any participants marked **★ primary**.
-- Add matching header cells (`TP_Type`, `Redirected_From`, `Primary_IDs`) to the output sheet so the header‑keyed script writes them.
+- **Third‑party responses** populate `TP_Type` (`redirect` / `intervene` / `seek_aid` / `undirected`) and `LinkedToRecord` (the label of the record responded to). `Redirected_From` holds the ID(s) a redirection moved away from. `Primary_IDs` lists any participants marked **★ primary**. Add matching header cells to the `EthographData` tab so the header‑keyed script writes them.
 
-CSV export from the home screen includes all of the above without any setup.
+### Notes (`EthographNotes` tab)
+
+Group‑ and individual‑level notes from the **Group Dashboard** are standalone (not tied to a record) and optionally tagged with a session. Each note has an **editable date/time (defaults to now)**, so you can back‑date an observation. They sync/export separately with columns:
+
+```
+Note_ID, Timestamp, Observer, Group, Scope, Subtype, Animal_ID, Animal_Name, Text, Session, Session_ID
+```
+
+- **Group notes** — subtypes: DOS · Monitoring · Group Release · Formation · Introduction.
+- **Individual notes** — subtypes: DOS · Wound · Infant · Behavior · Appearance · Social · Release · Clinical · Other. Select **one or more animals** per note from the **same spreadsheet‑style table + demographic quick‑select** used to pick session animals; `Animal_ID` / `Animal_Name` are comma‑joined for multi‑animal notes.
+
+CSV export produces **two files** — the records CSV and a `…_notes.csv` — without any setup.
 
 ---
 

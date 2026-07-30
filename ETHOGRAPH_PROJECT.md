@@ -153,10 +153,10 @@ Evolves the 2026-07-29 flow into a single state-aware model. **Supersedes** part
 
 ---
 
-## Data columns in Google Sheet
+## Data columns in Google Sheet — `EthographData` tab
 ```
 Record_ID, Session, Observer, Group, Demog, DataType, Conditions, ScanNum,
-Session_Start, Session_End, Event, Record_Label, Timestamp, GroupID,
+Session_Start, Session_End, Session_Notes, Event, Record_Label, Timestamp, GroupID,
 An1_ID, An1_Name, An2_ID, An2_Name, Solo, Duration, LinkedToRecord, TP_Type, Redirected_From, Primary_IDs,
 An1_Aggression, An1_Submission, An1_Affiliation,
 An2_Aggression, An2_Submission, An2_Affiliation,
@@ -164,16 +164,21 @@ An1_ThirdParty, An2_ThirdParty,
 An1_Qualifiers_Agg, An2_Qualifiers_Agg,
 An1_Qualifiers_Sub, An2_Qualifiers_Sub,
 An1_Qualifiers_Aff, An2_Qualifiers_Aff,
-Qualifiers_Interaction, Affect_An1, Affect_An2, Notes,
-Group_Notes, DOS_Notes, Births, Individual_Notes, Session_Notes
+Qualifiers_Interaction, Affect_An1, Affect_An2, Notes
 ```
+
+## Notes columns — `EthographNotes` tab (2026-07-30)
+```
+Note_ID, Timestamp, Observer, Group, Scope, Subtype, Animal_ID, Animal_Name, Text, Session, Session_ID
+```
+Standalone subtyped notes from the Group Dashboard (`notesLog`), synced to a **separate tab** (`postNotesToSheet` → `{pw, notes}`; Apps Script upserts by `Note_ID`, auto-creating the tab). CSV export writes a second `…_notes.csv`. **Removed** the old per-record `Group_Notes` / `DOS_Notes` / `Births` / `Individual_Notes` columns.
 **Note (multi-animal):** `An1_ID`, `An1_Name`, `An2_ID`, `An2_Name` may now be **comma-joined lists** when a record has multiple initiators/recipients (Feature #5). Behaviors/qualifiers/affect columns are shared per side.
 
 **Note (unknown nodes, #10):** a generic participant appears in `An1_ID`/`An2_ID` as `UNK:<category>×N` (e.g. `UNK:adult f×3`) and in `An1_Name`/`An2_Name` as `<category> (unknown)×N`. `×N` is omitted when N=1.
 
 **Note (third-party + primary, updated 2026-07-30):** `TP_Type` holds the third-party classification (`redirect` / `intervene` / `seek_aid` / `undirected`), blank for ordinary records. `LinkedToRecord` carries the `Record_Label` of the record being responded to. `Redirected_From` holds the ID(s) a redirection moved away from (the referenced edge's other participants). `Primary_IDs` lists participants marked ★ primary. **Add `TP_Type`, `Redirected_From`, and `Primary_IDs` header cells to the Google Sheet** so the header-keyed Apps Script writes them (CSV export includes all three with no setup).
 
-**Note:** the last 5 columns were added 2026-06-16 for the Group Dashboard. They are session-level (same value repeated on every row of a session). Add matching header cells to the Google Sheet so the Apps Script (header-keyed) writes them. `Individual_Notes` is serialized as `Name: note; Name: note`.
+**Note (dashboard notes redesign, 2026-07-30):** the Group Dashboard is now a **notes logger** (not per-session note fields). Group notes carry a subtype (DOS / Monitoring / Group Release / Formation / Introduction); individual notes carry a subtype (DOS / Wound / Infant / Behavior / Appearance / Social / Release / Clinical / Other) + **one or more animals** (`indNoteSel`) chosen from the **same spreadsheet table + demographic quick-select chips as the session animal picker** (`buildNoteAnimalTable`/`buildNoteDemogChips`/`buildNoteAnimalList`, mirroring `buildIndividualUI`/`buildDemogUI`). Stored as `animalIds[]` (accessor `noteAnimalIds` falls back to legacy `animalId`); `Animal_ID`/`Animal_Name` are comma-joined. Each note has an **editable date/time** (`datetime-local`, defaults to now via `nowLocalInput()`; drives `ts`/`timestamp`). Notes are logged immediately for the group and optionally tagged with the active session (`sessionId`). Stored in `notesLog` (persisted in the `LS_KEY` payload as `notes`), exported to the `EthographNotes` tab / `…_notes.csv`. Fns: `addNoteEntry`/`addGroupNote`/`addIndivNote`/`deleteNote`/`renderNoteLogs`/`buildNoteRows`. `Session_Notes` (session-level free text) stays on the data tab.
 
 ---
 
